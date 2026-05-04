@@ -1,19 +1,99 @@
-# secrets
+# -----------------------------------------------------------------------------
+# Secrets and credentials
+# -----------------------------------------------------------------------------
 .env
 .env.*
+!.env.example
 !*.env.example
-agents/*/home/.env
-agents/*/home/auth.json
 
-# runtime state; keep directory placeholders
+# Agent-local env/auth files. Keep examples commit-safe, never real credentials.
+agents/*/home/.env
+agents/*/home/.env.*
+!agents/*/home/.env.example
+agents/*/home/auth.json
+agents/*/home/auth*.json
+agents/*/home/credentials.json
+agents/*/home/credentials*.json
+agents/*/home/token.json
+agents/*/home/tokens.json
+agents/*/home/*token*
+agents/*/home/*secret*
+agents/*/home/*credential*
+agents/*/home/*.pem
+agents/*/home/*.key
+agents/*/home/*.p12
+agents/*/home/*.pfx
+
+# OAuth/provider/tool caches commonly contain credentials or personal account data.
+agents/*/home/.cache/
+agents/*/home/.config/
+agents/*/home/.local/
+agents/*/home/.ssh/
+agents/*/home/.gnupg/
+agents/*/home/.npmrc
+agents/*/home/.pypirc
+agents/*/home/.netrc
+
+# -----------------------------------------------------------------------------
+# Hermes runtime state and user-sensitive agent data
+# -----------------------------------------------------------------------------
+# These directories may contain transcripts, memories, logs, generated skills,
+# MCP config with headers/env, cron outputs, browser profiles, downloaded files,
+# and task-specific customer/project data. Keep only placeholders in git.
 agents/*/home/sessions/*
 !agents/*/home/sessions/.gitkeep
 agents/*/home/logs/*
 !agents/*/home/logs/.gitkeep
 agents/*/home/memory/*
 !agents/*/home/memory/.gitkeep
+agents/*/home/skills/*
+!agents/*/home/skills/.gitkeep
+agents/*/home/mcp/*
+!agents/*/home/mcp/.gitkeep
+!agents/*/home/mcp/registry/
+!agents/*/home/mcp/registry/.gitkeep
+!agents/*/home/mcp/templates/
+!agents/*/home/mcp/templates/.gitkeep
+agents/*/home/mcp/registry/*
+!agents/*/home/mcp/registry/.gitkeep
+agents/*/home/mcp/templates/*
+!agents/*/home/mcp/templates/.gitkeep
+agents/*/home/cron/*
+agents/*/home/browser/*
+agents/*/home/downloads/*
+agents/*/home/tmp/*
+agents/*/home/temp/*
+
+# Agent workspaces are operational scratch space and may contain user/customer
+# data. Commit shared source-of-truth material under shared/ instead.
+agents/*/workspace/inbox/*
+!agents/*/workspace/inbox/.gitkeep
+agents/*/workspace/outbox/*
+!agents/*/workspace/outbox/.gitkeep
 agents/*/workspace/artifacts/*
 !agents/*/workspace/artifacts/.gitkeep
+agents/*/workspace/notes/*
+!agents/*/workspace/notes/.gitkeep
+agents/*/workspace/.env
+agents/*/workspace/.env.*
+agents/*/workspace/*.pem
+agents/*/workspace/*.key
 
+# -----------------------------------------------------------------------------
+# Local-only overrides
+# -----------------------------------------------------------------------------
+*.local
+*.local.*
+config.local.yaml
+agents/*/home/config.local.yaml
+agents/*/workspace/config.local.yaml
+
+# -----------------------------------------------------------------------------
 # OS/editor
+# -----------------------------------------------------------------------------
 .DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
