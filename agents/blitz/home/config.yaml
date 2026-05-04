@@ -3,7 +3,7 @@
 
 model:
   provider: openrouter
-  default: anthropic/claude-sonnet-4
+  default: google/gemma-4-31b-it:free
   context_length: 200000
 
 agent:

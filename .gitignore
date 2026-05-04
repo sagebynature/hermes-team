@@ -7,6 +7,9 @@
 !*.env.example
 
 # Agent-local env/auth files. Keep examples commit-safe, never real credentials.
+agents/*/home/*
+!agents/*/home/SOUL.md
+!agents/*/home/AGENTS.md
 agents/*/home/.env
 agents/*/home/.env.*
 !agents/*/home/.env.example
@@ -23,6 +26,7 @@ agents/*/home/*.pem
 agents/*/home/*.key
 agents/*/home/*.p12
 agents/*/home/*.pfx
+
 
 # OAuth/provider/tool caches commonly contain credentials or personal account data.
 agents/*/home/.cache/
