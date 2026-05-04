@@ -485,6 +485,7 @@ make help                         # show Makefile targets
 make build                        # build shared team-nexus-agent image once
 make up                           # start all gateways
 make down                         # stop all gateways
+make restart                      # restart all gateways
 make ps                           # show service status
 make logs AGENT=atlas             # follow one agent's logs
 make shell AGENT=forge            # open bash in one agent container
