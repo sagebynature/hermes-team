@@ -1,5 +1,6 @@
 # Keep Docker build context tiny.
 **
 !Dockerfile
+!team-nexus-entrypoint.sh
 !mise/
 !mise/config.toml

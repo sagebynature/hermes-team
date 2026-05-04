@@ -197,24 +197,24 @@ Start from the repo root:
 cd /Users/sage/team-nexus
 ```
 
-Build the team image:
+Build the shared team image once:
 
 ```bash
-docker compose build
+make build
 ```
 
-Bring Atlas online first:
+All services use `team-nexus-agent:latest`; only Atlas carries the Compose `build:` stanza so the image is not built eight times in parallel.
 
-```bash
-docker compose run --rm atlas setup
-docker compose run --rm atlas gateway setup
-docker compose run --rm atlas doctor
-```
-
-Or use the helper script:
+Bring Atlas online first with the helper script:
 
 ```bash
 ./scripts/setup-agent.sh atlas
+```
+
+The helper runs a non-interactive doctor check against the committed baseline config. It does not invoke Hermes' interactive setup wizard from scripts; put real secrets in `agents/atlas/home/.env` first, and run gateway setup manually from a TTY only when you need to change platform credentials:
+
+```bash
+docker compose run --rm atlas gateway setup
 ```
 
 Then activate whichever specialists you want in the field:
@@ -247,6 +247,8 @@ Run a full team health check:
 ./scripts/doctor-all.sh
 ```
 
+On a fresh clone, the image entrypoint bootstraps each mounted agent home before doctor runs: it creates the Hermes command symlink and a minimal Skills Hub lock file. Doctor may still report missing optional API keys for full tool access (`EXA_API_KEY`, `TAVILY_API_KEY`, `TINKER_API_KEY`, `WANDB_API_KEY`, etc.); those are intentionally left blank in `.env.example` because they are secrets.
+
 ---
 
 ## Gateway ports
@@ -270,15 +272,27 @@ If the team operates through Discord, Telegram, Slack, or another gateway, direc
 
 ## Agent-to-agent comms
 
-Team Nexus supports three coordination paths.
+Team Nexus supports four coordination paths.
 
 1. **Command channel**
    Sage talks to Atlas in Discord or another gateway. Atlas turns the objective into assignments, routes work to specialists, and returns the synthesis.
 
-2. **Gateway API**
+2. **Shared Kanban board**
+   All agents mount the same writable Kanban root at `/shared/kanban` via `HERMES_KANBAN_HOME`. Use it for durable cross-agent tasks, comments, dependencies, and handoffs:
+
+   ```bash
+   make kanban-init
+   make kanban-list
+   make kanban-stats
+   make kanban-create TITLE="research pricing options" ASSIGNEE=atlas
+   ```
+
+   Atlas is the only gateway with `kanban.dispatch_in_gateway: true`; the other agents keep dispatch disabled so multiple gateway dispatchers do not race on the same SQLite board. Every agent still has the `kanban` toolset enabled for normal sessions, so agents can inspect, create, comment on, and route shared board tasks.
+
+3. **Gateway API**
    Atlas or a helper service can call specialist gateway endpoints on localhost and collect responses programmatically.
 
-3. **Workspace handoff**
+4. **Workspace handoff**
    Agents can pass briefs and artifacts through the workspace convention: `inbox/` for incoming tasks, `outbox/` for finished deliverables.
 
 Operational rule: if a specialist produces something worth keeping, it goes in `outbox/`. Chat is the radio. The workspace is the record.
@@ -335,17 +349,17 @@ docker compose run --rm atlas auth list
 
 ## Personas
 
-Each agent has a persona file:
+Each agent has a SOUL.md file:
 
 ```text
-agents/<agent>/home/persona.md
+agents/<agent>/home/SOUL.md
 ```
 
 Each `config.yaml` includes metadata pointing at it:
 
 ```yaml
 startup_agent:
-  persona_file: /opt/data/persona.md
+  persona_file: /opt/data/SOUL.md
 ```
 
 If the Hermes runtime does not automatically consume that file, wire it in by copying it into the runtime persona path, converting it into a preload skill, or adding a gateway/router wrapper that injects it at session start.
@@ -465,7 +479,7 @@ Do not commit secrets into `shared/mcp/registry/*.mk`. Keep tokens in `agents/<a
 
 ```bash
 make help                         # show Makefile targets
-make build                        # docker compose build
+make build                        # build shared team-nexus-agent image once
 make up                           # start all gateways
 make down                         # stop all gateways
 make ps                           # show service status
@@ -474,6 +488,10 @@ make shell AGENT=forge            # open bash in one agent container
 make doctor AGENT=atlas           # run hermes doctor for one agent
 make doctor-all                   # run hermes doctor for every agent
 make compose-config               # validate docker-compose.yml
+make kanban-init                  # initialize shared Kanban DB
+make kanban-list                  # list shared Kanban tasks
+make kanban-stats                 # show shared Kanban counts
+make kanban-create TITLE='...' ASSIGNEE=atlas
 ```
 
 One-off Hermes commands:

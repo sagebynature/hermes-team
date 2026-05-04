@@ -10,7 +10,7 @@ ENV MISE_DATA_DIR=/opt/mise \
     MISE_CONFIG_DIR=/etc/mise \
     MISE_INSTALL_PATH=/usr/local/bin/mise \
     MISE_YES=1 \
-    PATH=/opt/mise/shims:/root/.local/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
+    PATH=/opt/mise/shims:/opt/data/.local/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       bash \
@@ -41,5 +41,17 @@ COPY mise/config.toml /etc/mise/config.toml
 RUN mise trust /etc/mise/config.toml \
     && mise install --yes \
     && mise reshim
+
+# Install Hermes' bundled RL backend when the upstream image contains the
+# tinker-atropos submodule. Doctor checks for this package in every agent.
+RUN if [ -d /opt/hermes/tinker-atropos ]; then \
+      uv pip install --no-cache --python /opt/hermes/.venv/bin/python -e /opt/hermes/tinker-atropos; \
+    fi \
+    && rm -rf /root/.cache/uv /tmp/uv-cache
+
+COPY team-nexus-entrypoint.sh /usr/local/bin/team-nexus-entrypoint.sh
+RUN chmod +x /usr/local/bin/team-nexus-entrypoint.sh
+
+ENTRYPOINT ["/usr/bin/tini", "-g", "--", "/usr/local/bin/team-nexus-entrypoint.sh"]
 
 WORKDIR /workspace

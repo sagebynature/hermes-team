@@ -12,6 +12,7 @@ ifneq ($(strip $(SERVER)),)
 endif
 
 .PHONY: help build up down ps logs shell doctor doctor-all compose-config \
+	kanban-init kanban-list kanban-stats kanban-watch kanban-create \
 	mcp-list mcp-list-all mcp-test mcp-remove mcp-add-command mcp-add-url \
 	mcp-register-template mcp-register-template-all mcp-templates mcp-show-template \
 	guard-agent guard-server guard-command guard-url
@@ -25,8 +26,8 @@ help: ## Show available targets
 	@printf "  make mcp-register-template AGENT=atlas SERVER=time\n"
 	@printf "  make mcp-register-template-all SERVER=filesystem-workspace TARGET_AGENTS='atlas forge'\n"
 
-build: ## Build the custom Hermes team image
-	$(COMPOSE) build
+build: ## Build the custom Hermes team image once; all agents share team-nexus-agent:latest
+	$(COMPOSE) build atlas
 
 up: ## Start all Hermes gateways
 	$(COMPOSE) up -d
@@ -55,6 +56,23 @@ doctor-all: ## Run hermes doctor for every team agent
 compose-config: ## Validate docker-compose.yml
 	$(COMPOSE) config >/tmp/team-nexus-compose.yaml
 	@echo "compose config OK -> /tmp/team-nexus-compose.yaml"
+
+kanban-init: ## Initialize the shared Team Nexus Kanban board
+	$(COMPOSE) run --rm atlas kanban init
+
+kanban-list: ## List shared Kanban tasks
+	$(COMPOSE) run --rm atlas kanban list
+
+kanban-stats: ## Show shared Kanban task counts
+	$(COMPOSE) run --rm atlas kanban stats
+
+kanban-watch: ## Watch shared Kanban board events
+	$(COMPOSE) run --rm atlas kanban watch
+
+kanban-create: ## Create a shared Kanban task: make kanban-create TITLE='...' ASSIGNEE=atlas
+	@if [ -z "$(TITLE)" ]; then echo "TITLE is required" >&2; exit 2; fi
+	@if [ -z "$(ASSIGNEE)" ]; then echo "ASSIGNEE is required, e.g. atlas" >&2; exit 2; fi
+	$(COMPOSE) run --rm atlas kanban create "$(TITLE)" --assignee "$(ASSIGNEE)"
 
 mcp-list: guard-agent ## List MCP servers configured for one agent
 	$(COMPOSE) run --rm $(AGENT) mcp list

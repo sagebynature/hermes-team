@@ -6,6 +6,14 @@ model:
   default: google/gemma-4-31b-it:free
   context_length: 200000
 
+# Keep the default Hermes CLI toolset and opt into Kanban tools.
+# Kanban tool handlers are runtime-gated by Hermes: they appear for
+# dispatcher-spawned workers, or when this config includes kanban for
+# orchestrator-style routing.
+toolsets:
+  - hermes-cli
+  - kanban
+
 agent:
   max_turns: 90
   tool_use_enforcement: true
@@ -18,7 +26,6 @@ terminal:
 memory:
   memory_enabled: true
   user_profile_enabled: true
-  provider: builtin
 
 compression:
   enabled: true
@@ -38,13 +45,22 @@ security:
 privacy:
   redact_pii: false
 
+# All agents share the board at HERMES_KANBAN_HOME=/shared/kanban.
+# Only Atlas runs the embedded dispatcher so multiple gateways do not race
+# against the same SQLite board. Other agents can still use /kanban and
+# Kanban CLI/tools to create/comment/inspect tasks.
+kanban:
+  dispatch_in_gateway: false
+  dispatch_interval_seconds: 60
+
 # Role metadata for your own scripts/router.
 startup_agent:
   name: Scout
   slug: scout
   role: Market + Customer Research
   description: Owns source-backed market, competitor, customer, and pricing research.
-  persona_file: /opt/data/persona.md
+  soul_file: /opt/data/SOUL.md
+  agents_file: /opt/data/AGENTS.md
   workspace: /workspace
   inbox: /workspace/inbox
   outbox: /workspace/outbox

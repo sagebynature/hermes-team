@@ -9,6 +9,7 @@ services:
     restart: unless-stopped
     environment:
       HERMES_HOME: /opt/data
+      HERMES_KANBAN_HOME: /shared/kanban
       AGENT_NAME: Atlas
       AGENT_ROLE: Orchestrator / Chief of Staff
     env_file:
@@ -20,6 +21,8 @@ services:
       - ./agents/atlas/workspace:/workspace
       # Shared readonly material visible to all agents.
       - ./shared/project:/shared/project:ro
+      # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
+      - ./shared/kanban:/shared/kanban
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
     ports:
@@ -27,13 +30,12 @@ services:
     command: ["gateway", "run"]
 
   vega:
-    build:
-      context: ./docker
     image: team-nexus-agent:latest
     container_name: hermes-vega
     restart: unless-stopped
     environment:
       HERMES_HOME: /opt/data
+      HERMES_KANBAN_HOME: /shared/kanban
       AGENT_NAME: Vega
       AGENT_ROLE: Product Strategist
     env_file:
@@ -45,6 +47,8 @@ services:
       - ./agents/vega/workspace:/workspace
       # Shared readonly material visible to all agents.
       - ./shared/project:/shared/project:ro
+      # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
+      - ./shared/kanban:/shared/kanban
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
     ports:
@@ -52,13 +56,12 @@ services:
     command: ["gateway", "run"]
 
   scout:
-    build:
-      context: ./docker
     image: team-nexus-agent:latest
     container_name: hermes-scout
     restart: unless-stopped
     environment:
       HERMES_HOME: /opt/data
+      HERMES_KANBAN_HOME: /shared/kanban
       AGENT_NAME: Scout
       AGENT_ROLE: Market + Customer Research
     env_file:
@@ -70,6 +73,8 @@ services:
       - ./agents/scout/workspace:/workspace
       # Shared readonly material visible to all agents.
       - ./shared/project:/shared/project:ro
+      # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
+      - ./shared/kanban:/shared/kanban
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
     ports:
@@ -77,13 +82,12 @@ services:
     command: ["gateway", "run"]
 
   forge:
-    build:
-      context: ./docker
     image: team-nexus-agent:latest
     container_name: hermes-forge
     restart: unless-stopped
     environment:
       HERMES_HOME: /opt/data
+      HERMES_KANBAN_HOME: /shared/kanban
       AGENT_NAME: Forge
       AGENT_ROLE: Engineering Lead
     env_file:
@@ -95,6 +99,8 @@ services:
       - ./agents/forge/workspace:/workspace
       # Shared readonly material visible to all agents.
       - ./shared/project:/shared/project:ro
+      # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
+      - ./shared/kanban:/shared/kanban
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
     ports:
@@ -102,13 +108,12 @@ services:
     command: ["gateway", "run"]
 
   lumen:
-    build:
-      context: ./docker
     image: team-nexus-agent:latest
     container_name: hermes-lumen
     restart: unless-stopped
     environment:
       HERMES_HOME: /opt/data
+      HERMES_KANBAN_HOME: /shared/kanban
       AGENT_NAME: Lumen
       AGENT_ROLE: UX / Design Lead
     env_file:
@@ -120,6 +125,8 @@ services:
       - ./agents/lumen/workspace:/workspace
       # Shared readonly material visible to all agents.
       - ./shared/project:/shared/project:ro
+      # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
+      - ./shared/kanban:/shared/kanban
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
     ports:
@@ -127,13 +134,12 @@ services:
     command: ["gateway", "run"]
 
   blitz:
-    build:
-      context: ./docker
     image: team-nexus-agent:latest
     container_name: hermes-blitz
     restart: unless-stopped
     environment:
       HERMES_HOME: /opt/data
+      HERMES_KANBAN_HOME: /shared/kanban
       AGENT_NAME: Blitz
       AGENT_ROLE: Growth + GTM
     env_file:
@@ -145,6 +151,8 @@ services:
       - ./agents/blitz/workspace:/workspace
       # Shared readonly material visible to all agents.
       - ./shared/project:/shared/project:ro
+      # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
+      - ./shared/kanban:/shared/kanban
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
     ports:
@@ -152,13 +160,12 @@ services:
     command: ["gateway", "run"]
 
   ledger:
-    build:
-      context: ./docker
     image: team-nexus-agent:latest
     container_name: hermes-ledger
     restart: unless-stopped
     environment:
       HERMES_HOME: /opt/data
+      HERMES_KANBAN_HOME: /shared/kanban
       AGENT_NAME: Ledger
       AGENT_ROLE: Finance + Ops
     env_file:
@@ -170,6 +177,8 @@ services:
       - ./agents/ledger/workspace:/workspace
       # Shared readonly material visible to all agents.
       - ./shared/project:/shared/project:ro
+      # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
+      - ./shared/kanban:/shared/kanban
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
     ports:
@@ -177,13 +186,12 @@ services:
     command: ["gateway", "run"]
 
   sentinel:
-    build:
-      context: ./docker
     image: team-nexus-agent:latest
     container_name: hermes-sentinel
     restart: unless-stopped
     environment:
       HERMES_HOME: /opt/data
+      HERMES_KANBAN_HOME: /shared/kanban
       AGENT_NAME: Sentinel
       AGENT_ROLE: Code Review / QA / Security Assessment
     env_file:
@@ -195,6 +203,8 @@ services:
       - ./agents/sentinel/workspace:/workspace
       # Shared readonly material visible to all agents.
       - ./shared/project:/shared/project:ro
+      # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
+      - ./shared/kanban:/shared/kanban
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
     ports:
