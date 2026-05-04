@@ -11,7 +11,7 @@ ifneq ($(strip $(SERVER)),)
 -include shared/mcp/registry/$(SERVER).mk
 endif
 
-.PHONY: help build up down ps logs shell doctor doctor-all compose-config \
+.PHONY: help build up down restart ps logs shell doctor doctor-all compose-config \
 	kanban-init kanban-list kanban-stats kanban-watch kanban-create \
 	mcp-list mcp-list-all mcp-test mcp-remove mcp-add-command mcp-add-url \
 	mcp-register-template mcp-register-template-all mcp-templates mcp-show-template \
@@ -34,6 +34,9 @@ up: ## Start all Hermes gateways
 
 down: ## Stop all Hermes gateways
 	$(COMPOSE) down
+
+restart: ## Restart all Hermes gateways
+	$(COMPOSE) restart
 
 ps: ## Show Compose service status
 	$(COMPOSE) ps

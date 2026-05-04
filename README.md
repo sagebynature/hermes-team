@@ -124,12 +124,13 @@ team-nexus/
     skills/                        # shared team-wide skills, mounted read-only
     mcp/                           # shared MCP registry/templates/docs
 
+  .env.example                    # template for the shared repo-root .env
+
   agents/
     atlas/
       README.md
       home/                        # mounted as /opt/data
         config.yaml
-        .env.example
         persona.md
         skills/
         sessions/
@@ -211,7 +212,7 @@ Bring Atlas online first with the helper script:
 ./scripts/setup-agent.sh atlas
 ```
 
-The helper runs a non-interactive doctor check against the committed baseline config. It does not invoke Hermes' interactive setup wizard from scripts; put real secrets in `agents/atlas/home/.env` first, and run gateway setup manually from a TTY only when you need to change platform credentials:
+The helper runs a non-interactive doctor check against the committed baseline config. It does not invoke Hermes' interactive setup wizard from scripts; put real secrets in the shared repo-root `.env` first, and run gateway setup manually from a TTY only when you need to change platform credentials:
 
 ```bash
 docker compose run --rm atlas gateway setup
@@ -247,7 +248,7 @@ Run a full team health check:
 ./scripts/doctor-all.sh
 ```
 
-On a fresh clone, the image entrypoint bootstraps each mounted agent home before doctor runs: it creates the Hermes command symlink and a minimal Skills Hub lock file. Doctor may still report missing optional API keys for full tool access (`EXA_API_KEY`, `TAVILY_API_KEY`, `TINKER_API_KEY`, `WANDB_API_KEY`, etc.); those are intentionally left blank in `.env.example` because they are secrets.
+On a fresh clone, the image entrypoint bootstraps each mounted agent home before doctor runs: it creates the Hermes command symlink and a minimal Skills Hub lock file. Doctor may still report missing optional API keys for full tool access (`EXA_API_KEY`, `TAVILY_API_KEY`, `TINKER_API_KEY`, `WANDB_API_KEY`, etc.); those are intentionally left blank in the shared `.env.example` because they are secrets.
 
 ---
 
@@ -301,16 +302,16 @@ Operational rule: if a specialist produces something worth keeping, it goes in `
 
 ## Secrets and auth
 
-Each agent has its own secrets file:
+All agents load the same repo-root secrets file through Compose:
 
 ```text
-agents/<agent>/home/.env
+.env
 ```
 
-Each one starts from:
+Start from the shared example:
 
-```text
-agents/<agent>/home/.env.example
+```bash
+cp .env.example .env
 ```
 
 Common entries:
@@ -321,16 +322,18 @@ ANTHROPIC_API_KEY=
 OPENAI_API_KEY=
 GOOGLE_API_KEY=
 DISCORD_BOT_TOKEN=
+DISCORD_ALLOWED_USERS=
+DISCORD_HOME_CHANNEL=
 GITHUB_TOKEN=
 GATEWAY_API_KEY=
 ```
 
 Rules of engagement:
 
-- Do not commit real `.env` files.
-- Prefer one gateway or bot token per agent.
-- Prefer separate provider keys or credential pools when you want clean accounting and revocation.
-- Keep OAuth and credential-pool state in the mounted home, not in the image.
+- Do not commit the real repo-root `.env` file.
+- Every service reads the same `./.env`; use it for shared provider keys and common gateway defaults.
+- If an agent needs distinct OAuth, credential-pool, or platform auth state, keep that state in the agent's mounted home, not in the image.
+- Prefer separate provider keys or credential pools only when you want clean accounting and revocation; otherwise the shared `.env` keeps bootstrap simple.
 
 For OAuth/provider login flows:
 
@@ -471,7 +474,7 @@ make mcp-test AGENT=atlas SERVER=time
 make mcp-remove AGENT=atlas SERVER=time
 ```
 
-Do not commit secrets into `shared/mcp/registry/*.mk`. Keep tokens in `agents/<agent>/home/.env`, OAuth state, or another local secret store.
+Do not commit secrets into `shared/mcp/registry/*.mk`. Keep shared tokens in the repo-root `.env`, and keep agent-specific OAuth state or credential pools in that agent's mounted home.
 
 ---
 
@@ -517,7 +520,7 @@ docker compose run --rm --entrypoint uv atlas --version
 - Do not bake secrets into the Docker image.
 - Do not mount your whole home directory into agent containers.
 - Do not mount `/var/run/docker.sock` unless you intentionally want that agent to control host Docker.
-- Use separate bot tokens and API keys where practical.
+- Use the shared repo-root `.env` for baseline credentials; move high-risk or role-specific auth into agent-local OAuth/credential-pool state where practical.
 - Keep `security.redact_secrets: true` in each `config.yaml`.
 - Prefer Atlas as the only agent allowed to fan out work to other agents.
 - Give agents narrow tool and credential access based on role.
@@ -555,7 +558,7 @@ Then update either global `docker/mise/config.toml` or that agent's `.mise.toml`
 
 Check:
 
-- the agent's `DISCORD_BOT_TOKEN` in `agents/<agent>/home/.env`
+- `DISCORD_BOT_TOKEN` in the shared repo-root `.env`
 - Discord Message Content Intent is enabled
 - the bot has channel permissions
 - gateway logs:

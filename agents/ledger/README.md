@@ -6,7 +6,7 @@ Owns budgets, runway, pricing models, unit economics, operating cadence, and met
 
 Inside container:
 
-- `/opt/data` → this directory's `home/` folder. Hermes stores config, API keys, sessions, skills, memories, logs here.
+- `/opt/data` → this directory's `home/` folder. Hermes stores config, auth state, sessions, skills, memories, logs here.
 - `/workspace` → this agent's private workspace.
 - `/shared/project` → shared project context, readonly.
 - `/shared/skills` → shared skills, readonly.

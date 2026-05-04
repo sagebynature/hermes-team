@@ -13,9 +13,9 @@ services:
       AGENT_NAME: Atlas
       AGENT_ROLE: Orchestrator / Chief of Staff
     env_file:
-      - ./agents/atlas/home/.env
+      - ./.env
     volumes:
-      # Hermes Docker docs use /opt/data for all durable user data: config, API keys, sessions, skills, memories.
+      # Hermes Docker docs use /opt/data for all durable user data: config, auth state, sessions, skills, memories.
       - ./agents/atlas/home:/opt/data
       # Agent-owned workspace. Configure terminal.cwd=/workspace in config.yaml.
       - ./agents/atlas/workspace:/workspace
@@ -39,9 +39,9 @@ services:
       AGENT_NAME: Vega
       AGENT_ROLE: Product Strategist
     env_file:
-      - ./agents/vega/home/.env
+      - ./.env
     volumes:
-      # Hermes Docker docs use /opt/data for all durable user data: config, API keys, sessions, skills, memories.
+      # Hermes Docker docs use /opt/data for all durable user data: config, auth state, sessions, skills, memories.
       - ./agents/vega/home:/opt/data
       # Agent-owned workspace. Configure terminal.cwd=/workspace in config.yaml.
       - ./agents/vega/workspace:/workspace
@@ -65,9 +65,9 @@ services:
       AGENT_NAME: Scout
       AGENT_ROLE: Market + Customer Research
     env_file:
-      - ./agents/scout/home/.env
+      - ./.env
     volumes:
-      # Hermes Docker docs use /opt/data for all durable user data: config, API keys, sessions, skills, memories.
+      # Hermes Docker docs use /opt/data for all durable user data: config, auth state, sessions, skills, memories.
       - ./agents/scout/home:/opt/data
       # Agent-owned workspace. Configure terminal.cwd=/workspace in config.yaml.
       - ./agents/scout/workspace:/workspace
@@ -91,9 +91,9 @@ services:
       AGENT_NAME: Forge
       AGENT_ROLE: Engineering Lead
     env_file:
-      - ./agents/forge/home/.env
+      - ./.env
     volumes:
-      # Hermes Docker docs use /opt/data for all durable user data: config, API keys, sessions, skills, memories.
+      # Hermes Docker docs use /opt/data for all durable user data: config, auth state, sessions, skills, memories.
       - ./agents/forge/home:/opt/data
       # Agent-owned workspace. Configure terminal.cwd=/workspace in config.yaml.
       - ./agents/forge/workspace:/workspace
@@ -117,9 +117,9 @@ services:
       AGENT_NAME: Lumen
       AGENT_ROLE: UX / Design Lead
     env_file:
-      - ./agents/lumen/home/.env
+      - ./.env
     volumes:
-      # Hermes Docker docs use /opt/data for all durable user data: config, API keys, sessions, skills, memories.
+      # Hermes Docker docs use /opt/data for all durable user data: config, auth state, sessions, skills, memories.
       - ./agents/lumen/home:/opt/data
       # Agent-owned workspace. Configure terminal.cwd=/workspace in config.yaml.
       - ./agents/lumen/workspace:/workspace
@@ -143,9 +143,9 @@ services:
       AGENT_NAME: Blitz
       AGENT_ROLE: Growth + GTM
     env_file:
-      - ./agents/blitz/home/.env
+      - ./.env
     volumes:
-      # Hermes Docker docs use /opt/data for all durable user data: config, API keys, sessions, skills, memories.
+      # Hermes Docker docs use /opt/data for all durable user data: config, auth state, sessions, skills, memories.
       - ./agents/blitz/home:/opt/data
       # Agent-owned workspace. Configure terminal.cwd=/workspace in config.yaml.
       - ./agents/blitz/workspace:/workspace
@@ -169,9 +169,9 @@ services:
       AGENT_NAME: Ledger
       AGENT_ROLE: Finance + Ops
     env_file:
-      - ./agents/ledger/home/.env
+      - ./.env
     volumes:
-      # Hermes Docker docs use /opt/data for all durable user data: config, API keys, sessions, skills, memories.
+      # Hermes Docker docs use /opt/data for all durable user data: config, auth state, sessions, skills, memories.
       - ./agents/ledger/home:/opt/data
       # Agent-owned workspace. Configure terminal.cwd=/workspace in config.yaml.
       - ./agents/ledger/workspace:/workspace
@@ -195,9 +195,9 @@ services:
       AGENT_NAME: Sentinel
       AGENT_ROLE: Code Review / QA / Security Assessment
     env_file:
-      - ./agents/sentinel/home/.env
+      - ./.env
     volumes:
-      # Hermes Docker docs use /opt/data for all durable user data: config, API keys, sessions, skills, memories.
+      # Hermes Docker docs use /opt/data for all durable user data: config, auth state, sessions, skills, memories.
       - ./agents/sentinel/home:/opt/data
       # Agent-owned workspace. Configure terminal.cwd=/workspace in config.yaml.
       - ./agents/sentinel/workspace:/workspace

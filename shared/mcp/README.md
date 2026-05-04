@@ -7,4 +7,4 @@ This directory is the team-wide source of truth for MCP server definitions and h
 - `scripts/` — optional helper scripts for more advanced sync/templating.
 - `docs/` — notes for server-specific setup and required credentials.
 
-Do not commit secrets here. Keep tokens in `agents/<agent>/home/.env` or in the agent's local Hermes auth state.
+Do not commit secrets here. Keep shared tokens in the repo-root `.env`, or keep agent-specific auth in that agent's local Hermes auth state.

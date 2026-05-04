@@ -14,7 +14,7 @@ esac
 
 # Avoid invoking Hermes' interactive setup wizard from a non-TTY script. The
 # agent homes in this repo carry baseline config.yaml/SOUL.md/AGENTS.md files;
-# secrets belong in agents/<agent>/home/.env or the caller's environment.
+# secrets belong in the repo-root .env loaded by Compose, or the caller's environment.
 # `doctor` is intentionally read-only here. The custom image entrypoint performs
 # the idempotent bootstrap that fresh mounted homes need without expanding or
 # rewriting the committed baseline config.yaml files.
