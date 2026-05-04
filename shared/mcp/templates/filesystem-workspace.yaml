@@ -1,0 +1,5 @@
+mcp_servers:
+  filesystem_workspace:
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"]
+    timeout: 30

@@ -5,11 +5,15 @@
 agents/*/home/.env
 agents/*/home/auth.json
 
-# runtime state
-agents/*/home/sessions/
-agents/*/home/logs/
-agents/*/home/memory/
-agents/*/workspace/artifacts/
+# runtime state; keep directory placeholders
+agents/*/home/sessions/*
+!agents/*/home/sessions/.gitkeep
+agents/*/home/logs/*
+!agents/*/home/logs/.gitkeep
+agents/*/home/memory/*
+!agents/*/home/memory/.gitkeep
+agents/*/workspace/artifacts/*
+!agents/*/workspace/artifacts/.gitkeep
 
 # OS/editor
 .DS_Store

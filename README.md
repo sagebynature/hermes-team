@@ -404,13 +404,13 @@ Because it is readonly inside containers, agents cannot accidentally corrupt sha
 
 ## Skills
 
-Per-agent editable skills live here:
+Per-agent editable/native Hermes skills live here:
 
 ```text
 agents/<agent>/home/skills/
 ```
 
-Shared readonly skills live here:
+Shared readonly skill source lives here:
 
 ```text
 shared/skills/
@@ -420,6 +420,26 @@ Mounted as:
 
 ```text
 /shared/skills:ro
+```
+
+The shared skill tree is organized by team function:
+
+```text
+shared/skills/
+  team/
+  product/
+  research/
+  engineering/
+  design/
+  growth/
+  finance/
+  risk/
+```
+
+Use `shared/skills/` as canonical source material, then copy or install selected skills into the relevant agent's native Hermes skill directory when that agent should load them:
+
+```text
+agents/<agent>/home/skills/
 ```
 
 Install or inspect skills inside a specific agent container:
@@ -436,15 +456,97 @@ Tool/skill changes may require a new Hermes session or gateway restart.
 
 ## MCP
 
-Add MCP servers per agent from inside the relevant container.
+Hermes native MCP servers are configured per agent under that agent's mounted home/config. In this repo, shared server definitions and reusable docs live here:
 
-Example: filesystem MCP for Forge:
+```text
+shared/mcp/
+  registry/    # Makefile-compatible server definitions
+  templates/   # YAML examples/snippets for config.yaml
+  scripts/     # optional sync/helper scripts
+  docs/        # server-specific setup notes
+```
+
+Each agent also has an agent-local MCP area:
+
+```text
+agents/<agent>/home/mcp/
+  registry/
+  templates/
+```
+
+### Makefile-driven MCP registration
+
+Use the `Makefile` targets from the repo root to avoid typing long `docker compose run` commands.
+
+List available shared MCP templates:
 
 ```bash
-docker compose run --rm forge mcp add filesystem --command "npx -y @modelcontextprotocol/server-filesystem /workspace"
-docker compose run --rm forge mcp list
-docker compose run --rm forge mcp test filesystem
+make mcp-templates
 ```
+
+Show a template:
+
+```bash
+make mcp-show-template SERVER=time
+```
+
+Register a shared template for one agent:
+
+```bash
+make mcp-register-template AGENT=atlas SERVER=time
+make mcp-register-template AGENT=forge SERVER=filesystem-workspace
+```
+
+Register a shared template for multiple agents:
+
+```bash
+make mcp-register-template-all SERVER=filesystem-workspace TARGET_AGENTS="atlas forge"
+```
+
+Register an ad-hoc stdio MCP server:
+
+```bash
+make mcp-add-command \
+  AGENT=forge \
+  SERVER=filesystem \
+  COMMAND='npx -y @modelcontextprotocol/server-filesystem /workspace'
+```
+
+Register an ad-hoc HTTP MCP server:
+
+```bash
+make mcp-add-url \
+  AGENT=atlas \
+  SERVER=company-api \
+  URL='https://mcp.example.com/mcp'
+```
+
+List, test, or remove servers:
+
+```bash
+make mcp-list AGENT=atlas
+make mcp-list-all
+make mcp-test AGENT=atlas SERVER=time
+make mcp-remove AGENT=atlas SERVER=time
+```
+
+The shared registry format is intentionally simple. Example:
+
+```makefile
+# shared/mcp/registry/time.mk
+MCP_TRANSPORT := command
+MCP_COMMAND := uvx mcp-server-time
+```
+
+For HTTP servers:
+
+```makefile
+# shared/mcp/registry/company-api.mk
+MCP_TRANSPORT := url
+MCP_URL := https://mcp.example.com/mcp
+```
+
+Do **not** commit secrets into `shared/mcp/registry/*.mk`. Keep tokens in `agents/<agent>/home/.env`, OAuth state, or another local secret store. Hermes' native MCP config supports explicit `env:`/`headers:` values, but secrets should be injected locally rather than committed.
 
 Because the custom image includes `node`, `npx`, `uv`, and `uvx`, common stdio MCP servers should work without rebuilding.
 

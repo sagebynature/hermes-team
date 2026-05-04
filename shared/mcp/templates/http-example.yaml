@@ -1,0 +1,7 @@
+mcp_servers:
+  company_api:
+    url: "https://mcp.example.com/mcp"
+    headers:
+      Authorization: "Bearer ${COMPANY_MCP_TOKEN}"
+    timeout: 180
+    connect_timeout: 30

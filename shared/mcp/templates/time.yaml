@@ -1,0 +1,4 @@
+mcp_servers:
+  time:
+    command: "uvx"
+    args: ["mcp-server-time"]
