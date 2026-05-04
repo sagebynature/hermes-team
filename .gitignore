@@ -37,17 +37,18 @@ agents/*/home/.netrc
 # -----------------------------------------------------------------------------
 # Hermes runtime state and user-sensitive agent data
 # -----------------------------------------------------------------------------
-# These directories may contain transcripts, memories, logs, generated skills,
-# MCP config with headers/env, cron outputs, browser profiles, downloaded files,
-# and task-specific customer/project data. Keep only placeholders in git.
+# These directories may contain transcripts, memories, logs, MCP config with
+# headers/env, cron outputs, browser profiles, downloaded files, and task-specific
+# customer/project data. Keep only placeholders in git.
+#
+# Agent-local skills under agents/*/home/skills/ are intentionally committable:
+# they are the reviewed, role-specific Hermes skill set for each agent.
 agents/*/home/sessions/*
 !agents/*/home/sessions/.gitkeep
 agents/*/home/logs/*
 !agents/*/home/logs/.gitkeep
 agents/*/home/memory/*
 !agents/*/home/memory/.gitkeep
-agents/*/home/skills/*
-!agents/*/home/skills/.gitkeep
 agents/*/home/mcp/*
 !agents/*/home/mcp/.gitkeep
 !agents/*/home/mcp/registry/

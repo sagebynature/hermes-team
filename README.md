@@ -422,25 +422,42 @@ Mounted as:
 /shared/skills:ro
 ```
 
-The shared skill tree is organized by team function:
+The shared skill tree currently contains team-wide skills:
 
 ```text
 shared/skills/
-  team/
-  product/
-  research/
-  engineering/
-  design/
-  growth/
-  finance/
-  risk/
+  core/         # shared by every agent
 ```
 
-Use `shared/skills/` as canonical source material, then copy or install selected skills into the relevant agent's native Hermes skill directory when that agent should load them:
+Agent-specific skills live directly with the agent:
 
 ```text
-agents/<agent>/home/skills/
+agents/vega/home/skills/      # Vega-only skills
+agents/scout/home/skills/     # Scout-only skills
+agents/forge/home/skills/     # Forge-only skills
+agents/lumen/home/skills/     # Lumen-only skills
+agents/blitz/home/skills/     # Blitz-only skills
+agents/ledger/home/skills/    # Ledger-only skills
+agents/sentinel/home/skills/  # Sentinel-only skills
 ```
+
+The reviewed placement is recorded in:
+
+```text
+shared/skills/SKILL_ASSESSMENT.md
+shared/skills/SKILL_MANIFEST.json
+```
+
+Use `shared/skills/` as the canonical source material. Skills in `shared/skills/core/` are available to every agent through the read-only `/shared/skills` mount. Agent-native skill directories under `agents/<agent>/home/skills/` are versioned and should contain only skills that are specific to that agent.
+
+The model is intentionally simple:
+
+```text
+shared skill  -> shared/skills/<category>/<skill>
+agent skill   -> agents/<agent>/home/skills/<skill>
+```
+
+No sync target is required: if a skill is shared, place it under `shared/skills`; if it belongs only to one agent, place it in that agent's skill folder.
 
 Install or inspect skills inside a specific agent container:
 
