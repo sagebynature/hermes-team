@@ -1,46 +1,64 @@
 # Team Nexus
 
-Dockerized virtual startup team powered by [Hermes Agent](https://hermes-agent.nousresearch.com/).
+**An autonomous startup strike team, containerized and ready to deploy.**
 
-Team Nexus is a repo-local operating system for a multi-agent startup team. It runs one independent Hermes Agent gateway per specialist, with isolated homes, workspaces, memories, credentials, skills, sessions, and logs — plus shared read-only context for team-wide knowledge.
+Team Nexus turns Hermes Agent into a serious multi-agent command center. Each specialist runs as its own Hermes gateway with its own home, workspace, memory, credentials, sessions, skills, and logs. Atlas coordinates the mission. Specialists execute. Shared context keeps everyone reading from the same brief without letting any one agent corrupt the source of truth.
 
-> Default coordination model: **Sage → Atlas → specialists → Atlas → Sage**.
+This is not a toy swarm. It is an A-Team in a repo.
+
+```text
+Sage -> Atlas -> specialists -> Atlas -> Sage
+```
 
 ---
 
-## The team
+## The squad
 
-Portraits are stored in `.docs/image/` and can be used in docs, launch pages, or team dashboards.
+Portraits live in `.docs/image/`. They are part of the identity system for docs, dashboards, and launch material.
 
 <table>
   <tr>
-    <td align="center" width="25%"><img src=".docs/image/atlas.jpeg" alt="Atlas portrait" width="140"><br><strong>Atlas</strong><br><em>Orchestrator / Chief of Staff</em></td>
-    <td align="center" width="25%"><img src=".docs/image/vega.jpeg" alt="Vega portrait" width="140"><br><strong>Vega</strong><br><em>Product Strategist</em></td>
-    <td align="center" width="25%"><img src=".docs/image/scout.jpeg" alt="Scout portrait" width="140"><br><strong>Scout</strong><br><em>Market + Customer Research</em></td>
-    <td align="center" width="25%"><img src=".docs/image/forge.jpeg" alt="Forge portrait" width="140"><br><strong>Forge</strong><br><em>Engineering Lead</em></td>
+    <td align="center" width="25%"><img src=".docs/image/atlas.jpeg" alt="Atlas portrait" width="140"><br><strong>Atlas</strong><br><em>Mission commander</em></td>
+    <td align="center" width="25%"><img src=".docs/image/vega.jpeg" alt="Vega portrait" width="140"><br><strong>Vega</strong><br><em>Product strategist</em></td>
+    <td align="center" width="25%"><img src=".docs/image/scout.jpeg" alt="Scout portrait" width="140"><br><strong>Scout</strong><br><em>Market recon</em></td>
+    <td align="center" width="25%"><img src=".docs/image/forge.jpeg" alt="Forge portrait" width="140"><br><strong>Forge</strong><br><em>Engineering lead</em></td>
   </tr>
   <tr>
-    <td align="center" width="25%"><img src=".docs/image/lumen.jpeg" alt="Lumen portrait" width="140"><br><strong>Lumen</strong><br><em>UX / Design Lead</em></td>
-    <td align="center" width="25%"><img src=".docs/image/blitz.jpeg" alt="Blitz portrait" width="140"><br><strong>Blitz</strong><br><em>Growth + GTM</em></td>
-    <td align="center" width="25%"><img src=".docs/image/ledger.jpeg" alt="Ledger portrait" width="140"><br><strong>Ledger</strong><br><em>Finance + Ops</em></td>
-    <td align="center" width="25%"><img src=".docs/image/sentinel.jpeg" alt="Sentinel portrait" width="140"><br><strong>Sentinel</strong><br><em>Legal / Risk / Compliance</em></td>
+    <td align="center" width="25%"><img src=".docs/image/lumen.jpeg" alt="Lumen portrait" width="140"><br><strong>Lumen</strong><br><em>UX and design</em></td>
+    <td align="center" width="25%"><img src=".docs/image/blitz.jpeg" alt="Blitz portrait" width="140"><br><strong>Blitz</strong><br><em>Growth and GTM</em></td>
+    <td align="center" width="25%"><img src=".docs/image/ledger.jpeg" alt="Ledger portrait" width="140"><br><strong>Ledger</strong><br><em>Finance and ops</em></td>
+    <td align="center" width="25%"><img src=".docs/image/sentinel.jpeg" alt="Sentinel portrait" width="140"><br><strong>Sentinel</strong><br><em>Risk and compliance</em></td>
   </tr>
 </table>
 
-| Agent | Role | Primary responsibility |
-|---|---|---|
-| **Atlas** | Orchestrator / Chief of Staff | Routes work, decomposes objectives, tracks decisions, synthesizes output |
-| **Vega** | Product Strategist | Product strategy, ICP, MVP scope, PRDs, roadmap, prioritization |
-| **Scout** | Market + Customer Research | Market research, competitors, customer discovery, pricing intelligence |
-| **Forge** | Engineering Lead | Architecture, implementation, prototypes, APIs, technical tradeoffs |
-| **Lumen** | UX / Design Lead | UX flows, interface structure, onboarding, design critique, UI copy |
-| **Blitz** | Growth + GTM | Launch plans, acquisition experiments, messaging, funnels, distribution |
-| **Ledger** | Finance + Ops | Budgets, runway, pricing models, unit economics, operating cadence |
-| **Sentinel** | Legal / Risk / Compliance | Legal, risk, compliance, security issue spotting and mitigations |
+| Agent | Callsign | Mission | Persona |
+|---|---|---|---|
+| **Atlas** | Mission commander | Decomposes objectives, routes work, tracks decisions, synthesizes the final answer | Calm under pressure. Decisive without ego. The one who makes the call when the room gets loud. |
+| **Vega** | Product strategist | Sharpens ICP, MVP scope, PRDs, roadmap, positioning, and prioritization | Elegant, intense, allergic to vague product thinking. Cuts scope like a blade, but only to protect the product. |
+| **Scout** | Market recon | Maps competitors, customers, categories, pricing, and weak signals | Curious, skeptical, and quietly relentless. Trusts evidence over vibes and is comfortable saying "unknown." |
+| **Forge** | Engineering lead | Designs systems, builds prototypes, makes technical tradeoffs, ships working code | Serious, blunt, and straight to the point. Does not crack jokes. Warm heart deep inside, mostly expressed as reliable systems. |
+| **Lumen** | UX and design | Shapes flows, screens, onboarding, interface structure, critique, and copy | Warm, perceptive, and exacting. Gentle with people, ruthless with confusing interfaces. |
+| **Blitz** | Growth and GTM | Builds launch plans, acquisition loops, messaging, funnels, and distribution plays | Fast, bold, and tactical. Brings momentum without tolerating spam, vanity metrics, or growth theater. |
+| **Ledger** | Finance and ops | Models runway, pricing, unit economics, operating cadence, and resource allocation | Precise, conservative, and unflappable. Makes ambition measurable and survivable. |
+| **Sentinel** | Risk and compliance | Spots legal, security, privacy, compliance, and operational risk before it becomes expensive | Watchful, exact, and hard to fool. Thinks like an adversary so the team does not get surprised by one. |
 
 ---
 
-## How it works
+## Operating doctrine
+
+Team Nexus gives each agent a clean lane and a hard boundary.
+
+- Every specialist has a private Hermes home under `agents/<agent>/home`.
+- Every specialist has a private workspace under `agents/<agent>/workspace`.
+- Shared project files, skills, and MCP material are mounted read-only.
+- Secrets stay out of the image and out of git.
+- Atlas is the default point of coordination, so specialist output gets synthesized instead of scattered.
+
+The result is simple: autonomous agents with their own identity, their own tools, and a common operating picture.
+
+---
+
+## Runtime map
 
 Each agent is a separate Docker Compose service running Hermes Agent. The container layout follows the Hermes Docker convention:
 
@@ -53,11 +71,17 @@ shared/skills            ->    /shared/skills:ro
 shared/mcp               ->    /shared/mcp:ro
 ```
 
-- `/opt/data` is the agent's durable Hermes home: `config.yaml`, `.env`, auth state, sessions, skills, memory, and logs.
-- `/workspace` is the agent's private working directory for notes, deliverables, prototypes, and generated artifacts.
-- `/shared/project`, `/shared/skills`, and `/shared/mcp` are read-only team context mounted into every agent.
+Inside the container:
 
-Every agent config sets terminal work to `/workspace` by default:
+| Path | Purpose |
+|---|---|
+| `/opt/data` | Durable Hermes home: `config.yaml`, `.env`, auth state, sessions, skills, memory, logs |
+| `/workspace` | Agent-owned working area for notes, prototypes, deliverables, and artifacts |
+| `/shared/project` | Read-only mission brief and project context |
+| `/shared/skills` | Read-only team skill library |
+| `/shared/mcp` | Read-only MCP registry, templates, scripts, and docs |
+
+Every agent runs terminal tools from `/workspace` by default:
 
 ```yaml
 terminal:
@@ -132,15 +156,15 @@ team-nexus/
 
 ---
 
-## Custom Docker image
+## The field kit
 
-The Compose stack builds a local image:
+The Compose stack builds one local image for the team:
 
 ```text
 team-nexus-agent:latest
 ```
 
-from `docker/Dockerfile`. It extends `nousresearch/hermes-agent:latest` and adds common runtime support for agent workspaces and MCP servers:
+It is built from `docker/Dockerfile`, extends `nousresearch/hermes-agent:latest`, and adds the tools agents need to work like operators instead of chat windows:
 
 - `mise`
 - `node@lts`, `npm`, `npx`
@@ -157,31 +181,31 @@ node = "lts"
 uv = "latest"
 ```
 
-Each agent also has an editable workspace-level mise file:
+Each agent can carry extra gear in its own workspace-level mise file:
 
 ```text
 agents/<agent>/workspace/.mise.toml
 ```
 
-Use that file to add agent-specific tools like Python, Go, Rust, Bun, or pnpm.
+Use it for specialist tools: Python for research and finance, Go or Rust for systems work, Bun or pnpm for frontend work, or anything else the mission calls for.
 
 ---
 
-## Quick start
+## Deployment sequence
 
-From this directory:
+Start from the repo root:
 
 ```bash
 cd /Users/sage/team-nexus
 ```
 
-Build the image:
+Build the team image:
 
 ```bash
 docker compose build
 ```
 
-Set up Atlas first:
+Bring Atlas online first:
 
 ```bash
 docker compose run --rm atlas setup
@@ -195,7 +219,7 @@ Or use the helper script:
 ./scripts/setup-agent.sh atlas
 ```
 
-Repeat for specialists you want live:
+Then activate whichever specialists you want in the field:
 
 ```bash
 ./scripts/setup-agent.sh vega
@@ -207,19 +231,19 @@ Repeat for specialists you want live:
 ./scripts/setup-agent.sh sentinel
 ```
 
-Start all gateways:
+Launch all gateways:
 
 ```bash
 docker compose up -d
 ```
 
-Follow logs:
+Watch Atlas:
 
 ```bash
 docker compose logs -f atlas
 ```
 
-Check all agents:
+Run a full team health check:
 
 ```bash
 ./scripts/doctor-all.sh
@@ -227,9 +251,9 @@ Check all agents:
 
 ---
 
-## Gateway API ports
+## Gateway ports
 
-All ports are bound to localhost for safety:
+Ports are bound to localhost. Keep them that way unless you deliberately want external access.
 
 | Agent | URL |
 |---|---|
@@ -242,19 +266,24 @@ All ports are bound to localhost for safety:
 | Ledger | <http://127.0.0.1:8648> |
 | Sentinel | <http://127.0.0.1:8649> |
 
-If you only use Discord, Telegram, Slack, or another messaging gateway, exposing API ports is optional. Keep them localhost-bound unless you intentionally need external access.
+If the team operates through Discord, Telegram, Slack, or another gateway, direct API access is optional.
 
 ---
 
-## Agent-to-agent messaging model
+## Agent-to-agent comms
 
-Team Nexus is set up so every agent can run as a gateway with its own identity. There are three practical coordination patterns:
+Team Nexus supports three coordination paths.
 
-1. **Human-mediated chat** — Sage talks to Atlas in Discord or another gateway. Atlas summarizes, delegates, and asks specialists through their configured gateway channels.
-2. **Gateway API calls** — Atlas or a helper MCP/server can send tasks to specialist gateway API endpoints on localhost, then collect the responses.
-3. **Workspace handoff** — Agents write briefs to `workspace/inbox/` and finished deliverables to `workspace/outbox/`, with Atlas responsible for synthesis.
+1. **Command channel**
+   Sage talks to Atlas in Discord or another gateway. Atlas turns the objective into assignments, routes work to specialists, and returns the synthesis.
 
-Recommended operating rule: specialists write durable deliverables to `outbox/`, not only chat responses.
+2. **Gateway API**
+   Atlas or a helper service can call specialist gateway endpoints on localhost and collect responses programmatically.
+
+3. **Workspace handoff**
+   Agents can pass briefs and artifacts through the workspace convention: `inbox/` for incoming tasks, `outbox/` for finished deliverables.
+
+Operational rule: if a specialist produces something worth keeping, it goes in `outbox/`. Chat is the radio. The workspace is the record.
 
 ---
 
@@ -284,12 +313,12 @@ GITHUB_TOKEN=
 GATEWAY_API_KEY=
 ```
 
-Rules:
+Rules of engagement:
 
-- Do **not** commit real `.env` files.
-- Prefer one gateway/bot token per agent.
-- Prefer one provider key or credential pool per agent if you want independent accounting/revocation.
-- OAuth and credential-pool state should remain in the mounted `home/`, not baked into the image.
+- Do not commit real `.env` files.
+- Prefer one gateway or bot token per agent.
+- Prefer separate provider keys or credential pools when you want clean accounting and revocation.
+- Keep OAuth and credential-pool state in the mounted home, not in the image.
 
 For OAuth/provider login flows:
 
@@ -308,60 +337,60 @@ docker compose run --rm atlas auth list
 
 ## Personas
 
-Each agent has an editable persona file:
+Each agent has a persona file:
 
 ```text
 agents/<agent>/home/persona.md
 ```
 
-Each `config.yaml` includes metadata pointing at:
+Each `config.yaml` includes metadata pointing at it:
 
 ```yaml
 startup_agent:
   persona_file: /opt/data/persona.md
 ```
 
-If the Hermes runtime does not automatically consume that file, wire it in by copying it into the runtime persona path, converting it into a preload skill, or using a small gateway/router wrapper that injects it at session start.
+If the Hermes runtime does not automatically consume that file, wire it in by copying it into the runtime persona path, converting it into a preload skill, or adding a gateway/router wrapper that injects it at session start.
 
 ---
 
-## Shared context
+## Shared intelligence
 
-Use `shared/project/` for company-wide or project-wide files all agents can read:
+Use `shared/project/` for the material every agent should know before acting:
 
 - company brief
 - product strategy
 - customer notes
 - architecture docs
 - brand voice
-- decision logs exported by Atlas
+- Atlas decision logs
 
-Because it is read-only inside containers, agents cannot accidentally corrupt shared source-of-truth files.
+The mount is read-only inside containers. Agents can read the brief. They cannot accidentally rewrite the canon.
 
 ---
 
 ## Skills
 
-Per-agent editable Hermes skills live in:
+Per-agent Hermes skills live here:
 
 ```text
 agents/<agent>/home/skills/
 ```
 
-Shared read-only skill source lives in:
+Shared team skills live here:
 
 ```text
 shared/skills/
 ```
 
-The model is intentionally simple:
+The rule is deliberately boring:
 
 ```text
 shared skill  -> shared/skills/<category>/<skill>
 agent skill   -> agents/<agent>/home/skills/<skill>
 ```
 
-No sync target is required: if a skill is shared, place it under `shared/skills`; if it belongs only to one agent, place it in that agent's skill folder.
+If everyone needs it, put it in `shared/skills`. If only Forge, Lumen, Scout, or another specialist needs it, keep it with that agent.
 
 Inspect skills inside an agent container:
 
@@ -374,7 +403,7 @@ Tool or skill changes may require a new Hermes session or gateway restart.
 
 ---
 
-## MCP
+## MCP arsenal
 
 Hermes native MCP servers are configured per agent under that agent's mounted home/config. Shared server definitions and reusable docs live under:
 
@@ -386,7 +415,7 @@ shared/mcp/
   docs/        # server-specific setup notes
 ```
 
-Use Makefile targets from the repo root to avoid typing long `docker compose run` commands.
+Use Makefile targets from the repo root instead of hand-typing long `docker compose run` commands.
 
 List templates:
 
@@ -430,11 +459,11 @@ make mcp-test AGENT=atlas SERVER=time
 make mcp-remove AGENT=atlas SERVER=time
 ```
 
-Do **not** commit secrets into `shared/mcp/registry/*.mk`. Keep tokens in `agents/<agent>/home/.env`, OAuth state, or another local secret store.
+Do not commit secrets into `shared/mcp/registry/*.mk`. Keep tokens in `agents/<agent>/home/.env`, OAuth state, or another local secret store.
 
 ---
 
-## Common commands
+## Command deck
 
 ```bash
 make help                         # show Makefile targets
@@ -466,7 +495,7 @@ docker compose run --rm --entrypoint uv atlas --version
 
 ---
 
-## Security notes
+## Security posture
 
 - Keep gateway API ports bound to `127.0.0.1` unless external access is intentional.
 - Do not bake secrets into the Docker image.
@@ -483,7 +512,7 @@ docker compose run --rm --entrypoint uv atlas --version
 
 ### Build fails while installing mise tools
 
-Try rebuilding without cache:
+Rebuild without cache:
 
 ```bash
 docker compose build --no-cache
@@ -493,7 +522,7 @@ If a specific mise tool fails, remove it from `docker/mise/config.toml` and inst
 
 ### MCP command not found
 
-Check inside the container:
+Check the container:
 
 ```bash
 docker compose run --rm --entrypoint bash forge
@@ -511,7 +540,7 @@ Then update either global `docker/mise/config.toml` or that agent's `.mise.toml`
 Check:
 
 - the agent's `DISCORD_BOT_TOKEN` in `agents/<agent>/home/.env`
-- Discord **Message Content Intent** is enabled
+- Discord Message Content Intent is enabled
 - the bot has channel permissions
 - gateway logs:
 
@@ -527,4 +556,4 @@ Restart the relevant gateway:
 docker compose restart <agent>
 ```
 
-or start a fresh Hermes session if the change affects tools, skills, or persona context.
+Start a fresh Hermes session if the change affects tools, skills, or persona context.
