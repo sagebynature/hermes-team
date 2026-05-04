@@ -12,7 +12,8 @@ ifneq ($(strip $(SERVER)),)
 endif
 
 .PHONY: help build up down restart ps logs shell doctor doctor-all compose-config \
-	kanban-init kanban-list kanban-stats kanban-watch kanban-create \
+	kanban-init kanban-list kanban-stats kanban-watch kanban-create kanban-dispatch \
+	kanban-dispatcher-once kanban-dispatcher-daemon discord-status-dry-run \
 	mcp-list mcp-list-all mcp-test mcp-remove mcp-add-command mcp-add-url \
 	mcp-register-template mcp-register-template-all mcp-templates mcp-show-template \
 	guard-agent guard-server guard-command guard-url
@@ -76,6 +77,20 @@ kanban-create: ## Create a shared Kanban task: make kanban-create TITLE='...' AS
 	@if [ -z "$(TITLE)" ]; then echo "TITLE is required" >&2; exit 2; fi
 	@if [ -z "$(ASSIGNEE)" ]; then echo "ASSIGNEE is required, e.g. atlas" >&2; exit 2; fi
 	$(COMPOSE) run --rm atlas kanban create "$(TITLE)" --assignee "$(ASSIGNEE)"
+
+kanban-dispatch: guard-agent ## Run one Kanban task in the assigned agent container: make kanban-dispatch AGENT=forge TASK=K...
+	@if [ -z "$(TASK)" ]; then echo "TASK is required" >&2; exit 2; fi
+	./scripts/kanban-dispatch-compose.sh $(AGENT) $(TASK)
+
+kanban-dispatcher-once: ## Run one Compose-aware Kanban dispatcher pass; add DRY_RUN=1 to avoid spawning
+	@if [ "$(DRY_RUN)" = "1" ]; then 		python3 scripts/kanban-compose-dispatcher.py --dry-run --max-tasks $${MAX_TASKS:-1}; 	else 		python3 scripts/kanban-compose-dispatcher.py --max-tasks $${MAX_TASKS:-1}; 	fi
+
+kanban-dispatcher-daemon: ## Run the Compose-aware Kanban dispatcher loop; INTERVAL=60 MAX_TASKS=1
+	python3 scripts/kanban-compose-dispatcher.py --daemon --interval $${INTERVAL:-60} --max-tasks $${MAX_TASKS:-1}
+
+discord-status-dry-run: ## Dry-run a Discord status post: make discord-status-dry-run MESSAGE='...'
+	@if [ -z "$(MESSAGE)" ]; then echo "MESSAGE is required" >&2; exit 2; fi
+	printf '%s' "$(MESSAGE)" | python3 scripts/discord-post-status.py --dry-run
 
 mcp-list: guard-agent ## List MCP servers configured for one agent
 	$(COMPOSE) run --rm $(AGENT) mcp list

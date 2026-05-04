@@ -1,0 +1,49 @@
+agents:
+  atlas:
+    service: atlas
+    display_name: Atlas
+    role: Orchestrator / Chief of Staff
+    gateway_port: 8642
+    discord_visible: true
+  vega:
+    service: vega
+    display_name: Vega
+    role: Product Strategist
+    gateway_port: 8643
+    discord_visible: true
+  scout:
+    service: scout
+    display_name: Scout
+    role: Market + Customer Research
+    gateway_port: 8644
+    discord_visible: true
+  forge:
+    service: forge
+    display_name: Forge
+    role: Engineering Lead
+    gateway_port: 8645
+    discord_visible: true
+  lumen:
+    service: lumen
+    display_name: Lumen
+    role: UX / Design Lead
+    gateway_port: 8646
+    discord_visible: true
+  blitz:
+    service: blitz
+    display_name: Blitz
+    role: Growth + GTM
+    gateway_port: 8647
+    discord_visible: true
+  ledger:
+    service: ledger
+    display_name: Ledger
+    role: Finance + Ops
+    gateway_port: 8648
+    discord_visible: true
+  sentinel:
+    service: sentinel
+    display_name: Sentinel
+    role: Code Review / QA / Security Assessment
+    gateway_port: 8649
+    discord_visible: true

@@ -115,6 +115,11 @@ team-nexus/
     mise/
       config.toml                  # global tools baked into the image
 
+  docs/
+    discord-kanban-operations.md   # Discord + Kanban setup/startup/runbook
+    adr/                           # architecture decision records
+      README.md                    # ADR index
+
   scripts/
     setup-agent.sh                 # setup one agent
     doctor-all.sh                  # doctor every agent
@@ -302,30 +307,58 @@ If the team operates through Discord, Telegram, Slack, or another gateway, direc
 
 ## Agent-to-agent comms
 
-Team Nexus supports four coordination paths.
+Team Nexus uses Discord for human-visible collaboration and Kanban for durable coordination. Discord is the mission room; Kanban is the source of truth.
+
+Recommended Discord layout:
+
+1. **#nexus-command**
+   user talks to Atlas. Atlas reads the mission, proposes or creates the task graph, routes work to specialists, and returns the synthesis.
+
+2. **#nexus-status**
+   Atlas posts compact status updates: assignments, blockers, completions, review gates, decisions, and final summaries.
+
+3. **#nexus-handoffs**
+   Optional. Use this only if specialist handoff summaries become too noisy for the status channel.
+
+4. **#nexus-lab / #nexus-social**
+   Optional. Use for explicitly bounded roundtables or low-stakes brainstorming. This is opt-in; agents should not drift into open-ended peer-to-peer debate.
+
+Coordination paths:
 
 1. **Command channel**
-   Sage talks to Atlas in Discord or another gateway. Atlas turns the objective into assignments, routes work to specialists, and returns the synthesis.
+   user talks to Atlas in Discord or another gateway. Atlas turns the objective into assignments, routes work to specialists, and returns the synthesis.
 
 2. **Shared Kanban board**
-   All agents mount the same writable Kanban root at `/shared/kanban` via `HERMES_KANBAN_HOME`. Use it for durable cross-agent tasks, comments, dependencies, and handoffs:
+   All agents mount the same writable Kanban root at `/shared/kanban` via `HERMES_KANBAN_HOME`. Use it for durable cross-agent tasks, comments, dependencies, blockers, review gates, and handoffs:
 
    ```bash
    make kanban-init
    make kanban-list
    make kanban-stats
-   make kanban-create TITLE="research pricing options" ASSIGNEE=atlas
+   make kanban-create TITLE="research pricing options" ASSIGNEE=forge
+   make kanban-dispatch AGENT=forge TASK=<task-id>
+   make kanban-dispatcher-once DRY_RUN=1
+   make kanban-dispatcher-daemon
    ```
 
-   Atlas is the only gateway with `kanban.dispatch_in_gateway: true`; the other agents keep dispatch disabled so multiple gateway dispatchers do not race on the same SQLite board. Every agent still has the `kanban` toolset enabled for normal sessions, so agents can inspect, create, comment on, and route shared board tasks.
+   The embedded Hermes profile dispatcher is disabled for every gateway because Team Nexus uses one Compose service per agent rather than local Hermes profiles. Every agent still has the `kanban` toolset enabled for normal sessions, so agents can inspect, create, comment on, and route shared board tasks. Use the Compose-aware dispatcher helper for execution.
 
-3. **Gateway API**
-   Atlas or a helper service can call specialist gateway endpoints on localhost and collect responses programmatically.
+3. **Compose-aware dispatch**
+   Hermes' built-in dispatcher assumes assignees are local Hermes profiles. Team Nexus uses one Compose service per agent, so use `scripts/kanban-dispatch-compose.sh` / `make kanban-dispatch AGENT=<agent> TASK=<task-id>` for manual execution, or `scripts/kanban-compose-dispatcher.py` / `make kanban-dispatcher-daemon` to poll ready tasks and run them in the matching containers.
 
-4. **Workspace handoff**
-   Agents can pass briefs and artifacts through the workspace convention: `inbox/` for incoming tasks, `outbox/` for finished deliverables.
+4. **Gateway API / Discord webhooks**
+   Atlas or helper scripts can call gateway endpoints or Discord status webhooks for compact public updates. Keep broad Discord bot control centralized in Atlas unless there is a deliberate reason to expose more.
 
-Operational rule: if a specialist produces something worth keeping, it goes in `outbox/`. Chat is the radio. The workspace is the record.
+5. **Workspace handoff**
+   Agents pass durable briefs and artifacts through the workspace convention: `inbox/` for incoming tasks, `outbox/` for finished deliverables, and `artifacts/` for generated files.
+
+Operational rule: chat is the radio; Kanban and workspace files are the record. If a specialist produces something worth keeping, it goes in `outbox/` or `artifacts/`, with a compact `[handoff]` Kanban comment that Atlas can quote in Discord.
+
+See `shared/project/team-collaboration-protocol.md` for the full collaboration protocol.
+
+For the operational startup/runbook, see `docs/discord-kanban-operations.md`.
+
+For the durable architecture decision log, see `docs/adr/README.md`.
 
 ---
 
@@ -353,6 +386,8 @@ GOOGLE_API_KEY=
 DISCORD_BOT_TOKEN=
 DISCORD_ALLOWED_USERS=
 DISCORD_HOME_CHANNEL=
+DISCORD_STATUS_WEBHOOK_URL=
+DISCORD_HANDOFFS_WEBHOOK_URL=
 GITHUB_TOKEN=
 GATEWAY_API_KEY=
 ```
@@ -526,7 +561,11 @@ make compose-config               # validate docker-compose.yml
 make kanban-init                  # initialize shared Kanban DB
 make kanban-list                  # list shared Kanban tasks
 make kanban-stats                 # show shared Kanban counts
-make kanban-create TITLE='...' ASSIGNEE=atlas
+make kanban-create TITLE='...' ASSIGNEE=forge
+make kanban-dispatch AGENT=forge TASK=<task-id>      # manually run one task in a service
+make kanban-dispatcher-once DRY_RUN=1                # preview ready Compose-dispatchable tasks
+make kanban-dispatcher-daemon                        # poll ready tasks and route to services
+make discord-status-dry-run MESSAGE='hello'          # preview a Discord status webhook payload
 ```
 
 One-off Hermes commands:

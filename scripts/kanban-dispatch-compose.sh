@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  echo "Usage: $0 <assignee> <task_id>" >&2
+}
+
+if [ "$#" -ne 2 ]; then
+  usage
+  exit 2
+fi
+
+assignee="$1"
+task_id="$2"
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+registry="$repo_root/shared/team-agents.yaml"
+
+if [ ! -f "$registry" ]; then
+  echo "Missing agent registry: $registry" >&2
+  exit 2
+fi
+
+if ! grep -Eq "^  ${assignee}:$" "$registry"; then
+  echo "Unknown assignee '$assignee'. Expected one of:" >&2
+  grep -E '^  [a-z0-9_-]+:$' "$registry" | sed 's/^  //; s/:$//' >&2
+  exit 2
+fi
+
+printf '==> Team Nexus Kanban dispatch
+'
+printf 'assignee: %s
+' "$assignee"
+printf 'task:     %s
+' "$task_id"
+printf 'started:  %s
+' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+cd "$repo_root"
+set +e
+docker compose run --rm "$assignee" chat -q "work kanban task $task_id"
+status="$?"
+set -e
+
+printf 'finished: %s
+' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+printf 'exit_code: %s
+' "$status"
+exit "$status"

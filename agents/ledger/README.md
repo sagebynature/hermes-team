@@ -15,6 +15,6 @@ Inside container:
 ## Workspace convention
 
 - `workspace/inbox/` — task briefs received by this agent
-- `workspace/outbox/` — deliverables ready for Atlas/Sage
+- `workspace/outbox/` — deliverables ready for Atlas/user
 - `workspace/artifacts/` — generated files, prototypes, exports
 - `workspace/notes/` — working notes

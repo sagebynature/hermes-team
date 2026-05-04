@@ -328,7 +328,7 @@ cron:
   wrap_response: true
   max_parallel_jobs: null
 kanban:
-  dispatch_in_gateway: true
+  dispatch_in_gateway: false
   dispatch_interval_seconds: 60
 code_execution:
   mode: project
