@@ -1,4 +1,4 @@
-# Global mise configuration baked into the Hermes startup team image.
+# Global mise configuration baked into the hermes-team image.
 # Per-agent overrides can live in agents/<agent>/workspace/.mise.toml.
 
 [settings]

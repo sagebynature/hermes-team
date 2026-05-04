@@ -1,4 +1,6 @@
-# Hermes Startup Team Docker Workspace
+# hermes-team
+
+Dockerized virtual startup team powered by Hermes Agent.
 
 This repository defines a Dockerized virtual startup team made of independent Hermes Agent gateways. Each agent has its own durable Hermes home, private workspace, persona, secrets, sessions, skills, memories, and logs.
 
@@ -34,7 +36,7 @@ Default coordination model: **Sage → Atlas → specialists → Atlas → Sage*
 ## Directory structure
 
 ```text
-hermes-startup-team/
+hermes-team/
   docker-compose.yml
   README.md
   .gitignore
@@ -125,7 +127,7 @@ So tools run inside the agent's private mounted workspace by default.
 The Compose stack builds a local image:
 
 ```text
-hermes-startup-agent:latest
+hermes-team-agent:latest
 ```
 
 from:
@@ -200,7 +202,7 @@ docker compose run --rm forge mise install
 From this directory:
 
 ```bash
-cd /Users/sage/hermes-startup-team
+cd /Users/sage/hermes-team
 ```
 
 Build the custom image:
