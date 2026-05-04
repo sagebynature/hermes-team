@@ -18,8 +18,8 @@ Portraits live in `.docs/image/`. They are part of the identity system for docs,
 
 <table>
   <tr>
-    <td align="center" width="25%"><img src=".docs/image/atlas.jpeg" alt="Atlas portrait" width="140"><br><strong>Atlas</strong><br><em>Mission commander</em></td>
-    <td align="center" width="25%"><img src=".docs/image/vega.jpeg" alt="Vega portrait" width="140"><br><strong>Vega</strong><br><em>Product strategist</em></td>
+    <td align="center" width="25%"><img src=".docs/image/atlas.jpeg" alt="Atlas portrait" width="140"><br><strong>Atlas</strong><br><em>Orchestrator</em></td>
+    <td align="center" width="25%"><img src=".docs/image/vega.jpeg" alt="Vega portrait" width="140"><br><strong>Vega</strong><br><em>Product lead</em></td>
     <td align="center" width="25%"><img src=".docs/image/scout.jpeg" alt="Scout portrait" width="140"><br><strong>Scout</strong><br><em>Market recon</em></td>
     <td align="center" width="25%"><img src=".docs/image/forge.jpeg" alt="Forge portrait" width="140"><br><strong>Forge</strong><br><em>Engineering lead</em></td>
   </tr>
