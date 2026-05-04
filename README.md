@@ -7,7 +7,7 @@ Team Nexus turns Hermes Agent into a serious multi-agent command center. Each sp
 This is not a toy swarm. It is an A-Team in a repo.
 
 ```text
-Sage -> Atlas -> specialists -> Atlas -> Sage
+User -> Atlas -> specialists -> Atlas -> User
 ```
 
 ---
