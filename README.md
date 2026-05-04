@@ -252,11 +252,25 @@ On a fresh clone, the image entrypoint bootstraps each mounted agent home before
 
 ---
 
-## Gateway ports
+## Gateway and dashboard ports
 
-Ports are bound to localhost. Keep them that way unless you deliberately want external access.
+Gateway API ports and dashboard UI ports are both bound to localhost. Keep them that way unless you deliberately want external access.
 
-| Agent    | URL                     |
+Start the gateway containers:
+
+```bash
+docker compose up -d
+```
+
+Start the dashboard containers:
+
+```bash
+docker compose --profile dashboard up -d
+```
+
+Gateway/API endpoints:
+
+| Agent    | Gateway URL             |
 | -------- | ----------------------- |
 | Atlas    | <http://127.0.0.1:8642> |
 | Vega     | <http://127.0.0.1:8643> |
@@ -266,6 +280,21 @@ Ports are bound to localhost. Keep them that way unless you deliberately want ex
 | Blitz    | <http://127.0.0.1:8647> |
 | Ledger   | <http://127.0.0.1:8648> |
 | Sentinel | <http://127.0.0.1:8649> |
+
+Dashboard UI endpoints:
+
+| Agent    | Dashboard URL           |
+| -------- | ----------------------- |
+| Atlas    | <http://127.0.0.1:9119> |
+| Vega     | <http://127.0.0.1:9120> |
+| Scout    | <http://127.0.0.1:9121> |
+| Forge    | <http://127.0.0.1:9122> |
+| Lumen    | <http://127.0.0.1:9123> |
+| Blitz    | <http://127.0.0.1:9124> |
+| Ledger   | <http://127.0.0.1:9125> |
+| Sentinel | <http://127.0.0.1:9126> |
+
+Dashboard services run with `hermes dashboard --host 0.0.0.0 --port 9119 --insecure --no-open` inside the container. The `--insecure` flag is required because Docker needs the dashboard process to bind inside the container; Compose still publishes every dashboard only to `127.0.0.1` on the host.
 
 If the team operates through Discord, Telegram, Slack, or another gateway, direct API access is optional.
 
@@ -486,6 +515,8 @@ make build                        # build shared team-nexus-agent image once
 make up                           # start all gateways
 make down                         # stop all gateways
 make restart                      # restart all gateways
+docker compose --profile dashboard up -d    # start gateway + dashboard services
+docker compose stop atlas-dashboard         # stop one dashboard service
 make ps                           # show service status
 make logs AGENT=atlas             # follow one agent's logs
 make shell AGENT=forge            # open bash in one agent container
