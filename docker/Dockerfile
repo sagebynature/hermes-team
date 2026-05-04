@@ -18,9 +18,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       curl \
       git \
       gnupg \
+      ffmpeg \
       jq \
+      libopus0 \
       openssh-client \
       pkg-config \
+      portaudio19-dev \
       ripgrep \
       tar \
       unzip \
@@ -41,6 +44,11 @@ COPY mise/config.toml /etc/mise/config.toml
 RUN mise trust /etc/mise/config.toml \
     && mise install --yes \
     && mise reshim
+
+# Install voice extras into the upstream Hermes venv for CLI/gateway voice mode.
+RUN cd /opt/hermes \
+    && uv pip install --no-cache --python /opt/hermes/.venv/bin/python '.[voice]' \
+    && rm -rf /root/.cache/uv /tmp/uv-cache
 
 # Install Hermes' bundled RL backend when the upstream image contains the
 # tinker-atropos submodule. Doctor checks for this package in every agent.

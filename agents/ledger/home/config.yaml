@@ -98,3 +98,28 @@ startup_agent:
 # MCP servers can be added with:
 # docker compose run --rm ledger mcp add <name> --command "..."
 # Then inspect the generated config and template it here.
+
+# Voice mode: Groq STT + free Edge TTS. GROQ_API_KEY is supplied by repo .env via Docker Compose env_file.
+tts:
+  provider: edge
+  edge:
+    voice: en-US-AriaNeural
+
+stt:
+  enabled: true
+  provider: groq
+  local:
+    model: base
+    language: ''
+  openai:
+    model: whisper-1
+  mistral:
+    model: voxtral-mini-latest
+
+voice:
+  record_key: ctrl+b
+  max_recording_seconds: 120
+  auto_tts: false
+  beep_enabled: true
+  silence_threshold: 200
+  silence_duration: 3.0

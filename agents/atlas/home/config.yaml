@@ -227,7 +227,7 @@ tts:
     voice: en_US-lessac-medium
 stt:
   enabled: true
-  provider: local
+  provider: groq
   local:
     model: base
     language: ''
