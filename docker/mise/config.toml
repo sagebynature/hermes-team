@@ -1,0 +1,14 @@
+# Global mise configuration baked into the Hermes startup team image.
+# Per-agent overrides can live in agents/<agent>/workspace/.mise.toml.
+
+[settings]
+yes = true
+experimental = true
+idiomatic_version_file_enable_tools = ["node", "python"]
+
+[tools]
+# Node is needed for many MCP servers invoked through `npx`.
+node = "lts"
+
+# Keep uv available for Python-based MCP servers/tools invoked through `uvx`.
+uv = "latest"

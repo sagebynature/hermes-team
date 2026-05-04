@@ -1,0 +1,15 @@
+# secrets
+.env
+.env.*
+!*.env.example
+agents/*/home/.env
+agents/*/home/auth.json
+
+# runtime state
+agents/*/home/sessions/
+agents/*/home/logs/
+agents/*/home/memory/
+agents/*/workspace/artifacts/
+
+# OS/editor
+.DS_Store

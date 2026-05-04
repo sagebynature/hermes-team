@@ -1,0 +1,55 @@
+# Hermes config for Atlas — Orchestrator / Chief of Staff
+# Mounted into the Docker container at /opt/data/config.yaml.
+
+model:
+  provider: openrouter
+  default: anthropic/claude-sonnet-4
+  context_length: 200000
+
+agent:
+  max_turns: 90
+  tool_use_enforcement: true
+
+terminal:
+  backend: local
+  cwd: /workspace
+  timeout: 180
+
+memory:
+  memory_enabled: true
+  user_profile_enabled: true
+  provider: builtin
+
+compression:
+  enabled: true
+  threshold: 0.5
+  target_ratio: 0.2
+
+display:
+  tool_progress: true
+  show_cost: true
+
+approvals:
+  mode: smart
+
+security:
+  redact_secrets: true
+
+privacy:
+  redact_pii: false
+
+# Role metadata for your own scripts/router.
+startup_agent:
+  name: Atlas
+  slug: atlas
+  role: Orchestrator / Chief of Staff
+  description: Routes work, decomposes startup objectives, tracks decisions, and synthesizes specialist output.
+  persona_file: /opt/data/persona.md
+  workspace: /workspace
+  inbox: /workspace/inbox
+  outbox: /workspace/outbox
+  artifacts: /workspace/artifacts
+
+# MCP servers can be added with:
+# docker compose run --rm atlas mcp add <name> --command "..."
+# Then inspect the generated config and template it here.

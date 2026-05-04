@@ -1,0 +1,13 @@
+# Per-agent mise config. Edit this to add tools needed by this agent's workspace.
+# The custom Docker image already provides global node@lts and uv@latest.
+
+[tools]
+# Examples:
+# python = "3.12"
+# node = "lts"
+# go = "latest"
+# rust = "latest"
+# bun = "latest"
+
+[env]
+HERMES_AGENT_WORKSPACE = "/workspace"
