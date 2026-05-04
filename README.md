@@ -12,9 +12,7 @@ User -> Atlas -> specialists -> Atlas -> User
 
 ---
 
-## The squad
-
-Portraits live in `.docs/image/`. They are part of the identity system for docs, dashboards, and launch material.
+## The Squad
 
 <table>
   <tr>
