@@ -1,4 +1,4 @@
-# Hermes config for Sentinel — Legal / Risk / Compliance
+# Hermes config for Sentinel — Code Review / QA / Security Assessment
 # Mounted into the Docker container at /opt/data/config.yaml.
 
 model:
@@ -42,8 +42,8 @@ privacy:
 startup_agent:
   name: Sentinel
   slug: sentinel
-  role: Legal / Risk / Compliance
-  description: Owns legal/risk/compliance/security issue spotting and mitigation planning.
+  role: Code Review / QA / Security Assessment
+  description: Owns code review, QA testing strategy, release readiness, and security assessment.
   persona_file: /opt/data/persona.md
   workspace: /workspace
   inbox: /workspace/inbox

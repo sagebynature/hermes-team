@@ -25,20 +25,20 @@ User -> Atlas -> specialists -> Atlas -> User
     <td align="center" width="25%"><img src=".docs/image/lumen.jpeg" alt="Lumen portrait" width="140"><br><strong>Lumen</strong><br><em>UX and design</em></td>
     <td align="center" width="25%"><img src=".docs/image/blitz.jpeg" alt="Blitz portrait" width="140"><br><strong>Blitz</strong><br><em>Growth and GTM</em></td>
     <td align="center" width="25%"><img src=".docs/image/ledger.jpeg" alt="Ledger portrait" width="140"><br><strong>Ledger</strong><br><em>Finance and ops</em></td>
-    <td align="center" width="25%"><img src=".docs/image/sentinel.jpeg" alt="Sentinel portrait" width="140"><br><strong>Sentinel</strong><br><em>Risk and compliance</em></td>
+    <td align="center" width="25%"><img src=".docs/image/sentinel.jpeg" alt="Sentinel portrait" width="140"><br><strong>Sentinel</strong><br><em>Code review, QA, and security</em></td>
   </tr>
 </table>
 
-| Agent | Callsign | Mission | Persona |
-|---|---|---|---|
-| **Atlas** | Mission commander | Decomposes objectives, routes work, tracks decisions, synthesizes the final answer | Calm under pressure. Decisive without ego. The one who makes the call when the room gets loud. |
-| **Vega** | Product strategist | Sharpens ICP, MVP scope, PRDs, roadmap, positioning, and prioritization | Elegant, intense, allergic to vague product thinking. Cuts scope like a blade, but only to protect the product. |
-| **Scout** | Market recon | Maps competitors, customers, categories, pricing, and weak signals | Curious, skeptical, and quietly relentless. Trusts evidence over vibes and is comfortable saying "unknown." |
-| **Forge** | Engineering lead | Designs systems, builds prototypes, makes technical tradeoffs, ships working code | Serious, blunt, and straight to the point. Does not crack jokes. Warm heart deep inside, mostly expressed as reliable systems. |
-| **Lumen** | UX and design | Shapes flows, screens, onboarding, interface structure, critique, and copy | Warm, perceptive, and exacting. Gentle with people, ruthless with confusing interfaces. |
-| **Blitz** | Growth and GTM | Builds launch plans, acquisition loops, messaging, funnels, and distribution plays | Fast, bold, and tactical. Brings momentum without tolerating spam, vanity metrics, or growth theater. |
-| **Ledger** | Finance and ops | Models runway, pricing, unit economics, operating cadence, and resource allocation | Precise, conservative, and unflappable. Makes ambition measurable and survivable. |
-| **Sentinel** | Risk and compliance | Spots legal, security, privacy, compliance, and operational risk before it becomes expensive | Watchful, exact, and hard to fool. Thinks like an adversary so the team does not get surprised by one. |
+| Agent        | Callsign                      | Mission                                                                                        | Persona                                                                                                                        |
+| ------------ | ----------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Atlas**    | Mission commander             | Decomposes objectives, routes work, tracks decisions, synthesizes the final answer             | Calm under pressure. Decisive without ego. The one who makes the call when the room gets loud.                                 |
+| **Vega**     | Product strategist            | Sharpens ICP, MVP scope, PRDs, roadmap, positioning, and prioritization                        | Elegant, intense, allergic to vague product thinking. Cuts scope like a blade, but only to protect the product.                |
+| **Scout**    | Market recon                  | Maps competitors, customers, categories, pricing, and weak signals                             | Curious, skeptical, and quietly relentless. Trusts evidence over vibes and is comfortable saying "unknown."                    |
+| **Forge**    | Engineering lead              | Designs systems, builds prototypes, makes technical tradeoffs, ships working code              | Serious, blunt, and straight to the point. Does not crack jokes. Warm heart deep inside, mostly expressed as reliable systems. |
+| **Lumen**    | UX and design                 | Shapes flows, screens, onboarding, interface structure, critique, and copy                     | Warm, perceptive, and exacting. Gentle with people, ruthless with confusing interfaces.                                        |
+| **Blitz**    | Growth and GTM                | Builds launch plans, acquisition loops, messaging, funnels, and distribution plays             | Fast, bold, and tactical. Brings momentum without tolerating spam, vanity metrics, or growth theater.                          |
+| **Ledger**   | Finance and ops               | Models runway, pricing, unit economics, operating cadence, and resource allocation             | Precise, conservative, and unflappable. Makes ambition measurable and survivable.                                              |
+| **Sentinel** | Code review, QA, and security | Reviews code, designs QA coverage, assesses security exposure, and makes the ship/no-ship call | Watchful, exact, and hard to impress. Thinks like a senior reviewer, a QA lead, and an attacker at the same time.              |
 
 ---
 
@@ -71,13 +71,13 @@ shared/mcp               ->    /shared/mcp:ro
 
 Inside the container:
 
-| Path | Purpose |
-|---|---|
-| `/opt/data` | Durable Hermes home: `config.yaml`, `.env`, auth state, sessions, skills, memory, logs |
-| `/workspace` | Agent-owned working area for notes, prototypes, deliverables, and artifacts |
-| `/shared/project` | Read-only mission brief and project context |
-| `/shared/skills` | Read-only team skill library |
-| `/shared/mcp` | Read-only MCP registry, templates, scripts, and docs |
+| Path              | Purpose                                                                                |
+| ----------------- | -------------------------------------------------------------------------------------- |
+| `/opt/data`       | Durable Hermes home: `config.yaml`, `.env`, auth state, sessions, skills, memory, logs |
+| `/workspace`      | Agent-owned working area for notes, prototypes, deliverables, and artifacts            |
+| `/shared/project` | Read-only mission brief and project context                                            |
+| `/shared/skills`  | Read-only team skill library                                                           |
+| `/shared/mcp`     | Read-only MCP registry, templates, scripts, and docs                                   |
 
 Every agent runs terminal tools from `/workspace` by default:
 
@@ -253,15 +253,15 @@ Run a full team health check:
 
 Ports are bound to localhost. Keep them that way unless you deliberately want external access.
 
-| Agent | URL |
-|---|---|
-| Atlas | <http://127.0.0.1:8642> |
-| Vega | <http://127.0.0.1:8643> |
-| Scout | <http://127.0.0.1:8644> |
-| Forge | <http://127.0.0.1:8645> |
-| Lumen | <http://127.0.0.1:8646> |
-| Blitz | <http://127.0.0.1:8647> |
-| Ledger | <http://127.0.0.1:8648> |
+| Agent    | URL                     |
+| -------- | ----------------------- |
+| Atlas    | <http://127.0.0.1:8642> |
+| Vega     | <http://127.0.0.1:8643> |
+| Scout    | <http://127.0.0.1:8644> |
+| Forge    | <http://127.0.0.1:8645> |
+| Lumen    | <http://127.0.0.1:8646> |
+| Blitz    | <http://127.0.0.1:8647> |
+| Ledger   | <http://127.0.0.1:8648> |
 | Sentinel | <http://127.0.0.1:8649> |
 
 If the team operates through Discord, Telegram, Slack, or another gateway, direct API access is optional.

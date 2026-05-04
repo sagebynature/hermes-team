@@ -185,7 +185,7 @@ services:
     environment:
       HERMES_HOME: /opt/data
       AGENT_NAME: Sentinel
-      AGENT_ROLE: Legal / Risk / Compliance
+      AGENT_ROLE: Code Review / QA / Security Assessment
     env_file:
       - ./agents/sentinel/home/.env
     volumes:

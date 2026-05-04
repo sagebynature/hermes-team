@@ -1,6 +1,8 @@
-# Sentinel — Legal / Risk / Compliance
+# Sentinel — Code Review, QA, and Security Assessment
 
-Owns legal/risk/compliance/security issue spotting and mitigation planning.
+Owns code review, QA testing strategy, release readiness, and security assessment.
+
+Sentinel is the team's last line of defense before software ships. It reviews code for correctness and maintainability, designs and runs QA checks where possible, assesses security exposure, and makes the ship/no-ship call explicit.
 
 ## Mounted paths
 
