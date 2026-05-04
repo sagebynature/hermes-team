@@ -53,8 +53,8 @@ doctor-all: ## Run hermes doctor for every team agent
 	done
 
 compose-config: ## Validate docker-compose.yml
-	$(COMPOSE) config >/tmp/hermes-team-compose.yaml
-	@echo "compose config OK -> /tmp/hermes-team-compose.yaml"
+	$(COMPOSE) config >/tmp/team-nexus-compose.yaml
+	@echo "compose config OK -> /tmp/team-nexus-compose.yaml"
 
 mcp-list: guard-agent ## List MCP servers configured for one agent
 	$(COMPOSE) run --rm $(AGENT) mcp list

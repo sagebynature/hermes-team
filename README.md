@@ -1,22 +1,31 @@
-# hermes-team
+# Team Nexus
 
-Dockerized virtual startup team powered by Hermes Agent.
+Dockerized virtual startup team powered by [Hermes Agent](https://hermes-agent.nousresearch.com/).
 
-This repository defines a Dockerized virtual startup team made of independent Hermes Agent gateways. Each agent has its own durable Hermes home, private workspace, persona, secrets, sessions, skills, memories, and logs.
+Team Nexus is a repo-local operating system for a multi-agent startup team. It runs one independent Hermes Agent gateway per specialist, with isolated homes, workspaces, memories, credentials, skills, sessions, and logs — plus shared read-only context for team-wide knowledge.
 
-The layout follows the Hermes Docker convention:
-
-```text
-host directory -> container path
-agents/<agent>/home      -> /opt/data
-agents/<agent>/workspace -> /workspace
-```
-
-Hermes stores config, API keys, sessions, skills, memories, and logs under `/opt/data`. Agent-generated work lives under `/workspace`.
+> Default coordination model: **Sage → Atlas → specialists → Atlas → Sage**.
 
 ---
 
-## Team roster
+## The team
+
+Portraits are stored in `.docs/image/` and can be used in docs, launch pages, or team dashboards.
+
+<table>
+  <tr>
+    <td align="center" width="25%"><img src=".docs/image/atlas.jpeg" alt="Atlas portrait" width="140"><br><strong>Atlas</strong><br><em>Orchestrator / Chief of Staff</em></td>
+    <td align="center" width="25%"><img src=".docs/image/vega.jpeg" alt="Vega portrait" width="140"><br><strong>Vega</strong><br><em>Product Strategist</em></td>
+    <td align="center" width="25%"><img src=".docs/image/scout.jpeg" alt="Scout portrait" width="140"><br><strong>Scout</strong><br><em>Market + Customer Research</em></td>
+    <td align="center" width="25%"><img src=".docs/image/forge.jpeg" alt="Forge portrait" width="140"><br><strong>Forge</strong><br><em>Engineering Lead</em></td>
+  </tr>
+  <tr>
+    <td align="center" width="25%"><img src=".docs/image/lumen.jpeg" alt="Lumen portrait" width="140"><br><strong>Lumen</strong><br><em>UX / Design Lead</em></td>
+    <td align="center" width="25%"><img src=".docs/image/blitz.jpeg" alt="Blitz portrait" width="140"><br><strong>Blitz</strong><br><em>Growth + GTM</em></td>
+    <td align="center" width="25%"><img src=".docs/image/ledger.jpeg" alt="Ledger portrait" width="140"><br><strong>Ledger</strong><br><em>Finance + Ops</em></td>
+    <td align="center" width="25%"><img src=".docs/image/sentinel.jpeg" alt="Sentinel portrait" width="140"><br><strong>Sentinel</strong><br><em>Legal / Risk / Compliance</em></td>
+  </tr>
+</table>
 
 | Agent | Role | Primary responsibility |
 |---|---|---|
@@ -27,41 +36,77 @@ Hermes stores config, API keys, sessions, skills, memories, and logs under `/opt
 | **Lumen** | UX / Design Lead | UX flows, interface structure, onboarding, design critique, UI copy |
 | **Blitz** | Growth + GTM | Launch plans, acquisition experiments, messaging, funnels, distribution |
 | **Ledger** | Finance + Ops | Budgets, runway, pricing models, unit economics, operating cadence |
-| **Sentinel** | Legal / Risk / Compliance | Legal/risk/compliance/security issue spotting and mitigations |
-
-Default coordination model: **Sage → Atlas → specialists → Atlas → Sage**.
+| **Sentinel** | Legal / Risk / Compliance | Legal, risk, compliance, security issue spotting and mitigations |
 
 ---
 
-## Directory structure
+## How it works
+
+Each agent is a separate Docker Compose service running Hermes Agent. The container layout follows the Hermes Docker convention:
 
 ```text
-hermes-team/
+host directory                 container path
+agents/<agent>/home      ->    /opt/data
+agents/<agent>/workspace ->    /workspace
+shared/project           ->    /shared/project:ro
+shared/skills            ->    /shared/skills:ro
+shared/mcp               ->    /shared/mcp:ro
+```
+
+- `/opt/data` is the agent's durable Hermes home: `config.yaml`, `.env`, auth state, sessions, skills, memory, and logs.
+- `/workspace` is the agent's private working directory for notes, deliverables, prototypes, and generated artifacts.
+- `/shared/project`, `/shared/skills`, and `/shared/mcp` are read-only team context mounted into every agent.
+
+Every agent config sets terminal work to `/workspace` by default:
+
+```yaml
+terminal:
+  backend: local
+  cwd: /workspace
+```
+
+---
+
+## Repository layout
+
+```text
+team-nexus/
   docker-compose.yml
+  Makefile
   README.md
   .gitignore
+
+  .docs/
+    image/                         # team portraits
+      atlas.jpeg
+      vega.jpeg
+      scout.jpeg
+      forge.jpeg
+      lumen.jpeg
+      blitz.jpeg
+      ledger.jpeg
+      sentinel.jpeg
 
   docker/
     Dockerfile
     .dockerignore
     mise/
-      config.toml
+      config.toml                  # global tools baked into the image
 
   scripts/
-    setup-agent.sh
-    doctor-all.sh
+    setup-agent.sh                 # setup one agent
+    doctor-all.sh                  # doctor every agent
 
   shared/
-    project/       # shared project context, mounted readonly
-    skills/        # shared skills, mounted readonly
-    mcp/           # shared MCP scripts/configs, mounted readonly
+    project/                       # shared project context, mounted read-only
+    skills/                        # shared team-wide skills, mounted read-only
+    mcp/                           # shared MCP registry/templates/docs
 
   agents/
     atlas/
       README.md
-      home/        # mounted as /opt/data
+      home/                        # mounted as /opt/data
         config.yaml
-        .env
         .env.example
         persona.md
         skills/
@@ -69,7 +114,7 @@ hermes-team/
         logs/
         memory/
         mcp/
-      workspace/   # mounted as /workspace
+      workspace/                   # mounted as /workspace
         .mise.toml
         inbox/
         outbox/
@@ -87,82 +132,24 @@ hermes-team/
 
 ---
 
-## Mount model
-
-Every service mounts the same shape:
-
-```yaml
-volumes:
-  - ./agents/<agent>/home:/opt/data
-  - ./agents/<agent>/workspace:/workspace
-  - ./shared/project:/shared/project:ro
-  - ./shared/skills:/shared/skills:ro
-  - ./shared/mcp:/shared/mcp:ro
-```
-
-Inside the container:
-
-| Container path | Purpose |
-|---|---|
-| `/opt/data` | Hermes durable home: `config.yaml`, `.env`, `auth.json`, `skills/`, `sessions/`, `logs/`, `memory/` |
-| `/workspace` | Agent-owned working directory |
-| `/shared/project` | Shared project context, readonly |
-| `/shared/skills` | Shared skill source, readonly |
-| `/shared/mcp` | Shared MCP config/scripts, readonly |
-
-Each `config.yaml` sets:
-
-```yaml
-terminal:
-  backend: local
-  cwd: /workspace
-```
-
-So tools run inside the agent's private mounted workspace by default.
-
----
-
 ## Custom Docker image
 
 The Compose stack builds a local image:
 
 ```text
-hermes-team-agent:latest
+team-nexus-agent:latest
 ```
 
-from:
-
-```text
-docker/Dockerfile
-```
-
-It extends:
-
-```text
-nousresearch/hermes-agent:latest
-```
-
-and adds [mise-en-place](https://mise.jdx.dev/) plus common runtime support for agent workspaces and MCP servers:
+from `docker/Dockerfile`. It extends `nousresearch/hermes-agent:latest` and adds common runtime support for agent workspaces and MCP servers:
 
 - `mise`
-- `node@lts`
-- `npm`
-- `npx`
-- `uv`
-- `uvx`
-- `jq`
-- `ripgrep`
-- `git`
+- `node@lts`, `npm`, `npx`
+- `uv`, `uvx`
+- `jq`, `ripgrep`, `git`
 - `openssh-client`
 - `zip` / `unzip`
 
-Global mise config lives at:
-
-```text
-docker/mise/config.toml
-```
-
-Current global tools:
+Global mise config lives at `docker/mise/config.toml`:
 
 ```toml
 [tools]
@@ -176,36 +163,19 @@ Each agent also has an editable workspace-level mise file:
 agents/<agent>/workspace/.mise.toml
 ```
 
-Use that file to add agent-specific tools like Python, Go, Rust, Bun, pnpm, etc.
-
-Example for Forge:
-
-```toml
-[tools]
-python = "3.12"
-go = "latest"
-rust = "latest"
-node = "lts"
-uv = "latest"
-```
-
-Then install inside that agent container:
-
-```bash
-docker compose run --rm forge mise install
-```
+Use that file to add agent-specific tools like Python, Go, Rust, Bun, or pnpm.
 
 ---
 
-## Bootstrap
+## Quick start
 
 From this directory:
 
 ```bash
-cd /Users/sage/hermes-team
+cd /Users/sage/team-nexus
 ```
 
-Build the custom image:
+Build the image:
 
 ```bash
 docker compose build
@@ -263,16 +233,28 @@ All ports are bound to localhost for safety:
 
 | Agent | URL |
 |---|---|
-| Atlas | http://127.0.0.1:8642 |
-| Vega | http://127.0.0.1:8643 |
-| Scout | http://127.0.0.1:8644 |
-| Forge | http://127.0.0.1:8645 |
-| Lumen | http://127.0.0.1:8646 |
-| Blitz | http://127.0.0.1:8647 |
-| Ledger | http://127.0.0.1:8648 |
-| Sentinel | http://127.0.0.1:8649 |
+| Atlas | <http://127.0.0.1:8642> |
+| Vega | <http://127.0.0.1:8643> |
+| Scout | <http://127.0.0.1:8644> |
+| Forge | <http://127.0.0.1:8645> |
+| Lumen | <http://127.0.0.1:8646> |
+| Blitz | <http://127.0.0.1:8647> |
+| Ledger | <http://127.0.0.1:8648> |
+| Sentinel | <http://127.0.0.1:8649> |
 
 If you only use Discord, Telegram, Slack, or another messaging gateway, exposing API ports is optional. Keep them localhost-bound unless you intentionally need external access.
+
+---
+
+## Agent-to-agent messaging model
+
+Team Nexus is set up so every agent can run as a gateway with its own identity. There are three practical coordination patterns:
+
+1. **Human-mediated chat** — Sage talks to Atlas in Discord or another gateway. Atlas summarizes, delegates, and asks specialists through their configured gateway channels.
+2. **Gateway API calls** — Atlas or a helper MCP/server can send tasks to specialist gateway API endpoints on localhost, then collect the responses.
+3. **Workspace handoff** — Agents write briefs to `workspace/inbox/` and finished deliverables to `workspace/outbox/`, with Atlas responsible for synthesis.
+
+Recommended operating rule: specialists write durable deliverables to `outbox/`, not only chat responses.
 
 ---
 
@@ -307,7 +289,7 @@ Rules:
 - Do **not** commit real `.env` files.
 - Prefer one gateway/bot token per agent.
 - Prefer one provider key or credential pool per agent if you want independent accounting/revocation.
-- OAuth/credential-pool state should remain in the mounted `home/`, not baked into the image.
+- OAuth and credential-pool state should remain in the mounted `home/`, not baked into the image.
 
 For OAuth/provider login flows:
 
@@ -324,9 +306,9 @@ docker compose run --rm atlas auth list
 
 ---
 
-## Persona files
+## Personas
 
-Each agent has an editable persona:
+Each agent has an editable persona file:
 
 ```text
 agents/<agent>/home/persona.md
@@ -339,57 +321,13 @@ startup_agent:
   persona_file: /opt/data/persona.md
 ```
 
-If your Hermes runtime does not automatically consume that persona file, wire it in using one of these patterns:
-
-1. Copy it into Hermes' native personality/persona path during setup.
-2. Convert the persona into an agent-specific skill and preload it.
-3. Add a small gateway/router wrapper that injects the persona at session start.
-4. Keep it as explicit operating documentation for the agent and human operators.
-
----
-
-## Agent workspace convention
-
-Each agent owns:
-
-```text
-agents/<agent>/workspace/
-```
-
-Inside the container this is:
-
-```text
-/workspace
-```
-
-Workspace subdirectories:
-
-| Directory | Use |
-|---|---|
-| `inbox/` | Task briefs, requests, input docs |
-| `outbox/` | Finished deliverables ready for Atlas/Sage |
-| `artifacts/` | Generated files, prototypes, exports |
-| `notes/` | Working notes and scratch docs |
-
-Recommended rule: specialists write durable deliverables to `outbox/`, not only chat responses.
+If the Hermes runtime does not automatically consume that file, wire it in by copying it into the runtime persona path, converting it into a preload skill, or using a small gateway/router wrapper that injects it at session start.
 
 ---
 
 ## Shared context
 
-Use this for company-wide/project-wide files all agents can read:
-
-```text
-shared/project/
-```
-
-Mounted as:
-
-```text
-/shared/project:ro
-```
-
-Good candidates:
+Use `shared/project/` for company-wide or project-wide files all agents can read:
 
 - company brief
 - product strategy
@@ -398,57 +336,23 @@ Good candidates:
 - brand voice
 - decision logs exported by Atlas
 
-Because it is readonly inside containers, agents cannot accidentally corrupt shared source-of-truth files.
+Because it is read-only inside containers, agents cannot accidentally corrupt shared source-of-truth files.
 
 ---
 
 ## Skills
 
-Per-agent editable/native Hermes skills live here:
+Per-agent editable Hermes skills live in:
 
 ```text
 agents/<agent>/home/skills/
 ```
 
-Shared readonly skill source lives here:
+Shared read-only skill source lives in:
 
 ```text
 shared/skills/
 ```
-
-Mounted as:
-
-```text
-/shared/skills:ro
-```
-
-The shared skill tree currently contains team-wide skills:
-
-```text
-shared/skills/
-  core/         # shared by every agent
-```
-
-Agent-specific skills live directly with the agent:
-
-```text
-agents/vega/home/skills/      # Vega-only skills
-agents/scout/home/skills/     # Scout-only skills
-agents/forge/home/skills/     # Forge-only skills
-agents/lumen/home/skills/     # Lumen-only skills
-agents/blitz/home/skills/     # Blitz-only skills
-agents/ledger/home/skills/    # Ledger-only skills
-agents/sentinel/home/skills/  # Sentinel-only skills
-```
-
-The reviewed placement is recorded in:
-
-```text
-shared/skills/SKILL_ASSESSMENT.md
-shared/skills/SKILL_MANIFEST.json
-```
-
-Use `shared/skills/` as the canonical source material. Skills in `shared/skills/core/` are available to every agent through the read-only `/shared/skills` mount. Agent-native skill directories under `agents/<agent>/home/skills/` are versioned and should contain only skills that are specific to that agent.
 
 The model is intentionally simple:
 
@@ -459,21 +363,20 @@ agent skill   -> agents/<agent>/home/skills/<skill>
 
 No sync target is required: if a skill is shared, place it under `shared/skills`; if it belongs only to one agent, place it in that agent's skill folder.
 
-Install or inspect skills inside a specific agent container:
+Inspect skills inside an agent container:
 
 ```bash
 docker compose run --rm atlas skills list
 docker compose run --rm atlas skills browse
-docker compose run --rm atlas skills install <skill-id>
 ```
 
-Tool/skill changes may require a new Hermes session or gateway restart.
+Tool or skill changes may require a new Hermes session or gateway restart.
 
 ---
 
 ## MCP
 
-Hermes native MCP servers are configured per agent under that agent's mounted home/config. In this repo, shared server definitions and reusable docs live here:
+Hermes native MCP servers are configured per agent under that agent's mounted home/config. Shared server definitions and reusable docs live under:
 
 ```text
 shared/mcp/
@@ -483,28 +386,12 @@ shared/mcp/
   docs/        # server-specific setup notes
 ```
 
-Each agent also has an agent-local MCP area:
+Use Makefile targets from the repo root to avoid typing long `docker compose run` commands.
 
-```text
-agents/<agent>/home/mcp/
-  registry/
-  templates/
-```
-
-### Makefile-driven MCP registration
-
-Use the `Makefile` targets from the repo root to avoid typing long `docker compose run` commands.
-
-List available shared MCP templates:
+List templates:
 
 ```bash
 make mcp-templates
-```
-
-Show a template:
-
-```bash
-make mcp-show-template SERVER=time
 ```
 
 Register a shared template for one agent:
@@ -514,24 +401,20 @@ make mcp-register-template AGENT=atlas SERVER=time
 make mcp-register-template AGENT=forge SERVER=filesystem-workspace
 ```
 
-Register a shared template for multiple agents:
+Register for multiple agents:
 
 ```bash
 make mcp-register-template-all SERVER=filesystem-workspace TARGET_AGENTS="atlas forge"
 ```
 
-Register an ad-hoc stdio MCP server:
+Register ad-hoc MCP servers:
 
 ```bash
 make mcp-add-command \
   AGENT=forge \
   SERVER=filesystem \
   COMMAND='npx -y @modelcontextprotocol/server-filesystem /workspace'
-```
 
-Register an ad-hoc HTTP MCP server:
-
-```bash
 make mcp-add-url \
   AGENT=atlas \
   SERVER=company-api \
@@ -547,94 +430,38 @@ make mcp-test AGENT=atlas SERVER=time
 make mcp-remove AGENT=atlas SERVER=time
 ```
 
-The shared registry format is intentionally simple. Example:
-
-```makefile
-# shared/mcp/registry/time.mk
-MCP_TRANSPORT := command
-MCP_COMMAND := uvx mcp-server-time
-```
-
-For HTTP servers:
-
-```makefile
-# shared/mcp/registry/company-api.mk
-MCP_TRANSPORT := url
-MCP_URL := https://mcp.example.com/mcp
-```
-
-Do **not** commit secrets into `shared/mcp/registry/*.mk`. Keep tokens in `agents/<agent>/home/.env`, OAuth state, or another local secret store. Hermes' native MCP config supports explicit `env:`/`headers:` values, but secrets should be injected locally rather than committed.
-
-Because the custom image includes `node`, `npx`, `uv`, and `uvx`, common stdio MCP servers should work without rebuilding.
-
-If an MCP server needs additional tools, add them to the relevant agent's:
-
-```text
-agents/<agent>/workspace/.mise.toml
-```
-
-Then run:
-
-```bash
-docker compose run --rm <agent> mise install
-```
-
-For shared production-grade MCP servers, consider HTTP MCP servers reachable by all containers rather than duplicating stdio server processes per agent.
+Do **not** commit secrets into `shared/mcp/registry/*.mk`. Keep tokens in `agents/<agent>/home/.env`, OAuth state, or another local secret store.
 
 ---
 
 ## Common commands
 
-Build:
-
 ```bash
-docker compose build
+make help                         # show Makefile targets
+make build                        # docker compose build
+make up                           # start all gateways
+make down                         # stop all gateways
+make ps                           # show service status
+make logs AGENT=atlas             # follow one agent's logs
+make shell AGENT=forge            # open bash in one agent container
+make doctor AGENT=atlas           # run hermes doctor for one agent
+make doctor-all                   # run hermes doctor for every agent
+make compose-config               # validate docker-compose.yml
 ```
 
-Start all:
-
-```bash
-docker compose up -d
-```
-
-Stop all:
-
-```bash
-docker compose down
-```
-
-Logs:
-
-```bash
-docker compose logs -f atlas
-docker compose logs -f forge
-```
-
-Run a one-off Hermes command:
+One-off Hermes commands:
 
 ```bash
 docker compose run --rm atlas status --all
 docker compose run --rm forge doctor
 ```
 
-Open a shell in an agent container:
-
-```bash
-docker compose run --rm --entrypoint bash forge
-```
-
-Verify mise and runtimes:
+Verify runtime tools:
 
 ```bash
 docker compose run --rm --entrypoint mise atlas --version
 docker compose run --rm --entrypoint node atlas --version
 docker compose run --rm --entrypoint uv atlas --version
-```
-
-Validate Compose:
-
-```bash
-docker compose config
 ```
 
 ---
@@ -692,7 +519,7 @@ Check:
 docker compose logs -f <agent>
 ```
 
-### Config/persona changes not taking effect
+### Config/persona changes do not take effect
 
 Restart the relevant gateway:
 
@@ -700,4 +527,4 @@ Restart the relevant gateway:
 docker compose restart <agent>
 ```
 
-or start a fresh Hermes session if the change affects tools/skills/persona context.
+or start a fresh Hermes session if the change affects tools, skills, or persona context.

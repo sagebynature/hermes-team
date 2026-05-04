@@ -1,10 +1,10 @@
-name: hermes-team
+name: team-nexus
 
 services:
   atlas:
     build:
       context: ./docker
-    image: hermes-team-agent:latest
+    image: team-nexus-agent:latest
     container_name: hermes-atlas
     restart: unless-stopped
     environment:
@@ -29,7 +29,7 @@ services:
   vega:
     build:
       context: ./docker
-    image: hermes-team-agent:latest
+    image: team-nexus-agent:latest
     container_name: hermes-vega
     restart: unless-stopped
     environment:
@@ -54,7 +54,7 @@ services:
   scout:
     build:
       context: ./docker
-    image: hermes-team-agent:latest
+    image: team-nexus-agent:latest
     container_name: hermes-scout
     restart: unless-stopped
     environment:
@@ -79,7 +79,7 @@ services:
   forge:
     build:
       context: ./docker
-    image: hermes-team-agent:latest
+    image: team-nexus-agent:latest
     container_name: hermes-forge
     restart: unless-stopped
     environment:
@@ -104,7 +104,7 @@ services:
   lumen:
     build:
       context: ./docker
-    image: hermes-team-agent:latest
+    image: team-nexus-agent:latest
     container_name: hermes-lumen
     restart: unless-stopped
     environment:
@@ -129,7 +129,7 @@ services:
   blitz:
     build:
       context: ./docker
-    image: hermes-team-agent:latest
+    image: team-nexus-agent:latest
     container_name: hermes-blitz
     restart: unless-stopped
     environment:
@@ -154,7 +154,7 @@ services:
   ledger:
     build:
       context: ./docker
-    image: hermes-team-agent:latest
+    image: team-nexus-agent:latest
     container_name: hermes-ledger
     restart: unless-stopped
     environment:
@@ -179,7 +179,7 @@ services:
   sentinel:
     build:
       context: ./docker
-    image: hermes-team-agent:latest
+    image: team-nexus-agent:latest
     container_name: hermes-sentinel
     restart: unless-stopped
     environment:
