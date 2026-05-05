@@ -37,7 +37,7 @@ printf 'started:  %s
 ' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 cd "$repo_root"
-compose_cmd="${COMPOSE:-docker compose}"
+compose_cmd="${COMPOSE:-docker compose -f docker-compose.yml -f docker-compose.agents.generated.yml -f docker-compose.dashboards.generated.yml}"
 cleanup() {
   # Best-effort cleanup for dispatcher timeout cancellation.
   docker rm -f "$container_name" >/dev/null 2>&1 || true

@@ -1,9 +1,14 @@
 SHELL := /usr/bin/env bash
 .DEFAULT_GOAL := help
 
-COMPOSE ?= docker compose
-TEAM_AGENTS := atlas vega scout forge lumen blitz ledger sentinel
+COMPOSE_FILES ?= -f docker-compose.yml -f docker-compose.agents.generated.yml -f docker-compose.dashboards.generated.yml
+COMPOSE ?= docker compose $(COMPOSE_FILES)
+export SLUG NAME ROLE GATEWAY_PORT DASHBOARD_PORT FORCE
+-include generated/team-agents.mk
+TEAM_AGENTS ?= atlas vega scout forge lumen blitz ledger sentinel
+DASHBOARD_AGENTS ?= $(TEAM_AGENTS)
 TARGET_AGENTS ?= $(TEAM_AGENTS)
+TEAM_REGISTRY := python3 scripts/team_registry.py
 
 # When SERVER is set, optionally load a shared MCP registry definition.
 # Example: make mcp-register-template AGENT=atlas SERVER=time
@@ -12,6 +17,8 @@ ifneq ($(strip $(SERVER)),)
 endif
 
 .PHONY: help build up down restart ps logs shell doctor doctor-all compose-config workspace-init \
+	generate check-generated validate preflight registry-list registry-validate registry-next-ports validate-plugins dashboards-up dashboards-restart \
+	agent-add agent-disable agent-archive \
 	kanban-init kanban-list kanban-stats kanban-watch kanban-create kanban-link kanban-dispatch \
 	kanban-dispatcher-once kanban-dispatcher-daemon kanban-dispatcher-stop kanban-dispatcher-logs discord-status-dry-run \
 	mcp-list mcp-list-all mcp-test mcp-remove mcp-add-command mcp-add-url \
@@ -64,6 +71,67 @@ compose-config: ## Validate docker-compose.yml
 	$(COMPOSE) config >/tmp/team-nexus-compose.yaml
 	@echo "compose config OK -> /tmp/team-nexus-compose.yaml"
 
+generate: ## Generate registry-derived Team Nexus files
+	@mkdir -p generated nginx shared/project/generated
+	$(TEAM_REGISTRY) generate-make > generated/team-agents.mk
+	$(TEAM_REGISTRY) generate-compose-agents > docker-compose.agents.generated.yml
+	$(TEAM_REGISTRY) generate-compose-dashboards > docker-compose.dashboards.generated.yml
+	$(TEAM_REGISTRY) generate-nginx > nginx/dashboards.conf
+	$(TEAM_REGISTRY) generate-roster > shared/project/generated/team-roster.md
+
+check-generated: ## Regenerate files in a temp dir and fail if generated outputs are stale
+	@tmp="$$(mktemp -d)"; trap 'rm -rf "$$tmp"' EXIT; \
+		$(TEAM_REGISTRY) generate-make > "$$tmp/team-agents.mk"; \
+		$(TEAM_REGISTRY) generate-compose-agents > "$$tmp/docker-compose.agents.generated.yml"; \
+		$(TEAM_REGISTRY) generate-compose-dashboards > "$$tmp/docker-compose.dashboards.generated.yml"; \
+		$(TEAM_REGISTRY) generate-nginx > "$$tmp/dashboards.conf"; \
+		$(TEAM_REGISTRY) generate-roster > "$$tmp/team-roster.md"; \
+		cmp -s generated/team-agents.mk "$$tmp/team-agents.mk" || { diff -u generated/team-agents.mk "$$tmp/team-agents.mk"; exit 1; }; \
+		cmp -s docker-compose.agents.generated.yml "$$tmp/docker-compose.agents.generated.yml" || { diff -u docker-compose.agents.generated.yml "$$tmp/docker-compose.agents.generated.yml"; exit 1; }; \
+		cmp -s docker-compose.dashboards.generated.yml "$$tmp/docker-compose.dashboards.generated.yml" || { diff -u docker-compose.dashboards.generated.yml "$$tmp/docker-compose.dashboards.generated.yml"; exit 1; }; \
+		cmp -s nginx/dashboards.conf "$$tmp/dashboards.conf" || { diff -u nginx/dashboards.conf "$$tmp/dashboards.conf"; exit 1; }; \
+		cmp -s shared/project/generated/team-roster.md "$$tmp/team-roster.md" || { diff -u shared/project/generated/team-roster.md "$$tmp/team-roster.md"; exit 1; }; \
+		echo "generated files OK"
+
+validate: ## Validate registry, generated files, configs, compose, nginx, plugins, and kanban assignees
+	$(TEAM_REGISTRY) validate-all
+
+preflight: ## Run generation, validation, compose config, and drift check
+	./scripts/preflight.sh
+
+agent-add: ## Add an agent: make agent-add SLUG=raven NAME=Raven ROLE='Legal / Compliance'
+	$(TEAM_REGISTRY) agent-add-env
+	$(MAKE) generate
+	$(MAKE) validate
+
+agent-disable: ## Disable an agent without deleting state: make agent-disable SLUG=raven
+	$(TEAM_REGISTRY) agent-disable-env
+	$(MAKE) generate
+	$(MAKE) validate
+
+agent-archive: ## Archive a disabled agent: make agent-archive SLUG=raven [FORCE=1]
+	$(TEAM_REGISTRY) agent-archive-env
+	$(MAKE) generate
+	$(MAKE) validate
+
+registry-list: ## List enabled Team Nexus agent slugs
+	$(TEAM_REGISTRY) list-enabled-slugs
+
+registry-validate: ## Validate shared/team-agents.yaml only
+	$(TEAM_REGISTRY) validate-registry
+
+registry-next-ports: ## Show next available gateway/dashboard ports
+	$(TEAM_REGISTRY) next-ports
+
+validate-plugins: ## Validate shared plugin layout
+	$(TEAM_REGISTRY) validate-plugins
+
+dashboards-up: ## Start dashboard profile
+	$(COMPOSE) --profile dashboard up -d
+
+dashboards-restart: ## Restart dashboard profile services
+	$(COMPOSE) --profile dashboard restart
+
 workspace-init: ## Initialize shared workspace directories and artifact handoff placeholder
 	@mkdir -p shared/project/artifacts shared/kanban
 	@if [ ! -f shared/project/artifacts/.gitignore ]; then \
@@ -96,7 +164,7 @@ kanban-link: ## Link parent->child dependency: make kanban-link PARENT=K... CHIL
 
 kanban-dispatch: guard-agent ## Run one Kanban task in the assigned agent container: make kanban-dispatch AGENT=forge TASK=K...
 	@if [ -z "$(TASK)" ]; then echo "TASK is required" >&2; exit 2; fi
-	./scripts/kanban-dispatch-compose.sh $(AGENT) $(TASK)
+	COMPOSE='$(COMPOSE)' ./scripts/kanban-dispatch-compose.sh $(AGENT) $(TASK)
 
 kanban-dispatcher-once: ## Run one Dockerized Compose-aware dispatcher pass; add DRY_RUN=1 to avoid spawning
 	@if [ "$(DRY_RUN)" = "1" ]; then \

@@ -6,6 +6,35 @@ Team Nexus turns Hermes Agent into a serious multi-agent command center. Each sp
 
 This is not a toy swarm. It is an A-Team in a repo.
 
+## Operator quick start
+
+For day-to-day operations, use the registry-driven runbook:
+
+- Operations runbook: `docs/team-nexus-operations.md`
+- Discord/Kanban deep dive: `docs/discord-kanban-operations.md`
+- Dedicated runtime rationale: `docs/adr/0011-dedicated-agent-runtimes-vs-profiles.md`
+- Registry-driven roster decision: `docs/adr/0012-registry-driven-agent-roster-and-generated-runtime-artifacts.md`
+
+Common operator path:
+
+```bash
+cp .env.example .env
+# edit .env
+make generate
+make validate
+make build
+make up
+make dashboards-up
+```
+
+Manage agents with lifecycle targets instead of copy/paste:
+
+```bash
+make agent-add SLUG=raven NAME=Raven ROLE='Legal / Compliance'
+make agent-disable SLUG=raven
+make agent-archive SLUG=raven
+```
+
 ```text
 User -> Atlas -> specialists -> Atlas -> User
 ```
@@ -218,7 +247,7 @@ Bring Atlas online first with the helper script:
 The helper runs a non-interactive doctor check against the committed baseline config. It does not invoke Hermes' interactive setup wizard from scripts; put real secrets in the shared repo-root `.env` first, and run gateway setup manually from a TTY only when you need to change platform credentials:
 
 ```bash
-docker compose run --rm atlas gateway setup
+docker compose -f docker-compose.yml -f docker-compose.agents.generated.yml -f docker-compose.dashboards.generated.yml run --rm atlas gateway setup
 ```
 
 Then activate whichever specialists you want in the field:
@@ -236,13 +265,13 @@ Then activate whichever specialists you want in the field:
 Launch all gateways:
 
 ```bash
-docker compose up -d
+make up
 ```
 
 Watch Atlas:
 
 ```bash
-docker compose logs -f atlas
+make logs AGENT=atlas
 ```
 
 Run a full team health check:
@@ -262,13 +291,13 @@ Gateway API ports and dashboard UI ports are both bound to localhost. Keep them 
 Start the gateway containers:
 
 ```bash
-docker compose up -d
+make up
 ```
 
 Start the dashboard containers:
 
 ```bash
-docker compose --profile dashboard up -d
+make dashboards-up
 ```
 
 Gateway/API endpoints:
@@ -412,14 +441,14 @@ Rules of engagement:
 For OAuth/provider login flows:
 
 ```bash
-docker compose run --rm atlas login --provider <provider>
+docker compose -f docker-compose.yml -f docker-compose.agents.generated.yml -f docker-compose.dashboards.generated.yml run --rm atlas login --provider <provider>
 ```
 
 For credential pools:
 
 ```bash
-docker compose run --rm atlas auth add
-docker compose run --rm atlas auth list
+docker compose -f docker-compose.yml -f docker-compose.agents.generated.yml -f docker-compose.dashboards.generated.yml run --rm atlas auth add
+docker compose -f docker-compose.yml -f docker-compose.agents.generated.yml -f docker-compose.dashboards.generated.yml run --rm atlas auth list
 ```
 
 ---
@@ -484,8 +513,8 @@ If everyone needs it, put it in `shared/skills`. If only Forge, Lumen, Scout, or
 Inspect skills inside an agent container:
 
 ```bash
-docker compose run --rm atlas skills list
-docker compose run --rm atlas skills browse
+docker compose -f docker-compose.yml -f docker-compose.agents.generated.yml -f docker-compose.dashboards.generated.yml run --rm atlas skills list
+docker compose -f docker-compose.yml -f docker-compose.agents.generated.yml -f docker-compose.dashboards.generated.yml run --rm atlas skills browse
 ```
 
 Tool or skill changes may require a new Hermes session or gateway restart.
@@ -563,7 +592,7 @@ dashboard:
 Theme YAMLs are discovered on each `/api/dashboard/themes` request, but Compose mount changes require recreating the running containers:
 
 ```bash
-docker compose --profile dashboard up -d --force-recreate
+docker compose -f docker-compose.yml -f docker-compose.agents.generated.yml -f docker-compose.dashboards.generated.yml --profile dashboard up -d --force-recreate
 ```
 
 Plugin changes have two refresh paths:
@@ -574,13 +603,13 @@ curl -fsS http://127.0.0.1:9119/api/dashboard/plugins/rescan
 
 # plugin backend API changes or new plugin_api.py routes
 # restart/recreate the dashboard service because FastAPI routes mount at process startup
-docker compose --profile dashboard restart atlas-dashboard dashboard-nginx
+make dashboards-restart
 ```
 
 Verify the shared mounts, selected theme, and plugin discovery:
 
 ```bash
-docker compose --profile dashboard config >/tmp/team-nexus-dashboard.yaml
+docker compose -f docker-compose.yml -f docker-compose.agents.generated.yml -f docker-compose.dashboards.generated.yml --profile dashboard config >/tmp/team-nexus-dashboard.yaml
 python3 - <<'PY'
 import json
 import urllib.request
@@ -676,8 +705,8 @@ make build                        # build shared team-nexus-agent image once
 make up                           # start all gateways
 make down                         # stop all gateways
 make restart                      # restart all gateways
-docker compose --profile dashboard up -d    # start gateway + dashboard services
-docker compose stop atlas-dashboard         # stop one dashboard service
+make dashboards-up                # start dashboard services and reverse proxy
+docker compose -f docker-compose.yml -f docker-compose.agents.generated.yml -f docker-compose.dashboards.generated.yml stop atlas-dashboard  # stop one dashboard service
 make ps                           # show service status
 make logs AGENT=atlas             # follow one agent's logs
 make shell AGENT=forge            # open bash in one agent container
@@ -697,16 +726,16 @@ make discord-status-dry-run MESSAGE='hello'          # preview a Discord status 
 One-off Hermes commands:
 
 ```bash
-docker compose run --rm atlas status --all
-docker compose run --rm forge doctor
+docker compose -f docker-compose.yml -f docker-compose.agents.generated.yml -f docker-compose.dashboards.generated.yml run --rm atlas status --all
+docker compose -f docker-compose.yml -f docker-compose.agents.generated.yml -f docker-compose.dashboards.generated.yml run --rm forge doctor
 ```
 
 Verify runtime tools:
 
 ```bash
-docker compose run --rm --entrypoint mise atlas --version
-docker compose run --rm --entrypoint node atlas --version
-docker compose run --rm --entrypoint uv atlas --version
+docker compose -f docker-compose.yml -f docker-compose.agents.generated.yml -f docker-compose.dashboards.generated.yml run --rm --entrypoint mise atlas --version
+docker compose -f docker-compose.yml -f docker-compose.agents.generated.yml -f docker-compose.dashboards.generated.yml run --rm --entrypoint node atlas --version
+docker compose -f docker-compose.yml -f docker-compose.agents.generated.yml -f docker-compose.dashboards.generated.yml run --rm --entrypoint uv atlas --version
 ```
 
 ---
@@ -731,7 +760,7 @@ docker compose run --rm --entrypoint uv atlas --version
 Rebuild without cache:
 
 ```bash
-docker compose build --no-cache
+docker compose -f docker-compose.yml -f docker-compose.agents.generated.yml -f docker-compose.dashboards.generated.yml build --no-cache atlas
 ```
 
 If a specific mise tool fails, remove it from `docker/mise/config.toml` and install it per-agent from `agents/<agent>/workspace/.mise.toml` instead.
@@ -741,7 +770,7 @@ If a specific mise tool fails, remove it from `docker/mise/config.toml` and inst
 Check the container:
 
 ```bash
-docker compose run --rm --entrypoint bash forge
+make shell AGENT=forge
 which node
 which npx
 which uv
@@ -761,7 +790,7 @@ Check:
 - gateway logs:
 
 ```bash
-docker compose logs -f <agent>
+make logs AGENT=<agent>
 ```
 
 ### Config/persona changes do not take effect
@@ -769,7 +798,7 @@ docker compose logs -f <agent>
 Restart the relevant gateway:
 
 ```bash
-docker compose restart <agent>
+docker compose -f docker-compose.yml -f docker-compose.agents.generated.yml -f docker-compose.dashboards.generated.yml restart <agent>
 ```
 
 Start a fresh Hermes session if the change affects tools, skills, or persona context.

@@ -1,0 +1,245 @@
+# GENERATED FILE. DO NOT EDIT.
+# Source: shared/team-agents.yaml
+# Regenerate: make generate
+services:
+  atlas:
+    build:
+      context: ./docker
+    image: team-nexus-agent:latest
+    container_name: hermes-atlas
+    restart: unless-stopped
+    environment:
+      HERMES_HOME: /opt/data
+      HERMES_KANBAN_HOME: /shared/kanban
+      AGENT_NAME: "Atlas"
+      AGENT_ROLE: "Orchestrator / Chief of Staff"
+    env_file:
+      - ./.env
+    volumes:
+      # Hermes Docker docs use /opt/data for durable user data: config, auth state, sessions, skills, memories.
+      - ./agents/atlas/home:/opt/data
+      # Agent-owned workspace. Configure terminal.cwd=/workspace in config.yaml.
+      - ./agents/atlas/workspace:/workspace
+      # Shared project context is read-only, except the artifacts submount below is writable for handoffs.
+      - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
+      # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
+      - ./shared/kanban:/shared/kanban:rw
+      - ./shared/skills:/shared/skills:ro
+      - ./shared/mcp:/shared/mcp:ro
+      # Hermes only discovers user plugins under $HERMES_HOME/plugins.
+      - ./shared/plugins:/opt/data/plugins:ro
+      - ./shared/dashboard-themes:/opt/data/dashboard-themes:ro
+    ports:
+      - "127.0.0.1:8642:8642"
+    command: ["gateway", "run"]
+
+  vega:
+    image: team-nexus-agent:latest
+    container_name: hermes-vega
+    restart: unless-stopped
+    environment:
+      HERMES_HOME: /opt/data
+      HERMES_KANBAN_HOME: /shared/kanban
+      AGENT_NAME: "Vega"
+      AGENT_ROLE: "Product Strategist"
+    env_file:
+      - ./.env
+    volumes:
+      # Hermes Docker docs use /opt/data for durable user data: config, auth state, sessions, skills, memories.
+      - ./agents/vega/home:/opt/data
+      # Agent-owned workspace. Configure terminal.cwd=/workspace in config.yaml.
+      - ./agents/vega/workspace:/workspace
+      # Shared project context is read-only, except the artifacts submount below is writable for handoffs.
+      - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
+      # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
+      - ./shared/kanban:/shared/kanban:rw
+      - ./shared/skills:/shared/skills:ro
+      - ./shared/mcp:/shared/mcp:ro
+      # Hermes only discovers user plugins under $HERMES_HOME/plugins.
+      - ./shared/plugins:/opt/data/plugins:ro
+      - ./shared/dashboard-themes:/opt/data/dashboard-themes:ro
+    ports:
+      - "127.0.0.1:8643:8642"
+    command: ["gateway", "run"]
+
+  scout:
+    image: team-nexus-agent:latest
+    container_name: hermes-scout
+    restart: unless-stopped
+    environment:
+      HERMES_HOME: /opt/data
+      HERMES_KANBAN_HOME: /shared/kanban
+      AGENT_NAME: "Scout"
+      AGENT_ROLE: "Market + Customer Research"
+    env_file:
+      - ./.env
+    volumes:
+      # Hermes Docker docs use /opt/data for durable user data: config, auth state, sessions, skills, memories.
+      - ./agents/scout/home:/opt/data
+      # Agent-owned workspace. Configure terminal.cwd=/workspace in config.yaml.
+      - ./agents/scout/workspace:/workspace
+      # Shared project context is read-only, except the artifacts submount below is writable for handoffs.
+      - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
+      # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
+      - ./shared/kanban:/shared/kanban:rw
+      - ./shared/skills:/shared/skills:ro
+      - ./shared/mcp:/shared/mcp:ro
+      # Hermes only discovers user plugins under $HERMES_HOME/plugins.
+      - ./shared/plugins:/opt/data/plugins:ro
+      - ./shared/dashboard-themes:/opt/data/dashboard-themes:ro
+    ports:
+      - "127.0.0.1:8644:8642"
+    command: ["gateway", "run"]
+
+  forge:
+    image: team-nexus-agent:latest
+    container_name: hermes-forge
+    restart: unless-stopped
+    environment:
+      HERMES_HOME: /opt/data
+      HERMES_KANBAN_HOME: /shared/kanban
+      AGENT_NAME: "Forge"
+      AGENT_ROLE: "Engineering Lead"
+    env_file:
+      - ./.env
+    volumes:
+      # Hermes Docker docs use /opt/data for durable user data: config, auth state, sessions, skills, memories.
+      - ./agents/forge/home:/opt/data
+      # Agent-owned workspace. Configure terminal.cwd=/workspace in config.yaml.
+      - ./agents/forge/workspace:/workspace
+      # Shared project context is read-only, except the artifacts submount below is writable for handoffs.
+      - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
+      # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
+      - ./shared/kanban:/shared/kanban:rw
+      - ./shared/skills:/shared/skills:ro
+      - ./shared/mcp:/shared/mcp:ro
+      # Hermes only discovers user plugins under $HERMES_HOME/plugins.
+      - ./shared/plugins:/opt/data/plugins:ro
+      - ./shared/dashboard-themes:/opt/data/dashboard-themes:ro
+    ports:
+      - "127.0.0.1:8645:8642"
+    command: ["gateway", "run"]
+
+  lumen:
+    image: team-nexus-agent:latest
+    container_name: hermes-lumen
+    restart: unless-stopped
+    environment:
+      HERMES_HOME: /opt/data
+      HERMES_KANBAN_HOME: /shared/kanban
+      AGENT_NAME: "Lumen"
+      AGENT_ROLE: "UX / Design Lead"
+    env_file:
+      - ./.env
+    volumes:
+      # Hermes Docker docs use /opt/data for durable user data: config, auth state, sessions, skills, memories.
+      - ./agents/lumen/home:/opt/data
+      # Agent-owned workspace. Configure terminal.cwd=/workspace in config.yaml.
+      - ./agents/lumen/workspace:/workspace
+      # Shared project context is read-only, except the artifacts submount below is writable for handoffs.
+      - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
+      # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
+      - ./shared/kanban:/shared/kanban:rw
+      - ./shared/skills:/shared/skills:ro
+      - ./shared/mcp:/shared/mcp:ro
+      # Hermes only discovers user plugins under $HERMES_HOME/plugins.
+      - ./shared/plugins:/opt/data/plugins:ro
+      - ./shared/dashboard-themes:/opt/data/dashboard-themes:ro
+    ports:
+      - "127.0.0.1:8646:8642"
+    command: ["gateway", "run"]
+
+  blitz:
+    image: team-nexus-agent:latest
+    container_name: hermes-blitz
+    restart: unless-stopped
+    environment:
+      HERMES_HOME: /opt/data
+      HERMES_KANBAN_HOME: /shared/kanban
+      AGENT_NAME: "Blitz"
+      AGENT_ROLE: "Growth + GTM"
+    env_file:
+      - ./.env
+    volumes:
+      # Hermes Docker docs use /opt/data for durable user data: config, auth state, sessions, skills, memories.
+      - ./agents/blitz/home:/opt/data
+      # Agent-owned workspace. Configure terminal.cwd=/workspace in config.yaml.
+      - ./agents/blitz/workspace:/workspace
+      # Shared project context is read-only, except the artifacts submount below is writable for handoffs.
+      - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
+      # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
+      - ./shared/kanban:/shared/kanban:rw
+      - ./shared/skills:/shared/skills:ro
+      - ./shared/mcp:/shared/mcp:ro
+      # Hermes only discovers user plugins under $HERMES_HOME/plugins.
+      - ./shared/plugins:/opt/data/plugins:ro
+      - ./shared/dashboard-themes:/opt/data/dashboard-themes:ro
+    ports:
+      - "127.0.0.1:8647:8642"
+    command: ["gateway", "run"]
+
+  ledger:
+    image: team-nexus-agent:latest
+    container_name: hermes-ledger
+    restart: unless-stopped
+    environment:
+      HERMES_HOME: /opt/data
+      HERMES_KANBAN_HOME: /shared/kanban
+      AGENT_NAME: "Ledger"
+      AGENT_ROLE: "Finance + Ops"
+    env_file:
+      - ./.env
+    volumes:
+      # Hermes Docker docs use /opt/data for durable user data: config, auth state, sessions, skills, memories.
+      - ./agents/ledger/home:/opt/data
+      # Agent-owned workspace. Configure terminal.cwd=/workspace in config.yaml.
+      - ./agents/ledger/workspace:/workspace
+      # Shared project context is read-only, except the artifacts submount below is writable for handoffs.
+      - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
+      # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
+      - ./shared/kanban:/shared/kanban:rw
+      - ./shared/skills:/shared/skills:ro
+      - ./shared/mcp:/shared/mcp:ro
+      # Hermes only discovers user plugins under $HERMES_HOME/plugins.
+      - ./shared/plugins:/opt/data/plugins:ro
+      - ./shared/dashboard-themes:/opt/data/dashboard-themes:ro
+    ports:
+      - "127.0.0.1:8648:8642"
+    command: ["gateway", "run"]
+
+  sentinel:
+    image: team-nexus-agent:latest
+    container_name: hermes-sentinel
+    restart: unless-stopped
+    environment:
+      HERMES_HOME: /opt/data
+      HERMES_KANBAN_HOME: /shared/kanban
+      AGENT_NAME: "Sentinel"
+      AGENT_ROLE: "Code Review / QA / Security Assessment"
+    env_file:
+      - ./.env
+    volumes:
+      # Hermes Docker docs use /opt/data for durable user data: config, auth state, sessions, skills, memories.
+      - ./agents/sentinel/home:/opt/data
+      # Agent-owned workspace. Configure terminal.cwd=/workspace in config.yaml.
+      - ./agents/sentinel/workspace:/workspace
+      # Shared project context is read-only, except the artifacts submount below is writable for handoffs.
+      - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
+      # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
+      - ./shared/kanban:/shared/kanban:rw
+      - ./shared/skills:/shared/skills:ro
+      - ./shared/mcp:/shared/mcp:ro
+      # Hermes only discovers user plugins under $HERMES_HOME/plugins.
+      - ./shared/plugins:/opt/data/plugins:ro
+      - ./shared/dashboard-themes:/opt/data/dashboard-themes:ro
+    ports:
+      - "127.0.0.1:8649:8642"
+    command: ["gateway", "run"]

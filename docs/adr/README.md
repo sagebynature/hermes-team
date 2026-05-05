@@ -15,6 +15,7 @@ Team Nexus decisions are recorded here as ADRs.
 - [ADR-0009: Use shared read-only skills and MCP registries with agent-local extensions](0009-shared-readonly-skills-and-mcp.md)
 - [ADR-0010: Mirror only compact status and handoffs to Discord](0010-compact-discord-status-and-handoffs.md)
 - [ADR-0011: Treat dedicated agent runtimes as Team Nexus mode, not the default lightweight pattern](0011-dedicated-agent-runtimes-vs-profiles.md)
+- [ADR-0012: Use registry-driven agent roster and generated runtime artifacts](0012-registry-driven-agent-roster-and-generated-runtime-artifacts.md)
 
 ## ADR format
 

@@ -1,16 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_root"
+compose_cmd="${COMPOSE:-docker compose -f docker-compose.yml -f docker-compose.agents.generated.yml -f docker-compose.dashboards.generated.yml}"
+
 usage() {
   echo "usage: scripts/setup-agent.sh <agent>" >&2
-  echo "agents: atlas vega scout forge lumen blitz ledger sentinel" >&2
+  printf 'agents: ' >&2
+  python3 scripts/team_registry.py list-enabled-slugs >&2 || true
 }
 
 agent="${1:-}"
-case "$agent" in
-  atlas|vega|scout|forge|lumen|blitz|ledger|sentinel) ;;
-  *) usage; exit 1 ;;
-esac
+if [ -z "$agent" ] || ! python3 scripts/team_registry.py list-enabled-slugs | tr ' ' '\n' | grep -Fxq "$agent"; then
+  usage
+  exit 1
+fi
 
 # Avoid invoking Hermes' interactive setup wizard from a non-TTY script. The
 # agent homes in this repo carry baseline config.yaml/SOUL.md/AGENTS.md files;
@@ -27,18 +32,23 @@ if [ ! -f shared/project/artifacts/.gitignore ]; then
 fi
 chmod 2775 shared/project/artifacts shared/kanban 2>/dev/null || true
 
-docker compose run --rm "$agent" doctor
+# shellcheck disable=SC2086
+$compose_cmd run --rm "$agent" doctor
 
 if [ -t 0 ]; then
   echo
   echo "Optional: run gateway setup interactively for $agent now? [y/N] "
   read -r answer
   case "$answer" in
-    y|Y|yes|YES) docker compose run --rm "$agent" gateway setup ;;
+    y|Y|yes|YES)
+      # shellcheck disable=SC2086
+      $compose_cmd run --rm "$agent" gateway setup
+      ;;
   esac
 else
   echo "Non-interactive shell detected; skipping optional gateway setup." >&2
-  echo "Run 'docker compose run --rm $agent gateway setup' from a TTY if needed." >&2
+  echo "Run 'COMPOSE=\"$compose_cmd\" scripts/setup-agent.sh $agent' from a TTY if needed." >&2
 fi
 
-docker compose run --rm "$agent" doctor
+# shellcheck disable=SC2086
+$compose_cmd run --rm "$agent" doctor

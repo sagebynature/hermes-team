@@ -1,0 +1,230 @@
+# GENERATED FILE. DO NOT EDIT.
+# Source: shared/team-agents.yaml
+# Regenerate: make generate
+services:
+  atlas-dashboard:
+    image: team-nexus-agent:latest
+    container_name: hermes-atlas-dashboard
+    restart: unless-stopped
+    profiles: ["dashboard"]
+    environment:
+      HERMES_HOME: /opt/data
+      HERMES_KANBAN_HOME: /shared/kanban
+      AGENT_NAME: "Atlas"
+      AGENT_ROLE: "Orchestrator / Chief of Staff"
+    env_file:
+      - ./.env
+    volumes:
+      - ./agents/atlas/home:/opt/data
+      - ./agents/atlas/workspace:/workspace
+      - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
+      - ./shared/kanban:/shared/kanban:rw
+      - ./shared/skills:/shared/skills:ro
+      - ./shared/mcp:/shared/mcp:ro
+      - ./shared/plugins:/opt/data/plugins:ro
+      - ./shared/dashboard-themes:/opt/data/dashboard-themes:ro
+    ports:
+      - "127.0.0.1:9119:9119"
+    command: ["dashboard", "--host", "0.0.0.0", "--port", "9119", "--insecure", "--no-open"]
+
+  vega-dashboard:
+    image: team-nexus-agent:latest
+    container_name: hermes-vega-dashboard
+    restart: unless-stopped
+    profiles: ["dashboard"]
+    environment:
+      HERMES_HOME: /opt/data
+      HERMES_KANBAN_HOME: /shared/kanban
+      AGENT_NAME: "Vega"
+      AGENT_ROLE: "Product Strategist"
+    env_file:
+      - ./.env
+    volumes:
+      - ./agents/vega/home:/opt/data
+      - ./agents/vega/workspace:/workspace
+      - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
+      - ./shared/kanban:/shared/kanban:rw
+      - ./shared/skills:/shared/skills:ro
+      - ./shared/mcp:/shared/mcp:ro
+      - ./shared/plugins:/opt/data/plugins:ro
+      - ./shared/dashboard-themes:/opt/data/dashboard-themes:ro
+    ports:
+      - "127.0.0.1:9120:9119"
+    command: ["dashboard", "--host", "0.0.0.0", "--port", "9119", "--insecure", "--no-open"]
+
+  scout-dashboard:
+    image: team-nexus-agent:latest
+    container_name: hermes-scout-dashboard
+    restart: unless-stopped
+    profiles: ["dashboard"]
+    environment:
+      HERMES_HOME: /opt/data
+      HERMES_KANBAN_HOME: /shared/kanban
+      AGENT_NAME: "Scout"
+      AGENT_ROLE: "Market + Customer Research"
+    env_file:
+      - ./.env
+    volumes:
+      - ./agents/scout/home:/opt/data
+      - ./agents/scout/workspace:/workspace
+      - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
+      - ./shared/kanban:/shared/kanban:rw
+      - ./shared/skills:/shared/skills:ro
+      - ./shared/mcp:/shared/mcp:ro
+      - ./shared/plugins:/opt/data/plugins:ro
+      - ./shared/dashboard-themes:/opt/data/dashboard-themes:ro
+    ports:
+      - "127.0.0.1:9121:9119"
+    command: ["dashboard", "--host", "0.0.0.0", "--port", "9119", "--insecure", "--no-open"]
+
+  forge-dashboard:
+    image: team-nexus-agent:latest
+    container_name: hermes-forge-dashboard
+    restart: unless-stopped
+    profiles: ["dashboard"]
+    environment:
+      HERMES_HOME: /opt/data
+      HERMES_KANBAN_HOME: /shared/kanban
+      AGENT_NAME: "Forge"
+      AGENT_ROLE: "Engineering Lead"
+    env_file:
+      - ./.env
+    volumes:
+      - ./agents/forge/home:/opt/data
+      - ./agents/forge/workspace:/workspace
+      - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
+      - ./shared/kanban:/shared/kanban:rw
+      - ./shared/skills:/shared/skills:ro
+      - ./shared/mcp:/shared/mcp:ro
+      - ./shared/plugins:/opt/data/plugins:ro
+      - ./shared/dashboard-themes:/opt/data/dashboard-themes:ro
+    ports:
+      - "127.0.0.1:9122:9119"
+    command: ["dashboard", "--host", "0.0.0.0", "--port", "9119", "--insecure", "--no-open"]
+
+  lumen-dashboard:
+    image: team-nexus-agent:latest
+    container_name: hermes-lumen-dashboard
+    restart: unless-stopped
+    profiles: ["dashboard"]
+    environment:
+      HERMES_HOME: /opt/data
+      HERMES_KANBAN_HOME: /shared/kanban
+      AGENT_NAME: "Lumen"
+      AGENT_ROLE: "UX / Design Lead"
+    env_file:
+      - ./.env
+    volumes:
+      - ./agents/lumen/home:/opt/data
+      - ./agents/lumen/workspace:/workspace
+      - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
+      - ./shared/kanban:/shared/kanban:rw
+      - ./shared/skills:/shared/skills:ro
+      - ./shared/mcp:/shared/mcp:ro
+      - ./shared/plugins:/opt/data/plugins:ro
+      - ./shared/dashboard-themes:/opt/data/dashboard-themes:ro
+    ports:
+      - "127.0.0.1:9123:9119"
+    command: ["dashboard", "--host", "0.0.0.0", "--port", "9119", "--insecure", "--no-open"]
+
+  blitz-dashboard:
+    image: team-nexus-agent:latest
+    container_name: hermes-blitz-dashboard
+    restart: unless-stopped
+    profiles: ["dashboard"]
+    environment:
+      HERMES_HOME: /opt/data
+      HERMES_KANBAN_HOME: /shared/kanban
+      AGENT_NAME: "Blitz"
+      AGENT_ROLE: "Growth + GTM"
+    env_file:
+      - ./.env
+    volumes:
+      - ./agents/blitz/home:/opt/data
+      - ./agents/blitz/workspace:/workspace
+      - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
+      - ./shared/kanban:/shared/kanban:rw
+      - ./shared/skills:/shared/skills:ro
+      - ./shared/mcp:/shared/mcp:ro
+      - ./shared/plugins:/opt/data/plugins:ro
+      - ./shared/dashboard-themes:/opt/data/dashboard-themes:ro
+    ports:
+      - "127.0.0.1:9124:9119"
+    command: ["dashboard", "--host", "0.0.0.0", "--port", "9119", "--insecure", "--no-open"]
+
+  ledger-dashboard:
+    image: team-nexus-agent:latest
+    container_name: hermes-ledger-dashboard
+    restart: unless-stopped
+    profiles: ["dashboard"]
+    environment:
+      HERMES_HOME: /opt/data
+      HERMES_KANBAN_HOME: /shared/kanban
+      AGENT_NAME: "Ledger"
+      AGENT_ROLE: "Finance + Ops"
+    env_file:
+      - ./.env
+    volumes:
+      - ./agents/ledger/home:/opt/data
+      - ./agents/ledger/workspace:/workspace
+      - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
+      - ./shared/kanban:/shared/kanban:rw
+      - ./shared/skills:/shared/skills:ro
+      - ./shared/mcp:/shared/mcp:ro
+      - ./shared/plugins:/opt/data/plugins:ro
+      - ./shared/dashboard-themes:/opt/data/dashboard-themes:ro
+    ports:
+      - "127.0.0.1:9125:9119"
+    command: ["dashboard", "--host", "0.0.0.0", "--port", "9119", "--insecure", "--no-open"]
+
+  sentinel-dashboard:
+    image: team-nexus-agent:latest
+    container_name: hermes-sentinel-dashboard
+    restart: unless-stopped
+    profiles: ["dashboard"]
+    environment:
+      HERMES_HOME: /opt/data
+      HERMES_KANBAN_HOME: /shared/kanban
+      AGENT_NAME: "Sentinel"
+      AGENT_ROLE: "Code Review / QA / Security Assessment"
+    env_file:
+      - ./.env
+    volumes:
+      - ./agents/sentinel/home:/opt/data
+      - ./agents/sentinel/workspace:/workspace
+      - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
+      - ./shared/kanban:/shared/kanban:rw
+      - ./shared/skills:/shared/skills:ro
+      - ./shared/mcp:/shared/mcp:ro
+      - ./shared/plugins:/opt/data/plugins:ro
+      - ./shared/dashboard-themes:/opt/data/dashboard-themes:ro
+    ports:
+      - "127.0.0.1:9126:9119"
+    command: ["dashboard", "--host", "0.0.0.0", "--port", "9119", "--insecure", "--no-open"]
+
+  dashboard-nginx:
+    image: nginx:1.27-alpine
+    container_name: hermes-dashboard-nginx
+    restart: unless-stopped
+    profiles: ["dashboard"]
+    depends_on:
+      - atlas-dashboard
+      - vega-dashboard
+      - scout-dashboard
+      - forge-dashboard
+      - lumen-dashboard
+      - blitz-dashboard
+      - ledger-dashboard
+      - sentinel-dashboard
+    ports:
+      - "127.0.0.1:${NGINX_PORT:-9130}:80"
+    volumes:
+      - ./nginx/dashboards.conf:/etc/nginx/conf.d/default.conf:ro

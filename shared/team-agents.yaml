@@ -1,49 +1,82 @@
 agents:
   atlas:
+    enabled: true
     service: atlas
     display_name: Atlas
     role: Orchestrator / Chief of Staff
     gateway_port: 8642
+    dashboard_port: 9119
+    dashboard_visible: true
     discord_visible: true
+    dispatch_enabled: false
+    default_route: true
   vega:
+    enabled: true
     service: vega
     display_name: Vega
     role: Product Strategist
     gateway_port: 8643
+    dashboard_port: 9120
+    dashboard_visible: true
     discord_visible: true
+    dispatch_enabled: true
   scout:
+    enabled: true
     service: scout
     display_name: Scout
     role: Market + Customer Research
     gateway_port: 8644
+    dashboard_port: 9121
+    dashboard_visible: true
     discord_visible: true
+    dispatch_enabled: true
   forge:
+    enabled: true
     service: forge
     display_name: Forge
     role: Engineering Lead
     gateway_port: 8645
+    dashboard_port: 9122
+    dashboard_visible: true
     discord_visible: true
+    dispatch_enabled: true
   lumen:
+    enabled: true
     service: lumen
     display_name: Lumen
     role: UX / Design Lead
     gateway_port: 8646
+    dashboard_port: 9123
+    dashboard_visible: true
     discord_visible: true
+    dispatch_enabled: true
   blitz:
+    enabled: true
     service: blitz
     display_name: Blitz
     role: Growth + GTM
     gateway_port: 8647
+    dashboard_port: 9124
+    dashboard_visible: true
     discord_visible: true
+    dispatch_enabled: true
   ledger:
+    enabled: true
     service: ledger
     display_name: Ledger
     role: Finance + Ops
     gateway_port: 8648
+    dashboard_port: 9125
+    dashboard_visible: true
     discord_visible: true
+    dispatch_enabled: true
   sentinel:
+    enabled: true
     service: sentinel
     display_name: Sentinel
     role: Code Review / QA / Security Assessment
     gateway_port: 8649
+    dashboard_port: 9126
+    dashboard_visible: true
     discord_visible: true
+    dispatch_enabled: true
