@@ -195,3 +195,39 @@ def test_dispatch_pending_rejects_invalid_max(db):
         router.dispatch_pending(db, max_messages=0)
     with pytest.raises(router.RouterError, match="max_messages"):
         router.dispatch_pending(db, max_messages=-1)
+
+
+def test_sensitive_payloads_are_rejected_before_storage(db):
+    with pytest.raises(router.RouterError, match="sensitive"):
+        router.send_messages(db, "atlas", "forge", "task.request", "review token", "OPENAI_API_KEY=sk-test", "deliverable")
+    assert not db.exists()
+
+
+def test_list_rejects_unknown_status(db):
+    router.init_db(db)
+    with pytest.raises(router.RouterError, match="status"):
+        router.list_messages(db, status="wat")
+
+
+def test_main_send_and_list_status_paths(db):
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out):
+        assert router.main([
+            "send", "--db", str(db), "--from", "atlas", "--to", "forge",
+            "--summary", "cli smoke", "--goal", "goal", "--deliverable", "deliverable",
+        ]) == 0
+    mid = out.getvalue().strip()
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out):
+        assert router.main(["list", "--db", str(db), "--status", "pending"]) == 0
+    assert mid in out.getvalue()
+
+
+def test_main_rejects_sensitive_payload(db):
+    err = io.StringIO()
+    with contextlib.redirect_stderr(err):
+        assert router.main([
+            "send", "--db", str(db), "--from", "atlas", "--to", "forge",
+            "--summary", "bad", "--goal", "DISCORD_BOT_TOKEN=abc", "--deliverable", "deliverable",
+        ]) == 2
+    assert "sensitive" in err.getvalue()

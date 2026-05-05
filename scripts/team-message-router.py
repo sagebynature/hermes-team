@@ -26,6 +26,12 @@ COMPOSE_CMD = [
     "-f", "docker-compose.agents.generated.yml",
     "-f", "docker-compose.dashboards.generated.yml",
 ]
+KNOWN_STATUSES = {"pending", "dispatching", "dispatched", "blocked", "failed", "completed"}
+SENSITIVE_PATTERNS = [
+    re.compile(r"(?i)\b[A-Z0-9_]*(?:API[_-]?KEY|TOKEN|SECRET|PASSWORD|WEBHOOK[_-]?URL)\s*="),
+    re.compile(r"(?i)-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+    re.compile(r"\bsk-[A-Za-z0-9_-]{8,}"),
+]
 
 
 class RouterError(ValueError):
@@ -181,6 +187,13 @@ def build_body(goal: str, deliverable: str) -> dict[str, str]:
     return {"goal": goal, "deliverable": deliverable}
 
 
+def reject_sensitive_text(*values: str) -> None:
+    text = "\n".join(v for v in values if v)
+    for pattern in SENSITIVE_PATTERNS:
+        if pattern.search(text):
+            raise RouterError("sensitive payload rejected; route summaries/goals/deliverables must not include secrets or raw credentials")
+
+
 def validate_and_expand(
     sender: str,
     recipient: str,
@@ -255,9 +268,10 @@ def send_messages(
     allow_wide_fanout: bool = False,
     trace: list[str] | None = None,
 ) -> list[str]:
-    init_db(db)
     body = build_body(goal, deliverable)
+    reject_sensitive_text(summary, goal, deliverable)
     recipients, actual_ttl = validate_and_expand(sender, recipient, summary, body, ttl, trace, allow_wide_fanout)
+    init_db(db)
     ids: list[str] = []
     created = now_iso()
     with connect_db(db) as conn:
@@ -309,6 +323,8 @@ def row_to_envelope(row: sqlite3.Row) -> dict[str, Any]:
 
 
 def list_messages(db: str | os.PathLike[str] | None = None, status: str | None = None, out: Any = None) -> None:
+    if status and status not in KNOWN_STATUSES:
+        raise RouterError(f"status must be one of: {', '.join(sorted(KNOWN_STATUSES))}")
     init_db(db)
     out = out or sys.stdout
     with connect_db(db) as conn:

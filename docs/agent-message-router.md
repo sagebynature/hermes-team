@@ -21,7 +21,7 @@ Discord bot mentions are not guaranteed dispatch. Router/Kanban is the A2A work 
 - Do not use free-form Discord bot mentions as the primary agent-to-agent bus.
 - Do not enable an all-to-all bot swarm or global bot-to-bot Discord chatter.
 - Do not let every specialist recursively delegate to every other specialist.
-- Do not route raw transcripts, large logs, secrets, auth files, or private user data.
+- Do not route raw transcripts, large logs, secrets, auth files, or private user data. The CLI rejects obvious key/token/password assignments and private-key blocks before storage.
 - Do not invent dynamic recipients outside the registered roster or explicit group aliases.
 - Do not bypass Kanban for work that must be tracked, reviewed, blocked, or handed off.
 
