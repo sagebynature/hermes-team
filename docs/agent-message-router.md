@@ -102,11 +102,27 @@ Do not route when:
 - The same recipient is already working on an equivalent open Kanban task.
 - A simple workspace artifact or Kanban comment is the safer handoff.
 
+## Operator workflow
+
+```bash
+make router-send FROM=atlas TO=scout SUMMARY='bounded request' GOAL='...' DELIVERABLE='...'
+make router-list STATUS=pending
+make router-dispatch MAX_MESSAGES=1
+make router-list STATUS=dispatched
+make kanban-dispatcher-once MAX_TASKS=1
+make router-sync
+make router-list STATUS=completed
+make router-inspect MESSAGE=<message-id>
+```
+
+`router-sync` reads the shared Kanban database and records worker outcomes back onto dispatched router messages. Completed Kanban tasks become router `completed`; blocked tasks become router `blocked`; failed task runs become router `failed`. The original Kanban task/run remains the execution record, while the router event log becomes the Atlas-friendly coordination view.
+
 ## Troubleshooting
 
 - Missing specialist response: inspect the router and Kanban task first, then dispatcher logs. Discord bot mentions are not guaranteed dispatch.
 - Atlas mentioned specialists but nobody replied: check whether Atlas actually created router/Kanban work. A Discord `@Vega @Forge ...` post alone is not a control-plane event.
 - Router message not moving: run `make router-list STATUS=pending`, inspect the message with `make router-inspect MESSAGE=<message-id>`, then run `make router-dispatch`.
+- Worker finished but router still says dispatched: run `make router-sync`, then inspect the message again. This syncs completed, blocked, or failed Kanban task outcomes back into the router event log so Atlas can synthesize from router state instead of manually scraping Kanban runs.
 - Unsafe Discord bot mode: run `python3 scripts/team_registry.py validate-discord-bot-mode`; remove `DISCORD_ALLOW_BOTS=all` if present.
 - Unknown recipient: check `shared/team-agents.yaml` and generated roster docs for enabled agent slugs.
 - Route denied: confirm the sender is allowed to reach the recipient or group alias under router policy.

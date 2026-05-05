@@ -19,6 +19,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DB_PATH = REPO_ROOT / "shared" / "router" / "messages.db"
 DEFAULT_POLICY_PATH = REPO_ROOT / "shared" / "router" / "router-policy.yaml"
 DEFAULT_AGENTS_PATH = REPO_ROOT / "shared" / "team-agents.yaml"
+DEFAULT_KANBAN_DB_PATH = REPO_ROOT / "shared" / "kanban" / "kanban.db"
 ARTIFACT_DIR = REPO_ROOT / "shared" / "project" / "artifacts" / "router"
 COMPOSE_CMD = [
     "docker", "compose",
@@ -473,6 +474,83 @@ def dispatch_pending(
     return dispatched
 
 
+def sync_completions(
+    db: str | os.PathLike[str] | None = None,
+    kanban_db: str | os.PathLike[str] | None = None,
+) -> list[str]:
+    """Sync completed/blocked/failed Kanban task outcomes back into router state."""
+    init_db(db)
+    kanban_path = Path(kanban_db) if kanban_db else DEFAULT_KANBAN_DB_PATH
+    if not kanban_path.exists():
+        raise RouterError(f"kanban db not found: {kanban_path}")
+
+    synced: list[str] = []
+    with connect_db(db) as router_conn, sqlite3.connect(kanban_path) as kanban_conn:
+        kanban_conn.row_factory = sqlite3.Row
+        rows = router_conn.execute(
+            """
+            SELECT id, kanban_task_id
+            FROM messages
+            WHERE status='dispatched' AND kanban_task_id IS NOT NULL
+            ORDER BY created_at, id
+            """
+        ).fetchall()
+        for row in rows:
+            task = kanban_conn.execute(
+                "SELECT id, status, assignee, title FROM tasks WHERE id=?",
+                (row["kanban_task_id"],),
+            ).fetchone()
+            if task is None:
+                continue
+            run = kanban_conn.execute(
+                """
+                SELECT id, status, outcome, summary, error
+                FROM task_runs
+                WHERE task_id=?
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (row["kanban_task_id"],),
+            ).fetchone()
+            task_status = task["status"]
+            run_summary = run["summary"] if run is not None and "summary" in run.keys() else None
+            run_error = run["error"] if run is not None and "error" in run.keys() else None
+            run_status = run["status"] if run is not None and "status" in run.keys() else None
+            run_outcome = run["outcome"] if run is not None and "outcome" in run.keys() else None
+
+            new_status: str | None = None
+            error: str | None = None
+            if task_status == "done" or run_outcome == "completed":
+                new_status = "completed"
+            elif task_status == "blocked" or run_outcome == "blocked" or run_status == "blocked":
+                new_status = "blocked"
+                error = run_summary or run_error or "kanban task blocked"
+            elif task_status == "failed" or run_outcome == "failed" or run_status == "failed":
+                new_status = "failed"
+                error = run_error or run_summary or "kanban task failed"
+
+            if new_status is None:
+                continue
+
+            payload = {
+                "kanban_task_id": row["kanban_task_id"],
+                "task_status": task_status,
+                "task_assignee": task["assignee"],
+                "task_title": task["title"],
+                "run_status": run_status,
+                "run_outcome": run_outcome,
+                "run_summary": run_summary,
+                "run_error": run_error,
+            }
+            router_conn.execute(
+                "UPDATE messages SET status=?, error=? WHERE id=? AND status='dispatched'",
+                (new_status, error, row["id"]),
+            )
+            _insert_event(router_conn, row["id"], "completion_synced", payload)
+            synced.append(row["id"])
+    return synced
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Team Nexus message router")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -507,6 +585,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--db")
     p.add_argument("--max", type=int, default=1, dest="max_messages")
     p.add_argument("--dry-run", action="store_true")
+
+    p = sub.add_parser("sync-completions")
+    p.add_argument("--db")
+    p.add_argument("--kanban-db")
     return parser
 
 
@@ -530,6 +612,10 @@ def main(argv: list[str] | None = None) -> int:
             inspect_message(args.db, args.message_id)
         elif args.command == "dispatch-pending":
             ids = dispatch_pending(args.db, args.max_messages, args.dry_run)
+            for mid in ids:
+                print(mid)
+        elif args.command == "sync-completions":
+            ids = sync_completions(args.db, args.kanban_db)
             for mid in ids:
                 print(mid)
         return 0

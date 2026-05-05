@@ -204,6 +204,97 @@ def test_dispatch_pending_rejects_invalid_max(db):
         router.dispatch_pending(db, max_messages=-1)
 
 
+def create_kanban_db(path, *, task_id="t_done", task_status="done", run_status="done", outcome="completed", summary="router smoke ok"):
+    conn = sqlite3.connect(path)
+    conn.executescript("""
+        CREATE TABLE tasks(
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            body TEXT,
+            assignee TEXT,
+            status TEXT NOT NULL
+        );
+        CREATE TABLE task_runs(
+            id INTEGER PRIMARY KEY,
+            task_id TEXT,
+            profile TEXT,
+            status TEXT,
+            outcome TEXT,
+            summary TEXT,
+            error TEXT
+        );
+    """)
+    conn.execute(
+        "INSERT INTO tasks(id, title, body, assignee, status) VALUES(?, ?, ?, ?, ?)",
+        (task_id, "[router:msg] done", "body", "scout", task_status),
+    )
+    conn.execute(
+        "INSERT INTO task_runs(task_id, profile, status, outcome, summary, error) VALUES(?, ?, ?, ?, ?, ?)",
+        (task_id, "scout", run_status, outcome, summary, None),
+    )
+    conn.commit()
+    conn.close()
+
+
+def test_sync_completions_marks_dispatched_message_completed_and_records_result(db, tmp_path):
+    router.init_db(db)
+    ids = router.send_messages(db, "atlas", "scout", "task.request", "sync me", "goal", "deliverable")
+    conn = sqlite3.connect(db)
+    conn.execute("UPDATE messages SET status='dispatched', kanban_task_id=? WHERE id=?", ("t_done", ids[0]))
+    conn.commit()
+    conn.close()
+    kanban_db = tmp_path / "kanban.db"
+    create_kanban_db(kanban_db)
+
+    synced = router.sync_completions(db, kanban_db)
+
+    assert synced == [ids[0]]
+    msg = rows(db, "SELECT status, error FROM messages WHERE id=?", (ids[0],))[0]
+    assert msg["status"] == "completed"
+    assert msg["error"] is None
+    events = rows(db, "SELECT kind, payload_json FROM route_events WHERE message_id=? ORDER BY id", (ids[0],))
+    assert [e["kind"] for e in events] == ["created", "completion_synced"]
+    payload = json.loads(events[-1]["payload_json"])
+    assert payload["kanban_task_id"] == "t_done"
+    assert payload["task_status"] == "done"
+    assert payload["run_summary"] == "router smoke ok"
+
+
+def test_sync_completions_marks_dispatched_message_blocked(db, tmp_path):
+    router.init_db(db)
+    ids = router.send_messages(db, "atlas", "scout", "task.request", "sync block", "goal", "deliverable")
+    conn = sqlite3.connect(db)
+    conn.execute("UPDATE messages SET status='dispatched', kanban_task_id=? WHERE id=?", ("t_blocked", ids[0]))
+    conn.commit()
+    conn.close()
+    kanban_db = tmp_path / "kanban.db"
+    create_kanban_db(kanban_db, task_id="t_blocked", task_status="blocked", run_status="blocked", outcome="blocked", summary="need input")
+
+    synced = router.sync_completions(db, kanban_db)
+
+    assert synced == [ids[0]]
+    msg = rows(db, "SELECT status, error FROM messages WHERE id=?", (ids[0],))[0]
+    assert msg["status"] == "blocked"
+    assert "need input" in msg["error"]
+
+
+def test_main_sync_completions_cli_prints_synced_ids(db, tmp_path):
+    router.init_db(db)
+    ids = router.send_messages(db, "atlas", "scout", "task.request", "sync cli", "goal", "deliverable")
+    conn = sqlite3.connect(db)
+    conn.execute("UPDATE messages SET status='dispatched', kanban_task_id=? WHERE id=?", ("t_done", ids[0]))
+    conn.commit()
+    conn.close()
+    kanban_db = tmp_path / "kanban.db"
+    create_kanban_db(kanban_db)
+
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out):
+        assert router.main(["sync-completions", "--db", str(db), "--kanban-db", str(kanban_db)]) == 0
+
+    assert ids[0] in out.getvalue()
+
+
 def test_sensitive_payloads_are_rejected_before_storage(db):
     with pytest.raises(router.RouterError, match="sensitive"):
         router.send_messages(db, "atlas", "forge", "task.request", "review token", "OPENAI_API_KEY=sk-test", "deliverable")

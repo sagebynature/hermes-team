@@ -22,7 +22,7 @@ endif
 	generate check-generated validate preflight registry-list registry-validate registry-next-ports validate-plugins dashboards-up dashboards-restart \
 	agent-add agent-disable agent-archive \
 	kanban-init kanban-list kanban-stats kanban-watch kanban-create kanban-link kanban-dispatch \
-	router-init router-send router-list router-inspect router-dispatch \
+	router-init router-send router-list router-inspect router-dispatch router-sync \
 	kanban-dispatcher-once kanban-dispatcher-daemon kanban-dispatcher-stop kanban-dispatcher-logs discord-status-dry-run \
 	mcp-list mcp-list-all mcp-test mcp-remove mcp-add-command mcp-add-url \
 	mcp-register-template mcp-register-template-all mcp-templates mcp-show-template \
@@ -194,6 +194,9 @@ router-inspect: ## Inspect a router message: make router-inspect MESSAGE=msg_...
 MAX_MESSAGES ?= 1
 router-dispatch: ## Dispatch pending router messages to Kanban; MAX_MESSAGES defaults to 1
 	python3 scripts/team-message-router.py dispatch-pending --max "$(MAX_MESSAGES)"
+
+router-sync: ## Sync completed/blocked/failed Kanban task outcomes back into router messages
+	python3 scripts/team-message-router.py sync-completions
 
 kanban-dispatcher-once: ## Run one Dockerized Compose-aware dispatcher pass; add DRY_RUN=1 to avoid spawning
 	@if [ "$(DRY_RUN)" = "1" ]; then \
