@@ -85,9 +85,16 @@ colorOverrides:
   ring: "#50ff50"
 
 customCSS: |
+  :root {
+    --agent-primary-color: #50ff50;
+    --agent-secondary-color: #ff9830;
+    --agent-primary-rgb: 80,255,80;
+    --agent-secondary-rgb: 255,152,48;
+  }
+
   body {
     background: #000000 fixed;
-    color: #50ff50;
+    color: var(--agent-primary-color, #50ff50);
     font-family: var(--font-mono);
     text-rendering: geometricPrecision;
   }
@@ -100,7 +107,7 @@ customCSS: |
     z-index: 0;
     background:
       linear-gradient(rgba(0,0,0,0.04) 50%, transparent 50%),
-      radial-gradient(circle at 50% 0%, rgba(255,152,48,0.08), transparent 50%);
+      radial-gradient(circle at 50% 0%, rgba(var(--agent-secondary-rgb, 255,152,48),0.08), transparent 50%);
     background-size: 100% 3px, 100% 100%;
     mix-blend-mode: screen;
     opacity: 0.55;
@@ -124,7 +131,7 @@ customCSS: |
   }
 
   h1, h2, h3, .font-display {
-    color: #ff9830;
+    color: var(--agent-secondary-color, #ff9830);
     font-family: var(--font-display);
     font-weight: 900;
     letter-spacing: 0.14em;
@@ -138,7 +145,7 @@ customCSS: |
   }
 
   button:hover, a:hover, [role="tab"]:hover, [data-slot="button"]:hover {
-    box-shadow: 0 0 0 1px rgba(80,255,80,0.24), 0 0 18px rgba(80,255,80,0.12);
+    box-shadow: 0 0 0 1px rgba(var(--agent-primary-rgb, 80,255,80),0.24), 0 0 18px rgba(var(--agent-primary-rgb, 80,255,80),0.12);
   }
 
   [data-slot="card"]::before,
@@ -148,7 +155,7 @@ customCSS: |
     inset: 0;
     pointer-events: none;
     background:
-      linear-gradient(90deg, rgba(255,152,48,0.22), transparent 28%, transparent 72%, rgba(80,255,80,0.12)),
+      linear-gradient(90deg, rgba(var(--agent-secondary-rgb, 255,152,48),0.22), transparent 28%, transparent 72%, rgba(var(--agent-primary-rgb, 80,255,80),0.12)),
       linear-gradient(180deg, rgba(255,255,255,0.025), transparent 32%);
     opacity: 0.28;
   }
@@ -159,11 +166,11 @@ customCSS: |
   }
 
   #app-sidebar > div:first-child span {
-    color: #ff9830 !important;
+    color: var(--agent-secondary-color, #ff9830) !important;
     font-family: var(--font-display) !important;
     font-weight: 900 !important;
     letter-spacing: 0.16em !important;
-    text-shadow: 0 0 8px rgba(255,152,48,0.35);
+    text-shadow: 0 0 8px rgba(var(--agent-secondary-rgb, 255,152,48),0.35);
     text-transform: uppercase;
   }
 
@@ -172,26 +179,26 @@ customCSS: |
   }
 
   #app-sidebar nav a svg {
-    color: #ff9830 !important;
+    color: var(--agent-secondary-color, #ff9830) !important;
   }
 
   #app-sidebar nav a[aria-current="page"],
   #app-sidebar nav a:hover {
-    color: #50ff50 !important;
-    text-shadow: 0 0 8px rgba(80,255,80,0.35);
+    color: var(--agent-primary-color, #50ff50) !important;
+    text-shadow: 0 0 8px rgba(var(--agent-primary-rgb, 80,255,80),0.35);
   }
 
   main .border.border-border.bg-card\/80 {
     position: relative !important;
     background:
-      linear-gradient(90deg, rgba(255,152,48,0.10), transparent 18rem),
-      linear-gradient(180deg, rgba(80,255,80,0.035), transparent 18rem),
+      linear-gradient(90deg, rgba(var(--agent-secondary-rgb, 255,152,48),0.10), transparent 18rem),
+      linear-gradient(180deg, rgba(var(--agent-primary-rgb, 80,255,80),0.035), transparent 18rem),
       #050504 !important;
-    border-color: rgba(255,152,48,0.58) !important;
+    border-color: rgba(var(--agent-secondary-rgb, 255,152,48),0.58) !important;
     box-shadow:
-      inset 0 1px 0 rgba(255,152,48,0.22),
-      inset 0 -1px 0 rgba(80,255,80,0.12),
-      0 0 0 1px rgba(255,152,48,0.06),
+      inset 0 1px 0 rgba(var(--agent-secondary-rgb, 255,152,48),0.22),
+      inset 0 -1px 0 rgba(var(--agent-primary-rgb, 80,255,80),0.12),
+      0 0 0 1px rgba(var(--agent-secondary-rgb, 255,152,48),0.06),
       0 18px 38px rgba(0,0,0,0.42) !important;
   }
 
@@ -201,7 +208,7 @@ customCSS: |
     top: -1px;
     right: 1rem;
     padding: 0.16rem 0.55rem 0.18rem;
-    background: #ff9830;
+    background: var(--agent-secondary-color, #ff9830);
     color: #000000;
     font-family: var(--font-mono);
     font-size: 0.58rem;
@@ -215,24 +222,24 @@ customCSS: |
   main .flex.flex-col.gap-1\.5 > .border.overflow-hidden {
     position: relative !important;
     background:
-      linear-gradient(90deg, rgba(255,152,48,0.18) 0 0.18rem, transparent 0.18rem),
-      repeating-linear-gradient(90deg, rgba(80,255,80,0.028) 0 1px, transparent 1px 5.4rem),
+      linear-gradient(90deg, rgba(var(--agent-secondary-rgb, 255,152,48),0.18) 0 0.18rem, transparent 0.18rem),
+      repeating-linear-gradient(90deg, rgba(var(--agent-primary-rgb, 80,255,80),0.028) 0 1px, transparent 1px 5.4rem),
       rgba(8,8,7,0.92) !important;
-    border-color: rgba(255,152,48,0.36) !important;
-    border-left-color: #ff9830 !important;
+    border-color: rgba(var(--agent-secondary-rgb, 255,152,48),0.36) !important;
+    border-left-color: var(--agent-secondary-color, #ff9830) !important;
     border-left-width: 3px !important;
     clip-path: polygon(0 0, calc(100% - 0.75rem) 0, 100% 0.75rem, 100% 100%, 0.75rem 100%, 0 calc(100% - 0.75rem));
-    box-shadow: inset 0 0 0 1px rgba(80,255,80,0.055) !important;
+    box-shadow: inset 0 0 0 1px rgba(var(--agent-primary-rgb, 80,255,80),0.055) !important;
   }
 
   main .p-4.grid.gap-3 > .border.border-border:hover,
   main .flex.flex-col.gap-1\.5 > .border.overflow-hidden:hover {
     background:
-      linear-gradient(90deg, rgba(80,255,80,0.26) 0 0.18rem, transparent 0.18rem),
-      repeating-linear-gradient(90deg, rgba(80,255,80,0.04) 0 1px, transparent 1px 5.4rem),
+      linear-gradient(90deg, rgba(var(--agent-primary-rgb, 80,255,80),0.26) 0 0.18rem, transparent 0.18rem),
+      repeating-linear-gradient(90deg, rgba(var(--agent-primary-rgb, 80,255,80),0.04) 0 1px, transparent 1px 5.4rem),
       rgba(12,12,9,0.98) !important;
-    border-color: rgba(80,255,80,0.62) !important;
-    box-shadow: 0 0 0 1px rgba(80,255,80,0.18), 0 0 22px rgba(80,255,80,0.10) !important;
+    border-color: rgba(var(--agent-primary-rgb, 80,255,80),0.62) !important;
+    box-shadow: 0 0 0 1px rgba(var(--agent-primary-rgb, 80,255,80),0.18), 0 0 22px rgba(var(--agent-primary-rgb, 80,255,80),0.10) !important;
   }
 
   main .p-4.grid.gap-3 > .border.border-border::after,
@@ -250,8 +257,8 @@ customCSS: |
 
   main h3,
   main .font-expanded {
-    color: #ff9830 !important;
-    text-shadow: 0 0 10px rgba(255,152,48,0.16);
+    color: var(--agent-secondary-color, #ff9830) !important;
+    text-shadow: 0 0 10px rgba(var(--agent-secondary-rgb, 255,152,48),0.16);
   }
 
   main [class*="text-muted"],
@@ -261,7 +268,7 @@ customCSS: |
 
   main button[aria-label="Delete session"] {
     border: 1px solid rgba(255,48,48,0.35) !important;
-    color: rgba(255,152,48,0.82) !important;
+    color: rgba(var(--agent-secondary-rgb, 255,152,48),0.82) !important;
     background: rgba(255,48,48,0.05) !important;
   }
 
@@ -271,16 +278,16 @@ customCSS: |
 
   .hermes-kanban-column {
     background:
-      linear-gradient(180deg, rgba(255,152,48,0.06), transparent 5.5rem),
+      linear-gradient(180deg, rgba(var(--agent-secondary-rgb, 255,152,48),0.06), transparent 5.5rem),
       rgba(4,4,3,0.96) !important;
-    border: 1px solid rgba(255,152,48,0.34) !important;
+    border: 1px solid rgba(var(--agent-secondary-rgb, 255,152,48),0.34) !important;
     box-shadow: inset 0 0 0 1px rgba(216,216,208,0.025), 0 16px 28px rgba(0,0,0,0.24) !important;
   }
 
   .hermes-kanban-column-header {
-    border-bottom: 1px solid rgba(255,152,48,0.32) !important;
-    background: linear-gradient(90deg, rgba(255,152,48,0.16), transparent) !important;
-    color: #ffc072 !important;
+    border-bottom: 1px solid rgba(var(--agent-secondary-rgb, 255,152,48),0.32) !important;
+    background: linear-gradient(90deg, rgba(var(--agent-secondary-rgb, 255,152,48),0.16), transparent) !important;
+    color: color-mix(in srgb, var(--agent-secondary-color, #ff9830) 72%, white) !important;
     text-transform: uppercase !important;
     letter-spacing: 0.12em !important;
   }
@@ -303,18 +310,18 @@ customCSS: |
   .hermes-kanban-card > .border,
   .hermes-kanban-card .border.border-border.bg-card\/80 {
     background:
-      linear-gradient(90deg, rgba(255,152,48,0.10) 0 0.18rem, transparent 0.18rem),
+      linear-gradient(90deg, rgba(var(--agent-secondary-rgb, 255,152,48),0.10) 0 0.18rem, transparent 0.18rem),
       rgba(7,7,6,0.99) !important;
-    border-color: rgba(255,152,48,0.30) !important;
-    border-left: 3px solid rgba(255,152,48,0.78) !important;
+    border-color: rgba(var(--agent-secondary-rgb, 255,152,48),0.30) !important;
+    border-left: 3px solid rgba(var(--agent-secondary-rgb, 255,152,48),0.78) !important;
     box-shadow: inset 0 0 0 1px rgba(216,216,208,0.04) !important;
   }
 
   .hermes-kanban-card:hover > .border,
   .hermes-kanban-card:hover .border.border-border.bg-card\/80 {
-    border-color: rgba(80,255,80,0.46) !important;
-    border-left-color: #50ff50 !important;
-    box-shadow: 0 0 0 1px rgba(80,255,80,0.12), 0 0 18px rgba(80,255,80,0.08) !important;
+    border-color: rgba(var(--agent-primary-rgb, 80,255,80),0.46) !important;
+    border-left-color: var(--agent-primary-color, #50ff50) !important;
+    box-shadow: 0 0 0 1px rgba(var(--agent-primary-rgb, 80,255,80),0.12), 0 0 18px rgba(var(--agent-primary-rgb, 80,255,80),0.08) !important;
   }
 
   .hermes-kanban-card-content {
@@ -369,7 +376,7 @@ customCSS: |
   .hermes-kanban [role="combobox"] {
     color: #f4f4e8 !important;
     background: rgba(0,0,0,0.86) !important;
-    border-color: rgba(80,255,80,0.40) !important;
+    border-color: rgba(var(--agent-primary-rgb, 80,255,80),0.40) !important;
     text-transform: none !important;
     letter-spacing: 0.015em !important;
   }
@@ -387,7 +394,7 @@ customCSS: |
   }
 
   ::selection {
-    background: rgba(80,255,80,0.28);
+    background: rgba(var(--agent-primary-rgb, 80,255,80),0.28);
     color: #000000;
   }
 

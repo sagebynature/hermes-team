@@ -15,6 +15,11 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+try:
+    import yaml  # type: ignore
+except Exception:  # pragma: no cover - dashboard runtime normally has PyYAML
+    yaml = None
+
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse
 
@@ -46,6 +51,80 @@ def _agent_identity_from_env() -> Dict[str, str]:
         "role": role,
         "title": f"{name} Dashboard" if name else "Hermes Dashboard",
     }
+
+
+def _config_data() -> Dict[str, Any]:
+    config_path = _hermes_home() / "config.yaml"
+    if not config_path.is_file() or yaml is None:
+        return {}
+    try:
+        data = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _dashboard_color_fallback() -> Dict[str, Optional[str]]:
+    config_path = _hermes_home() / "config.yaml"
+    if not config_path.is_file():
+        return {"primary": None, "secondary": None}
+    primary: Optional[str] = None
+    secondary: Optional[str] = None
+    in_dashboard = False
+    in_accent_colors = False
+    for raw in config_path.read_text(encoding="utf-8").splitlines():
+        if raw.startswith("dashboard:"):
+            in_dashboard = True
+            in_accent_colors = False
+            continue
+        if in_dashboard and raw and not raw.startswith(" "):
+            break
+        if not in_dashboard:
+            continue
+        text = raw.strip()
+        if text.startswith("accent_colors:"):
+            in_accent_colors = True
+            continue
+        if text.startswith("primary_color:"):
+            primary = text.split(":", 1)[1].strip().strip("'\"")
+        elif text.startswith("secondary_color:"):
+            secondary = text.split(":", 1)[1].strip().strip("'\"")
+        elif in_accent_colors and text.startswith("primary:"):
+            primary = text.split(":", 1)[1].strip().strip("'\"")
+        elif in_accent_colors and text.startswith("secondary:"):
+            secondary = text.split(":", 1)[1].strip().strip("'\"")
+    return {"primary": _normalize_hex(primary), "secondary": _normalize_hex(secondary)}
+
+
+def _normalize_hex(value: Any) -> Optional[str]:
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if re.fullmatch(r"#[0-9a-fA-F]{6}", text):
+        return text.lower()
+    if re.fullmatch(r"[0-9a-fA-F]{6}", text):
+        return f"#{text.lower()}"
+    return None
+
+
+def _dashboard_colors() -> Dict[str, Optional[str]]:
+    config = _config_data()
+    dashboard = config.get("dashboard") if isinstance(config.get("dashboard"), dict) else {}
+    accent_colors = dashboard.get("accent_colors") if isinstance(dashboard.get("accent_colors"), dict) else {}
+    fallback = _dashboard_color_fallback()
+    primary = (
+        _normalize_hex(accent_colors.get("primary"))
+        or _normalize_hex(dashboard.get("primary_color"))
+        or fallback.get("primary")
+        or _normalize_hex(os.environ.get("DASHBOARD_PRIMARY_COLOR"))
+    )
+    secondary = (
+        _normalize_hex(accent_colors.get("secondary"))
+        or _normalize_hex(dashboard.get("secondary_color"))
+        or fallback.get("secondary")
+        or _normalize_hex(os.environ.get("DASHBOARD_SECONDARY_COLOR"))
+    )
+    return {"primary": primary, "secondary": secondary}
 
 
 def _slugify(value: str) -> str:
@@ -122,6 +201,7 @@ async def identity() -> Dict[str, Any]:
             "available": has_profile,
             "url": "/api/plugins/agent-identity-dashboard/profile.jpg" if has_profile else None,
         },
+        "dashboard_colors": _dashboard_colors(),
     }
 
 

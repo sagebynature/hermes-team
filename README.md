@@ -579,7 +579,7 @@ So Team Nexus themes live here:
 shared/dashboard-themes/team-nexus.yaml
 ```
 
-Each agent chooses the active theme in its own config:
+Each agent chooses the active theme and profile-derived accents in its own config:
 
 ```yaml
 dashboard:
@@ -587,6 +587,40 @@ dashboard:
   agent_name: ${AGENT_NAME}
   agent_role: ${AGENT_ROLE}
   title: ${AGENT_NAME} Dashboard
+  accent_colors:
+    primary: "#4F7FC5"
+    secondary: "#6FE6F2"
+```
+
+`accent_colors.primary` and `accent_colors.secondary` are read by the `agent-identity-dashboard` plugin at `/api/plugins/agent-identity-dashboard/identity`. The plugin writes them into CSS variables (`--agent-primary-color`, `--agent-secondary-color`, and RGB variants), and the shared `team-nexus` dashboard theme uses those variables for the visible NERV chrome: active text, borders, glows, sidebar identity card, banner nav, session panels, and Kanban accents.
+
+The committed defaults are selected from each agent's `agents/<agent>/home/profile.jpg` portrait:
+
+| Agent | Primary | Secondary | Visual source |
+| --- | --- | --- | --- |
+| Atlas | `#4F7FC5` | `#6FE6F2` | cobalt command suit/hair + cyan holographic UI |
+| Vega | `#8B5CF6` | `#5EEAD4` | violet product-strategy portrait + teal dashboard UI |
+| Scout | `#F47A1F` | `#20D6C0` | scout orange tactical/UI palette + cyber teal lens |
+| Forge | `#6CFF9A` | `#FF4E57` | engineering green HUD/code + red cybernetic warning detail |
+| Lumen | `#7EF7F2` | `#2FA6A3` | aqua design-interface glow + deeper teal |
+| Blitz | `#E1262F` | `#FF5A5F` | growth/marketing crimson + bright coral red highlights |
+| Ledger | `#22C7F2` | `#0B3A63` | finance analytics cyan + deep dashboard navy |
+| Sentinel | `#FFD35A` | `#5F6670` | compliance/warning gold + gunmetal cybernetic gray |
+
+To change an existing agent's dashboard colors, edit `agents/<agent>/home/config.yaml` and restart that dashboard service. To make the color survive future regeneration or new agent creation, edit the matching registry fields in `shared/team-agents.yaml`:
+
+```yaml
+agents:
+  atlas:
+    dashboard_primary_color: "#4F7FC5"
+    dashboard_secondary_color: "#6FE6F2"
+```
+
+Then regenerate and restart dashboards:
+
+```bash
+make generate
+make dashboards-restart
 ```
 
 Theme YAMLs are discovered on each `/api/dashboard/themes` request, but Compose mount changes require recreating the running containers:

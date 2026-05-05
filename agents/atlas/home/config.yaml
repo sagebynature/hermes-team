@@ -201,6 +201,9 @@ dashboard:
   agent_name: ${AGENT_NAME}
   agent_role: ${AGENT_ROLE}
   title: ${AGENT_NAME} Dashboard
+  accent_colors:
+    primary: "#4F7FC5"
+    secondary: "#6FE6F2"
 privacy:
   redact_pii: false
 tts:

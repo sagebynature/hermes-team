@@ -6,6 +6,8 @@ agents:
     role: Orchestrator / Chief of Staff
     gateway_port: 8642
     dashboard_port: 9119
+    dashboard_primary_color: "#4F7FC5"
+    dashboard_secondary_color: "#6FE6F2"
     dashboard_visible: true
     discord_visible: true
     dispatch_enabled: false
@@ -17,6 +19,8 @@ agents:
     role: Product Strategist
     gateway_port: 8643
     dashboard_port: 9120
+    dashboard_primary_color: "#8B5CF6"
+    dashboard_secondary_color: "#5EEAD4"
     dashboard_visible: true
     discord_visible: true
     dispatch_enabled: true
@@ -27,6 +31,8 @@ agents:
     role: Market + Customer Research
     gateway_port: 8644
     dashboard_port: 9121
+    dashboard_primary_color: "#F47A1F"
+    dashboard_secondary_color: "#20D6C0"
     dashboard_visible: true
     discord_visible: true
     dispatch_enabled: true
@@ -37,6 +43,8 @@ agents:
     role: Engineering Lead
     gateway_port: 8645
     dashboard_port: 9122
+    dashboard_primary_color: "#6CFF9A"
+    dashboard_secondary_color: "#FF4E57"
     dashboard_visible: true
     discord_visible: true
     dispatch_enabled: true
@@ -47,6 +55,8 @@ agents:
     role: UX / Design Lead
     gateway_port: 8646
     dashboard_port: 9123
+    dashboard_primary_color: "#7EF7F2"
+    dashboard_secondary_color: "#2FA6A3"
     dashboard_visible: true
     discord_visible: true
     dispatch_enabled: true
@@ -57,6 +67,8 @@ agents:
     role: Growth + GTM
     gateway_port: 8647
     dashboard_port: 9124
+    dashboard_primary_color: "#E1262F"
+    dashboard_secondary_color: "#FF5A5F"
     dashboard_visible: true
     discord_visible: true
     dispatch_enabled: true
@@ -67,6 +79,8 @@ agents:
     role: Finance + Ops
     gateway_port: 8648
     dashboard_port: 9125
+    dashboard_primary_color: "#22C7F2"
+    dashboard_secondary_color: "#0B3A63"
     dashboard_visible: true
     discord_visible: true
     dispatch_enabled: true
@@ -77,6 +91,8 @@ agents:
     role: Code Review / QA / Security Assessment
     gateway_port: 8649
     dashboard_port: 9126
+    dashboard_primary_color: "#FFD35A"
+    dashboard_secondary_color: "#5F6670"
     dashboard_visible: true
     discord_visible: true
     dispatch_enabled: true

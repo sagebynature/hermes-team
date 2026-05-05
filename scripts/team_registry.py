@@ -24,6 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 REGISTRY_PATH = ROOT / "shared" / "team-agents.yaml"
 TEMPLATES_DIR = ROOT / "templates"
 SLUG_RE = re.compile(r"^[a-z][a-z0-9-]*$")
+HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
 class RegistryError(Exception):
@@ -190,6 +191,9 @@ def validate_registry_data(agents: OrderedDict[str, dict[str, Any]]) -> None:
             for field, port in (("gateway_port", gateway_port), ("dashboard_port", dashboard_port)):
                 if port < 1 or port > 65535:
                     errors.append(f"{slug}: {field} must be between 1 and 65535; got {port}")
+            for field in ("dashboard_primary_color", "dashboard_secondary_color"):
+                if field in info and not HEX_COLOR_RE.fullmatch(str(info[field])):
+                    errors.append(f"{slug}: {field} must be a 6-digit hex color like #50ff50")
             if enabled:
                 if gateway_port in gateway_ports:
                     errors.append(f"duplicate gateway_port {gateway_port}: {gateway_ports[gateway_port]} and {slug}")
@@ -531,6 +535,8 @@ def create_agent_files(slug: str, info: dict[str, Any]) -> None:
         "role": info["role"],
         "gateway_port": info["gateway_port"],
         "dashboard_port": info["dashboard_port"],
+        "dashboard_primary_color": info.get("dashboard_primary_color", "#50ff50"),
+        "dashboard_secondary_color": info.get("dashboard_secondary_color", "#ff9830"),
     }
     (home / "config.yaml").write_text(render_template("agent-config.yaml.tmpl", values))
     (home / "SOUL.md").write_text(render_template("agent-SOUL.md.tmpl", values))

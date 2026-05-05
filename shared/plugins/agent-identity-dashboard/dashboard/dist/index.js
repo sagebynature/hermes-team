@@ -6,8 +6,9 @@
   const { useEffect, useState } = SDK.hooks;
   const PLUGIN_NAME = "agent-identity-dashboard";
   const PROFILE_URL = "/api/plugins/agent-identity-dashboard/profile.jpg";
-  const DEFAULT_BRAND_TEXT = "team nexus";
-  const DEFAULT_BRAND_HTML = "team nexus";
+  const DEFAULT_BRAND_TEXT = "TEAM NEXUS";
+  const DEFAULT_BRAND_HTML = "TEAM NEXUS";
+  const DEFAULT_THEME_COLORS = { primary: "#50ff50", secondary: "#ff9830" };
 
   function pickIdentity(config) {
     const dashboard = (config && config.dashboard) || {};
@@ -18,6 +19,44 @@
     return { name, role, title };
   }
 
+  function normalizeHex(value) {
+    if (typeof value !== "string") return null;
+    const text = value.trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(text)) return text.toLowerCase();
+    if (/^[0-9a-fA-F]{6}$/.test(text)) return `#${text.toLowerCase()}`;
+    return null;
+  }
+
+  function hexToRgb(value) {
+    const hex = normalizeHex(value);
+    if (!hex) return null;
+    return [1, 3, 5].map((offset) => parseInt(hex.slice(offset, offset + 2), 16));
+  }
+
+  function normalizeThemeColors(colors) {
+    const primary = normalizeHex(colors && colors.primary) || DEFAULT_THEME_COLORS.primary;
+    const secondary = normalizeHex(colors && colors.secondary) || DEFAULT_THEME_COLORS.secondary;
+    return { primary, secondary };
+  }
+
+  function applyAgentThemeColors(colors) {
+    const theme = normalizeThemeColors(colors);
+    const root = document.documentElement;
+    const primaryRgb = hexToRgb(theme.primary) || [80, 255, 80];
+    const secondaryRgb = hexToRgb(theme.secondary) || [255, 152, 48];
+    root.style.setProperty("--agent-primary-color", theme.primary);
+    root.style.setProperty("--agent-secondary-color", theme.secondary);
+    root.style.setProperty("--agent-primary-rgb", primaryRgb.join(", "));
+    root.style.setProperty("--agent-secondary-rgb", secondaryRgb.join(", "));
+    root.style.setProperty("--foreground", theme.primary);
+    root.style.setProperty("--primary", theme.primary);
+    root.style.setProperty("--ring", theme.primary);
+    root.style.setProperty("--secondary", `rgba(${secondaryRgb.join(", ")}, 0.12)`);
+    root.dataset.agentPrimaryColor = theme.primary;
+    root.dataset.agentSecondaryColor = theme.secondary;
+    return theme;
+  }
+
   function normalizeIdentity(payload) {
     const profile = payload && payload.profile_image;
     return {
@@ -26,6 +65,7 @@
       title: (payload && payload.title) || "Hermes Dashboard",
       hasProfileImage: Boolean(profile && profile.available),
       profileUrl: (profile && profile.url) || PROFILE_URL,
+      themeColors: normalizeThemeColors(payload && payload.dashboard_colors),
     };
   }
 
@@ -36,6 +76,7 @@
       title: "Hermes Dashboard",
       hasProfileImage: false,
       profileUrl: PROFILE_URL,
+      themeColors: DEFAULT_THEME_COLORS,
     });
 
     useEffect(() => {
@@ -45,6 +86,7 @@
         .then((payload) => {
           if (cancelled) return;
           const next = normalizeIdentity(payload);
+          applyAgentThemeColors(next.themeColors);
           setIdentity(next);
           if (next.title) document.title = next.title;
         })
@@ -52,7 +94,17 @@
           SDK.fetchJSON("/api/config")
             .then((config) => {
               if (cancelled) return;
-              const next = { ...pickIdentity(config), hasProfileImage: false, profileUrl: PROFILE_URL };
+              const dashboard = (config && config.dashboard) || {};
+              const next = {
+                ...pickIdentity(config),
+                hasProfileImage: false,
+                profileUrl: PROFILE_URL,
+                themeColors: normalizeThemeColors(dashboard.accent_colors || {
+                  primary: dashboard.primary_color,
+                  secondary: dashboard.secondary_color,
+                }),
+              };
+              applyAgentThemeColors(next.themeColors);
               setIdentity(next);
               if (next.title) document.title = next.title;
             })

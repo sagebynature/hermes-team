@@ -71,6 +71,9 @@ dashboard:
   agent_name: ${AGENT_NAME}
   agent_role: ${AGENT_ROLE}
   title: ${AGENT_NAME} Dashboard
+  accent_colors:
+    primary: "#6CFF9A"
+    secondary: "#FF4E57"
 
 approvals:
   mode: smart
