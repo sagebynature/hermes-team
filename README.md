@@ -65,7 +65,7 @@ host directory                 container path
 agents/<agent>/home      ->    /opt/data
 agents/<agent>/workspace ->    /workspace
 shared/project           ->    /shared/project:ro
-shared/project/artifacts ->    /shared/project/artifacts (writable handoff submount)
+shared/project/artifacts ->    /shared/project/artifacts:rw (writable handoff submount)
 shared/skills            ->    /shared/skills:ro
 shared/mcp               ->    /shared/mcp:ro
 ```
@@ -355,7 +355,7 @@ Coordination paths:
 5. **Workspace handoff**
    Agents pass durable briefs and artifacts through the workspace convention: `inbox/` for incoming tasks, `outbox/` for finished deliverables, and `artifacts/` for generated files.
 
-Operational rule: chat is the radio; Kanban and workspace files are the record. If a specialist produces something worth keeping, it goes in `outbox/` or `artifacts/`, with a compact `[handoff]` Kanban comment that Atlas can quote in Discord.
+Operational rule: chat is the radio; Kanban and workspace files are the record. If a specialist produces something worth keeping, it goes in `outbox/` or `artifacts/`. Cross-agent handoffs go in `/shared/project/artifacts` and must be referenced by a compact `[handoff]` Kanban comment. Durable decisions should use `[decision]` comments and point to a decision memo/synthesis artifact when the rationale is longer than one sentence.
 
 See `shared/project/team-collaboration-protocol.md` for the full collaboration protocol.
 
@@ -373,10 +373,15 @@ All agents load the same repo-root secrets file through Compose:
 .env
 ```
 
-Start from the shared example:
+First-time or clean setup:
 
 ```bash
 cp .env.example .env
+# edit .env with real values
+make workspace-init
+make build
+make compose-config
+make kanban-init
 ```
 
 Common entries:

@@ -11,7 +11,7 @@ ifneq ($(strip $(SERVER)),)
 -include shared/mcp/registry/$(SERVER).mk
 endif
 
-.PHONY: help build up down restart ps logs shell doctor doctor-all compose-config \
+.PHONY: help build up down restart ps logs shell doctor doctor-all compose-config workspace-init \
 	kanban-init kanban-list kanban-stats kanban-watch kanban-create kanban-dispatch \
 	kanban-dispatcher-once kanban-dispatcher-daemon kanban-dispatcher-stop kanban-dispatcher-logs discord-status-dry-run \
 	mcp-list mcp-list-all mcp-test mcp-remove mcp-add-command mcp-add-url \
@@ -61,7 +61,15 @@ compose-config: ## Validate docker-compose.yml
 	$(COMPOSE) config >/tmp/team-nexus-compose.yaml
 	@echo "compose config OK -> /tmp/team-nexus-compose.yaml"
 
-kanban-init: ## Initialize the shared Team Nexus Kanban board
+workspace-init: ## Initialize shared workspace directories and artifact handoff placeholder
+	@mkdir -p shared/project/artifacts shared/kanban
+	@if [ ! -f shared/project/artifacts/.gitignore ]; then \
+		printf '*\n!.gitignore\n' > shared/project/artifacts/.gitignore; \
+	fi
+	@chmod 2775 shared/project/artifacts shared/kanban 2>/dev/null || true
+	@echo "workspace initialized: shared/project/artifacts and shared/kanban"
+
+kanban-init: workspace-init ## Initialize the shared Team Nexus Kanban board
 	$(COMPOSE) run --rm atlas kanban init
 
 kanban-list: ## List shared Kanban tasks

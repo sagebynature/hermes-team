@@ -57,10 +57,12 @@ DISCORD_HANDOFFS_WEBHOOK_URL=
 Recommended Kanban comment prefixes:
 
 ```text
-[handoff]
+[handoff] producer=<agent> consumer=<agent|atlas> artifact=/shared/project/artifacts/<file> summary=<one sentence> next=<optional task/reviewer>
+[decision] owner=<atlas|user> decision=<one sentence> rationale=<why> artifact=/shared/project/artifacts/<optional memo>
 [question]
 [review]
-[decision]
 [status]
 ```
+
+Use `[handoff]` when one agent creates a durable artifact another agent should consume. Use `[decision]` for Atlas/user decisions; point to a decision artifact when the rationale is longer than one sentence.
 

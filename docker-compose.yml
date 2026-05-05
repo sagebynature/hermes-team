@@ -21,9 +21,9 @@ services:
       - ./agents/atlas/workspace:/workspace
       # Shared project context is read-only, except the artifacts submount below is writable for handoffs.
       - ./shared/project:/shared/project:ro
-      - ./shared/project/artifacts:/shared/project/artifacts
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
       # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
-      - ./shared/kanban:/shared/kanban
+      - ./shared/kanban:/shared/kanban:rw
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
     ports:
@@ -48,9 +48,9 @@ services:
       - ./agents/vega/workspace:/workspace
       # Shared project context is read-only, except the artifacts submount below is writable for handoffs.
       - ./shared/project:/shared/project:ro
-      - ./shared/project/artifacts:/shared/project/artifacts
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
       # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
-      - ./shared/kanban:/shared/kanban
+      - ./shared/kanban:/shared/kanban:rw
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
     ports:
@@ -75,9 +75,9 @@ services:
       - ./agents/scout/workspace:/workspace
       # Shared project context is read-only, except the artifacts submount below is writable for handoffs.
       - ./shared/project:/shared/project:ro
-      - ./shared/project/artifacts:/shared/project/artifacts
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
       # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
-      - ./shared/kanban:/shared/kanban
+      - ./shared/kanban:/shared/kanban:rw
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
     ports:
@@ -102,9 +102,9 @@ services:
       - ./agents/forge/workspace:/workspace
       # Shared project context is read-only, except the artifacts submount below is writable for handoffs.
       - ./shared/project:/shared/project:ro
-      - ./shared/project/artifacts:/shared/project/artifacts
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
       # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
-      - ./shared/kanban:/shared/kanban
+      - ./shared/kanban:/shared/kanban:rw
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
     ports:
@@ -129,9 +129,9 @@ services:
       - ./agents/lumen/workspace:/workspace
       # Shared project context is read-only, except the artifacts submount below is writable for handoffs.
       - ./shared/project:/shared/project:ro
-      - ./shared/project/artifacts:/shared/project/artifacts
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
       # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
-      - ./shared/kanban:/shared/kanban
+      - ./shared/kanban:/shared/kanban:rw
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
     ports:
@@ -156,9 +156,9 @@ services:
       - ./agents/blitz/workspace:/workspace
       # Shared project context is read-only, except the artifacts submount below is writable for handoffs.
       - ./shared/project:/shared/project:ro
-      - ./shared/project/artifacts:/shared/project/artifacts
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
       # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
-      - ./shared/kanban:/shared/kanban
+      - ./shared/kanban:/shared/kanban:rw
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
     ports:
@@ -183,9 +183,9 @@ services:
       - ./agents/ledger/workspace:/workspace
       # Shared project context is read-only, except the artifacts submount below is writable for handoffs.
       - ./shared/project:/shared/project:ro
-      - ./shared/project/artifacts:/shared/project/artifacts
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
       # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
-      - ./shared/kanban:/shared/kanban
+      - ./shared/kanban:/shared/kanban:rw
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
     ports:
@@ -210,9 +210,9 @@ services:
       - ./agents/sentinel/workspace:/workspace
       # Shared project context is read-only, except the artifacts submount below is writable for handoffs.
       - ./shared/project:/shared/project:ro
-      - ./shared/project/artifacts:/shared/project/artifacts
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
       # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
-      - ./shared/kanban:/shared/kanban
+      - ./shared/kanban:/shared/kanban:rw
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
     ports:
@@ -265,8 +265,8 @@ services:
       - ./agents/atlas/home:/opt/data
       - ./agents/atlas/workspace:/workspace
       - ./shared/project:/shared/project:ro
-      - ./shared/project/artifacts:/shared/project/artifacts
-      - ./shared/kanban:/shared/kanban
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
+      - ./shared/kanban:/shared/kanban:rw
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
     ports:
@@ -289,8 +289,8 @@ services:
       - ./agents/vega/home:/opt/data
       - ./agents/vega/workspace:/workspace
       - ./shared/project:/shared/project:ro
-      - ./shared/project/artifacts:/shared/project/artifacts
-      - ./shared/kanban:/shared/kanban
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
+      - ./shared/kanban:/shared/kanban:rw
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
     ports:
@@ -313,8 +313,8 @@ services:
       - ./agents/scout/home:/opt/data
       - ./agents/scout/workspace:/workspace
       - ./shared/project:/shared/project:ro
-      - ./shared/project/artifacts:/shared/project/artifacts
-      - ./shared/kanban:/shared/kanban
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
+      - ./shared/kanban:/shared/kanban:rw
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
     ports:
@@ -337,8 +337,8 @@ services:
       - ./agents/forge/home:/opt/data
       - ./agents/forge/workspace:/workspace
       - ./shared/project:/shared/project:ro
-      - ./shared/project/artifacts:/shared/project/artifacts
-      - ./shared/kanban:/shared/kanban
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
+      - ./shared/kanban:/shared/kanban:rw
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
     ports:
@@ -361,8 +361,8 @@ services:
       - ./agents/lumen/home:/opt/data
       - ./agents/lumen/workspace:/workspace
       - ./shared/project:/shared/project:ro
-      - ./shared/project/artifacts:/shared/project/artifacts
-      - ./shared/kanban:/shared/kanban
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
+      - ./shared/kanban:/shared/kanban:rw
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
     ports:
@@ -385,8 +385,8 @@ services:
       - ./agents/blitz/home:/opt/data
       - ./agents/blitz/workspace:/workspace
       - ./shared/project:/shared/project:ro
-      - ./shared/project/artifacts:/shared/project/artifacts
-      - ./shared/kanban:/shared/kanban
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
+      - ./shared/kanban:/shared/kanban:rw
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
     ports:
@@ -409,8 +409,8 @@ services:
       - ./agents/ledger/home:/opt/data
       - ./agents/ledger/workspace:/workspace
       - ./shared/project:/shared/project:ro
-      - ./shared/project/artifacts:/shared/project/artifacts
-      - ./shared/kanban:/shared/kanban
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
+      - ./shared/kanban:/shared/kanban:rw
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
     ports:
@@ -433,8 +433,8 @@ services:
       - ./agents/sentinel/home:/opt/data
       - ./agents/sentinel/workspace:/workspace
       - ./shared/project:/shared/project:ro
-      - ./shared/project/artifacts:/shared/project/artifacts
-      - ./shared/kanban:/shared/kanban
+      - ./shared/project/artifacts:/shared/project/artifacts:rw
+      - ./shared/kanban:/shared/kanban:rw
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
     ports:

@@ -18,6 +18,15 @@ esac
 # `doctor` is intentionally read-only here. The custom image entrypoint performs
 # the idempotent bootstrap that fresh mounted homes need without expanding or
 # rewriting the committed baseline config.yaml files.
+# Ensure shared bind-mount sources exist before Compose can create them as root-owned
+# fallback directories. This keeps the artifact handoff submount writable while
+# the rest of /shared/project remains read-only inside agent containers.
+mkdir -p shared/project/artifacts shared/kanban
+if [ ! -f shared/project/artifacts/.gitignore ]; then
+  printf '*\n!.gitignore\n' > shared/project/artifacts/.gitignore
+fi
+chmod 2775 shared/project/artifacts shared/kanban 2>/dev/null || true
+
 docker compose run --rm "$agent" doctor
 
 if [ -t 0 ]; then

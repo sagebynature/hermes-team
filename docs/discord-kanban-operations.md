@@ -27,11 +27,13 @@ Every agent mounts:
 ./agents/<agent>/home      -> /opt/data
 ./agents/<agent>/workspace -> /workspace
 ./shared/project           -> /shared/project:ro
-./shared/project/artifacts -> /shared/project/artifacts  # writable cross-agent handoffs
-./shared/kanban            -> /shared/kanban
+./shared/project/artifacts -> /shared/project/artifacts:rw  # writable cross-agent handoffs
+./shared/kanban            -> /shared/kanban:rw
 ./shared/skills            -> /shared/skills:ro
 ./shared/mcp               -> /shared/mcp:ro
 ```
+
+The Compose manifest uses shorthand bind mounts with explicit `:ro` or `:rw` suffixes for these shared paths. The only writable submount under `/shared/project` is `/shared/project/artifacts`; do not make the rest of `/shared/project`, `/shared/skills`, or `/shared/mcp` writable unless you are deliberately changing the team security boundary.
 
 The shared Kanban database lives on the host at:
 
@@ -87,6 +89,7 @@ First-time or clean setup:
 ```bash
 cp .env.example .env
 # edit .env with real values
+make workspace-init
 make build
 make compose-config
 make kanban-init
@@ -243,6 +246,23 @@ Recommended channels:
 
 Status and handoff webhooks are optional. They mirror important events to Discord, but Kanban remains the source of truth.
 
+## Kanban comment prefixes
+
+Use these prefixes consistently so Atlas can reconstruct a mission from the board and quote compact updates back into Discord:
+
+```text
+[handoff] producer=<agent> consumer=<agent|atlas> artifact=/shared/project/artifacts/<file> summary=<one sentence> next=<optional task/reviewer>
+[decision] owner=<atlas|user> decision=<one sentence> rationale=<why> artifact=/shared/project/artifacts/<optional memo>
+```
+
+Rules:
+
+- Use `[handoff]` whenever one agent creates something another agent should consume.
+- Cross-agent handoff artifacts must live under `/shared/project/artifacts`; private `/workspace` files are not sufficient for downstream agents.
+- Use `[decision]` for Atlas/user decisions, especially final syntheses or scope calls.
+- If the rationale is longer than one sentence, write a memo or synthesis artifact and point the `[decision]` comment at it.
+- Keep Discord posts short; link the Kanban task and artifact path instead of dumping long content.
+
 ## Environment variables
 
 Values live in the repo-root `.env`, loaded by every Compose service via `env_file: ./.env`.
@@ -296,9 +316,10 @@ make discord-status-dry-run MESSAGE='hello from Team Nexus'
 ```bash
 KANBAN_DISPATCH_INTERVAL=60
 KANBAN_DISPATCH_MAX_TASKS=1
+KANBAN_DISPATCH_WORKER_TIMEOUT=900
 ```
 
-These tune the Dockerized `kanban-dispatcher` service. They are optional; defaults are 60 seconds and 1 task per pass.
+These tune the Dockerized `kanban-dispatcher` service. They are optional; defaults are 60 seconds, 1 task per pass, and a 900-second worker timeout.
 
 ### Optional tool/integration keys
 

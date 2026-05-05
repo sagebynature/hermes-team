@@ -38,7 +38,9 @@ Atlas asks multiple specialists to work independently in parallel, then creates 
 
 ### Specialist handoff
 
-A specialist completes a bounded task, adds a Kanban handoff comment, and writes durable artifacts to `/workspace/outbox` or `/workspace/artifacts` for private work. Use `/shared/project/artifacts` for deliberate cross-agent handoff artifacts that downstream specialists must read.
+A specialist completes a bounded task, adds a Kanban `[handoff]` comment, and writes durable artifacts to `/workspace/outbox` or `/workspace/artifacts` for private work. Use `/shared/project/artifacts` for deliberate cross-agent handoff artifacts that downstream specialists must read.
+
+A cross-agent handoff is complete only when the Kanban comment points at the durable artifact path. Do not rely on Discord text, raw transcripts, or private workspace files as the handoff record.
 
 ### Review gate
 
@@ -89,11 +91,20 @@ For multi-agent missions, Atlas should create or reuse a Discord thread when the
 
 Use predictable comment prefixes so the board reads like a collaboration transcript:
 
-- `[handoff]` completed contribution, recommendation, artifact paths, and requested next reviewer if any.
+- `[handoff]` completed contribution plus one or more durable artifact paths. Required for any cross-agent handoff. Include the producer, intended consumer, artifact path under `/shared/project/artifacts`, and requested next reviewer if any.
 - `[question]` specific question blocking progress.
 - `[review]` approval, requested changes, or risk note.
-- `[decision]` decision made by Atlas or user.
+- `[decision]` decision made by Atlas or user. Include the decision owner, decision summary, rationale, and any decision artifact path under `/shared/project/artifacts` when the decision depends on a durable memo or synthesis.
 - `[status]` short progress update.
+
+Recommended shapes:
+
+```text
+[handoff] producer=<agent> consumer=<agent|atlas> artifact=/shared/project/artifacts/<file> summary=<one sentence> next=<optional task/reviewer>
+[decision] owner=<atlas|user> decision=<one sentence> rationale=<why> artifact=/shared/project/artifacts/<optional memo>
+```
+
+`[handoff]` and `[decision]` comments should point to artifacts rather than embedding long content in the comment. Keep comments compact enough for Atlas to quote in Discord.
 
 ## Discord-ready specialist handoff shape
 

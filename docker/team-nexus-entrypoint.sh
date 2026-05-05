@@ -43,4 +43,16 @@ if [ -n "$HERMES_KANBAN_HOME" ]; then
   chown -hR hermes:hermes "$HERMES_KANBAN_HOME" 2>/dev/null || true
 fi
 
+TEAM_NEXUS_ARTIFACTS_DIR="${TEAM_NEXUS_ARTIFACTS_DIR:-/shared/project/artifacts}"
+if [ -n "$TEAM_NEXUS_ARTIFACTS_DIR" ]; then
+  # Cross-agent handoff artifacts are the only writable submount under the
+  # otherwise read-only /shared/project tree. If Compose created the bind source
+  # on a fresh checkout, normalize ownership before the upstream entrypoint drops
+  # privileges.
+  mkdir -p "$TEAM_NEXUS_ARTIFACTS_DIR" 2>/dev/null || true
+  if [ -d "$TEAM_NEXUS_ARTIFACTS_DIR" ]; then
+    chown -hR hermes:hermes "$TEAM_NEXUS_ARTIFACTS_DIR" 2>/dev/null || true
+  fi
+fi
+
 exec /opt/hermes/docker/entrypoint.sh "$@"
