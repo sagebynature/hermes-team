@@ -198,6 +198,9 @@ display:
   tool_progress: true
 dashboard:
   theme: chronos-forge
+  agent_name: ${AGENT_NAME}
+  agent_role: ${AGENT_ROLE}
+  title: ${AGENT_NAME} Dashboard
 privacy:
   redact_pii: false
 tts:
