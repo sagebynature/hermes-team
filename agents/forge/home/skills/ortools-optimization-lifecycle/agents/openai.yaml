@@ -1,0 +1,3 @@
+display_name: OR-Tools Optimization Lifecycle
+short_description: Production OR-Tools lifecycle guidance.
+default_prompt: Use this skill to select an OR-Tools solver, formulate the math, implement production-grade solve controls, debug infeasibility, and review optimization code.
