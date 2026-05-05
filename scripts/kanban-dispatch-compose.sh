@@ -12,6 +12,7 @@ fi
 
 assignee="$1"
 task_id="$2"
+container_name="team-nexus-${assignee}-task-${task_id}"
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 registry="$repo_root/shared/team-agents.yaml"
 
@@ -37,11 +38,17 @@ printf 'started:  %s
 
 cd "$repo_root"
 compose_cmd="${COMPOSE:-docker compose}"
+cleanup() {
+  # Best-effort cleanup for dispatcher timeout cancellation.
+  docker rm -f "$container_name" >/dev/null 2>&1 || true
+}
+trap cleanup INT TERM
 set +e
 # shellcheck disable=SC2086
-$compose_cmd run --rm "$assignee" chat -q "work kanban task $task_id"
+$compose_cmd run --rm --name "$container_name" "$assignee" chat -q "work kanban task $task_id"
 status="$?"
 set -e
+trap - INT TERM
 
 printf 'finished: %s
 ' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"

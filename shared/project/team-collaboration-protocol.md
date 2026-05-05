@@ -38,7 +38,7 @@ Atlas asks multiple specialists to work independently in parallel, then creates 
 
 ### Specialist handoff
 
-A specialist completes a bounded task, adds a Kanban handoff comment, and writes durable artifacts to `/workspace/outbox` or `/workspace/artifacts` when needed.
+A specialist completes a bounded task, adds a Kanban handoff comment, and writes durable artifacts to `/workspace/outbox` or `/workspace/artifacts` for private work. Use `/shared/project/artifacts` for deliberate cross-agent handoff artifacts that downstream specialists must read.
 
 ### Review gate
 

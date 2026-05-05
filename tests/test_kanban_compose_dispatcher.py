@@ -22,13 +22,14 @@ def load_dispatcher_module():
     return module
 
 
-def make_args(db: Path, *, dry_run: bool = False) -> argparse.Namespace:
+def make_args(db: Path, *, dry_run: bool = False, worker_timeout: int = 900) -> argparse.Namespace:
     return argparse.Namespace(
         db=str(db),
         dry_run=dry_run,
         include_atlas=False,
         max_tasks=1,
         daemon=False,
+        worker_timeout=worker_timeout,
     )
 
 
@@ -95,7 +96,8 @@ class KanbanComposeDispatcherTests(unittest.TestCase):
             log_path = tmp / "dispatcher.log"
             observed_during_spawn = []
 
-            def fake_dispatch(task_id: str, assignee: str, dry_run: bool, log_path: Path) -> int:
+            def fake_dispatch(task_id: str, assignee: str, dry_run: bool, log_path: Path, worker_timeout: int) -> int:
+                self.assertEqual(worker_timeout, 900)
                 with sqlite3.connect(db) as conn:
                     task = conn.execute(
                         "SELECT status, started_at, claim_lock, claim_expires, current_run_id FROM tasks WHERE id = ?",
@@ -149,7 +151,7 @@ class KanbanComposeDispatcherTests(unittest.TestCase):
             init_db(db)
             log_path = tmp / "dispatcher.log"
 
-            def failing_dispatch(task_id: str, assignee: str, dry_run: bool, log_path: Path) -> int:
+            def failing_dispatch(task_id: str, assignee: str, dry_run: bool, log_path: Path, worker_timeout: int) -> int:
                 return 17
 
             with mock.patch.object(dispatcher, "dispatch", failing_dispatch):
@@ -167,6 +169,47 @@ class KanbanComposeDispatcherTests(unittest.TestCase):
             self.assertEqual([kind for kind, _ in events], ["claimed", "dispatch_failed"])
             self.assertEqual(runs[0][0:2], ("failed", "spawn_failed"))
             self.assertIsNotNone(runs[0][2])
+
+    def test_timed_out_worker_marks_task_blocked_without_requeueing(self):
+        dispatcher = load_dispatcher_module()
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            db = tmp / "kanban.db"
+            init_db(db)
+            log_path = tmp / "dispatcher.log"
+
+            def timed_out_dispatch(task_id: str, assignee: str, dry_run: bool, log_path: Path, worker_timeout: int) -> int:
+                self.assertEqual(worker_timeout, 30)
+                return dispatcher.DISPATCH_TIMEOUT_EXIT_CODE
+
+            with mock.patch.object(dispatcher, "dispatch", timed_out_dispatch):
+                code = dispatcher.run_pass(make_args(db, worker_timeout=30), {"scout": "scout"}, log_path)
+
+            self.assertEqual(code, dispatcher.DISPATCH_TIMEOUT_EXIT_CODE)
+            with sqlite3.connect(db) as conn:
+                task = conn.execute(
+                    "SELECT status, claim_lock, claim_expires, current_run_id FROM tasks WHERE id = 't_ready'"
+                ).fetchone()
+                events = conn.execute("SELECT kind, run_id FROM task_events WHERE task_id = 't_ready' ORDER BY id").fetchall()
+                runs = conn.execute("SELECT status, outcome, ended_at, summary FROM task_runs WHERE task_id = 't_ready'").fetchall()
+
+            self.assertEqual(task, ("blocked", None, None, None))
+            self.assertEqual([kind for kind, _ in events], ["claimed", "dispatch_timed_out"])
+            self.assertEqual(runs[0][0:2], ("blocked", "timed_out"))
+            self.assertIsNotNone(runs[0][2])
+            self.assertIn("timed out", runs[0][3])
+
+    def test_dispatch_returns_timeout_code_when_worker_exceeds_timeout(self):
+        dispatcher = load_dispatcher_module()
+        with tempfile.TemporaryDirectory() as td:
+            log_path = Path(td) / "dispatcher.log"
+            with mock.patch.object(dispatcher.subprocess, "run", side_effect=dispatcher.subprocess.TimeoutExpired("cmd", 1)), \
+                mock.patch.object(dispatcher, "cleanup_timed_out_container") as cleanup:
+                code = dispatcher.dispatch("t_ready", "scout", False, log_path, 1)
+
+            self.assertEqual(code, dispatcher.DISPATCH_TIMEOUT_EXIT_CODE)
+            cleanup.assert_called_once_with("t_ready", "scout", log_path)
+            self.assertIn("timed out", log_path.read_text(encoding="utf-8"))
 
     def test_dry_run_does_not_claim_or_dispatch_ready_task(self):
         dispatcher = load_dispatcher_module()

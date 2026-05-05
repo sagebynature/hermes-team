@@ -48,7 +48,7 @@ Team Nexus gives each agent a clean lane and a hard boundary.
 
 - Every specialist has a private Hermes home under `agents/<agent>/home`.
 - Every specialist has a private workspace under `agents/<agent>/workspace`.
-- Shared project files, skills, and MCP material are mounted read-only.
+- Shared project files, skills, and MCP material are mounted read-only; `/shared/project/artifacts` is a writable handoff submount for cross-agent deliverables.
 - Secrets stay out of the image and out of git.
 - Atlas is the default point of coordination, so specialist output gets synthesized instead of scattered.
 
@@ -65,6 +65,7 @@ host directory                 container path
 agents/<agent>/home      ->    /opt/data
 agents/<agent>/workspace ->    /workspace
 shared/project           ->    /shared/project:ro
+shared/project/artifacts ->    /shared/project/artifacts (writable handoff submount)
 shared/skills            ->    /shared/skills:ro
 shared/mcp               ->    /shared/mcp:ro
 ```
@@ -75,7 +76,7 @@ Inside the container:
 | ----------------- | -------------------------------------------------------------------------------------- |
 | `/opt/data`       | Durable Hermes home: `config.yaml`, `.env`, auth state, sessions, skills, memory, logs |
 | `/workspace`      | Agent-owned working area for notes, prototypes, deliverables, and artifacts            |
-| `/shared/project` | Read-only mission brief and project context                                            |
+| `/shared/project` | Read-only mission brief and project context, with `/shared/project/artifacts` as a writable handoff submount |
 | `/shared/skills`  | Read-only team skill library                                                           |
 | `/shared/mcp`     | Read-only MCP registry, templates, scripts, and docs                                   |
 
@@ -200,7 +201,7 @@ Use it for specialist tools: Python for research and finance, Go or Rust for sys
 Start from the repo root:
 
 ```bash
-cd /Users/sage/team-nexus
+cd ./team-nexus
 ```
 
 Build the shared team image once:
@@ -346,7 +347,7 @@ Coordination paths:
    The embedded Hermes profile dispatcher is disabled for every gateway because Team Nexus uses one Compose service per agent rather than local Hermes profiles. Every agent still has the `kanban` toolset enabled for normal sessions, so agents can inspect, create, comment on, and route shared board tasks. Use the Compose-aware dispatcher helper for execution.
 
 3. **Compose-aware dispatch**
-   Hermes' built-in dispatcher assumes assignees are local Hermes profiles. Team Nexus uses one Compose service per agent, so use `scripts/kanban-dispatch-compose.sh` / `make kanban-dispatch AGENT=<agent> TASK=<task-id>` for manual execution, or the Dockerized `kanban-dispatcher` Compose service / `make kanban-dispatcher-daemon` to poll ready tasks and run them in the matching containers. Automatic dispatch claims a ready task before spawning the worker, so Kanban shows the visible lifecycle `ready -> running -> done` and records a `claimed` event/run.
+   Hermes' built-in dispatcher assumes assignees are local Hermes profiles. Team Nexus uses one Compose service per agent, so use `scripts/kanban-dispatch-compose.sh` / `make kanban-dispatch AGENT=<agent> TASK=<task-id>` for manual execution, or the Dockerized `kanban-dispatcher` Compose service / `make kanban-dispatcher-daemon` to poll ready tasks and run them in the matching containers. Automatic dispatch claims a ready task before spawning the worker, so Kanban shows the visible lifecycle `ready -> running -> done` and records a `claimed` event/run. Worker runs have a default 900s timeout; timed-out workers are killed and the task is blocked for operator review instead of requeued into a loop.
 
 4. **Gateway API / Discord webhooks**
    Atlas or helper scripts can call gateway endpoints or Discord status webhooks for compact public updates. Keep broad Discord bot control centralized in Atlas unless there is a deliberate reason to expose more.
@@ -392,6 +393,7 @@ DISCORD_STATUS_WEBHOOK_URL=
 DISCORD_HANDOFFS_WEBHOOK_URL=
 KANBAN_DISPATCH_INTERVAL=60
 KANBAN_DISPATCH_MAX_TASKS=1
+KANBAN_DISPATCH_WORKER_TIMEOUT=900
 GITHUB_TOKEN=
 GATEWAY_API_KEY=
 ```
@@ -448,7 +450,7 @@ Use `shared/project/` for the material every agent should know before acting:
 - brand voice
 - Atlas decision logs
 
-The mount is read-only inside containers. Agents can read the brief. They cannot accidentally rewrite the canon.
+The mount is read-only inside containers, except `/shared/project/artifacts`, which is a writable submount for deliberate cross-agent handoff artifacts. Agents can read the brief and write handoff artifacts, but they cannot accidentally rewrite the rest of the canon.
 
 ---
 

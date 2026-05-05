@@ -19,8 +19,9 @@ services:
       - ./agents/atlas/home:/opt/data
       # Agent-owned workspace. Configure terminal.cwd=/workspace in config.yaml.
       - ./agents/atlas/workspace:/workspace
-      # Shared readonly material visible to all agents.
+      # Shared project context is read-only, except the artifacts submount below is writable for handoffs.
       - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts
       # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
       - ./shared/kanban:/shared/kanban
       - ./shared/skills:/shared/skills:ro
@@ -45,8 +46,9 @@ services:
       - ./agents/vega/home:/opt/data
       # Agent-owned workspace. Configure terminal.cwd=/workspace in config.yaml.
       - ./agents/vega/workspace:/workspace
-      # Shared readonly material visible to all agents.
+      # Shared project context is read-only, except the artifacts submount below is writable for handoffs.
       - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts
       # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
       - ./shared/kanban:/shared/kanban
       - ./shared/skills:/shared/skills:ro
@@ -71,8 +73,9 @@ services:
       - ./agents/scout/home:/opt/data
       # Agent-owned workspace. Configure terminal.cwd=/workspace in config.yaml.
       - ./agents/scout/workspace:/workspace
-      # Shared readonly material visible to all agents.
+      # Shared project context is read-only, except the artifacts submount below is writable for handoffs.
       - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts
       # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
       - ./shared/kanban:/shared/kanban
       - ./shared/skills:/shared/skills:ro
@@ -97,8 +100,9 @@ services:
       - ./agents/forge/home:/opt/data
       # Agent-owned workspace. Configure terminal.cwd=/workspace in config.yaml.
       - ./agents/forge/workspace:/workspace
-      # Shared readonly material visible to all agents.
+      # Shared project context is read-only, except the artifacts submount below is writable for handoffs.
       - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts
       # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
       - ./shared/kanban:/shared/kanban
       - ./shared/skills:/shared/skills:ro
@@ -123,8 +127,9 @@ services:
       - ./agents/lumen/home:/opt/data
       # Agent-owned workspace. Configure terminal.cwd=/workspace in config.yaml.
       - ./agents/lumen/workspace:/workspace
-      # Shared readonly material visible to all agents.
+      # Shared project context is read-only, except the artifacts submount below is writable for handoffs.
       - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts
       # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
       - ./shared/kanban:/shared/kanban
       - ./shared/skills:/shared/skills:ro
@@ -149,8 +154,9 @@ services:
       - ./agents/blitz/home:/opt/data
       # Agent-owned workspace. Configure terminal.cwd=/workspace in config.yaml.
       - ./agents/blitz/workspace:/workspace
-      # Shared readonly material visible to all agents.
+      # Shared project context is read-only, except the artifacts submount below is writable for handoffs.
       - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts
       # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
       - ./shared/kanban:/shared/kanban
       - ./shared/skills:/shared/skills:ro
@@ -175,8 +181,9 @@ services:
       - ./agents/ledger/home:/opt/data
       # Agent-owned workspace. Configure terminal.cwd=/workspace in config.yaml.
       - ./agents/ledger/workspace:/workspace
-      # Shared readonly material visible to all agents.
+      # Shared project context is read-only, except the artifacts submount below is writable for handoffs.
       - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts
       # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
       - ./shared/kanban:/shared/kanban
       - ./shared/skills:/shared/skills:ro
@@ -201,8 +208,9 @@ services:
       - ./agents/sentinel/home:/opt/data
       # Agent-owned workspace. Configure terminal.cwd=/workspace in config.yaml.
       - ./agents/sentinel/workspace:/workspace
-      # Shared readonly material visible to all agents.
+      # Shared project context is read-only, except the artifacts submount below is writable for handoffs.
       - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts
       # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
       - ./shared/kanban:/shared/kanban
       - ./shared/skills:/shared/skills:ro
@@ -239,6 +247,7 @@ services:
         python3 scripts/kanban-compose-dispatcher.py --daemon
         --interval "$${KANBAN_DISPATCH_INTERVAL:-60}"
         --max-tasks "$${KANBAN_DISPATCH_MAX_TASKS:-1}"
+        --worker-timeout "$${KANBAN_DISPATCH_WORKER_TIMEOUT:-900}"
 
   atlas-dashboard:
     image: team-nexus-agent:latest
@@ -256,6 +265,7 @@ services:
       - ./agents/atlas/home:/opt/data
       - ./agents/atlas/workspace:/workspace
       - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts
       - ./shared/kanban:/shared/kanban
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
@@ -279,6 +289,7 @@ services:
       - ./agents/vega/home:/opt/data
       - ./agents/vega/workspace:/workspace
       - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts
       - ./shared/kanban:/shared/kanban
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
@@ -302,6 +313,7 @@ services:
       - ./agents/scout/home:/opt/data
       - ./agents/scout/workspace:/workspace
       - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts
       - ./shared/kanban:/shared/kanban
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
@@ -325,6 +337,7 @@ services:
       - ./agents/forge/home:/opt/data
       - ./agents/forge/workspace:/workspace
       - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts
       - ./shared/kanban:/shared/kanban
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
@@ -348,6 +361,7 @@ services:
       - ./agents/lumen/home:/opt/data
       - ./agents/lumen/workspace:/workspace
       - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts
       - ./shared/kanban:/shared/kanban
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
@@ -371,6 +385,7 @@ services:
       - ./agents/blitz/home:/opt/data
       - ./agents/blitz/workspace:/workspace
       - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts
       - ./shared/kanban:/shared/kanban
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
@@ -394,6 +409,7 @@ services:
       - ./agents/ledger/home:/opt/data
       - ./agents/ledger/workspace:/workspace
       - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts
       - ./shared/kanban:/shared/kanban
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
@@ -417,6 +433,7 @@ services:
       - ./agents/sentinel/home:/opt/data
       - ./agents/sentinel/workspace:/workspace
       - ./shared/project:/shared/project:ro
+      - ./shared/project/artifacts:/shared/project/artifacts
       - ./shared/kanban:/shared/kanban
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro

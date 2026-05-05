@@ -27,6 +27,7 @@ Every agent mounts:
 ./agents/<agent>/home      -> /opt/data
 ./agents/<agent>/workspace -> /workspace
 ./shared/project           -> /shared/project:ro
+./shared/project/artifacts -> /shared/project/artifacts  # writable cross-agent handoffs
 ./shared/kanban            -> /shared/kanban
 ./shared/skills            -> /shared/skills:ro
 ./shared/mcp               -> /shared/mcp:ro
@@ -78,7 +79,7 @@ The automatic dispatcher is separate. It does not run with the plain gateway sta
 From the repo root:
 
 ```bash
-cd /Users/sage/team-nexus
+cd ./team-nexus
 ```
 
 First-time or clean setup:
@@ -156,10 +157,10 @@ Continuous dispatcher loop:
 make kanban-dispatcher-daemon
 ```
 
-With explicit interval and concurrency limit:
+With explicit interval, concurrency limit, and worker timeout:
 
 ```bash
-KANBAN_DISPATCH_INTERVAL=60 KANBAN_DISPATCH_MAX_TASKS=1 make kanban-dispatcher-daemon
+KANBAN_DISPATCH_INTERVAL=60 KANBAN_DISPATCH_MAX_TASKS=1 KANBAN_DISPATCH_WORKER_TIMEOUT=900 make kanban-dispatcher-daemon
 ```
 
 Manual dispatch of one task:
@@ -184,7 +185,9 @@ docker compose run --rm forge chat -q "work kanban task <task-id>"
 
 If the worker command exits non-zero while the dispatcher-created claim is still active, the dispatcher records a `dispatch_failed` event, closes the failed run as `spawn_failed`, and requeues the task back to `ready` for a later retry.
 
-The `kanban-dispatcher` container uses Docker-outside-of-Docker: it mounts the host Docker socket and the repo at `/Users/sage/team-nexus`, then runs nested `docker compose run --rm <agent> ...` commands against the host Docker daemon.
+If a worker exceeds `KANBAN_DISPATCH_WORKER_TIMEOUT` / `--worker-timeout` (default 900 seconds), the dispatcher kills the named one-off worker container, records a `dispatch_timed_out` event, closes the run as `timed_out`, and moves the task to `blocked` instead of requeueing it. This prevents an agent/model/tool loop from being relaunched forever; an operator should inspect, split, or unblock the task deliberately.
+
+The `kanban-dispatcher` container uses Docker-outside-of-Docker: it mounts the host Docker socket and the repo at `./team-nexus`, then runs nested `docker compose run --rm <agent> ...` commands against the host Docker daemon.
 
 Dispatcher logs go to:
 

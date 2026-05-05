@@ -72,7 +72,7 @@ Steps:
 Verification commands:
 
 ```bash
-cd /Users/sage/team-nexus
+cd ./team-nexus
 make compose-config
 make kanban-init
 make kanban-stats

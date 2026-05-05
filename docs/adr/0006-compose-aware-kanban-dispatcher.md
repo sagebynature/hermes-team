@@ -87,11 +87,13 @@ The dispatcher claims a ready task before spawning the worker container, so oper
 ready -> running -> done
 ```
 
-The dispatcher runs commands like:
+The dispatcher runs named worker containers like:
 
 ```bash
-docker compose run --rm forge chat -q "work kanban task <task-id>"
+docker compose run --rm --name team-nexus-forge-task-<task-id> forge chat -q "work kanban task <task-id>"
 ```
 
 If the worker command exits non-zero before completing the task, the dispatcher records `dispatch_failed`, closes that run as `spawn_failed`, and requeues the task to `ready`.
+
+If the worker exceeds its timeout budget, the dispatcher removes the named container, records `dispatch_timed_out`, closes that run as `timed_out`, and blocks the task for operator review rather than immediately requeueing it.
 

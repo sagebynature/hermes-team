@@ -26,6 +26,8 @@ REGISTRY = REPO_ROOT / "shared" / "team-agents.yaml"
 DISPATCH_SCRIPT = REPO_ROOT / "scripts" / "kanban-dispatch-compose.sh"
 DEFAULT_LOG = REPO_ROOT / "shared" / "kanban" / "dispatcher.log"
 DEFAULT_CLAIM_TTL_SECONDS = 15 * 60
+DEFAULT_WORKER_TIMEOUT_SECONDS = 15 * 60
+DISPATCH_TIMEOUT_EXIT_CODE = 124
 
 
 def parse_args() -> argparse.Namespace:
@@ -35,6 +37,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--log", default=str(DEFAULT_LOG), help="Dispatcher log path")
     parser.add_argument("--max-tasks", type=int, default=1, help="Maximum tasks to dispatch per pass")
     parser.add_argument("--interval", type=int, default=60, help="Seconds between daemon passes")
+    parser.add_argument(
+        "--worker-timeout",
+        type=int,
+        default=int(os.environ.get("KANBAN_DISPATCH_WORKER_TIMEOUT", DEFAULT_WORKER_TIMEOUT_SECONDS)),
+        help="Seconds before a worker dispatch is killed and the task is blocked; use 0 to disable",
+    )
     parser.add_argument("--daemon", action="store_true", help="Run continuously")
     parser.add_argument("--dry-run", action="store_true", help="Show what would be dispatched")
     parser.add_argument("--include-atlas", action="store_true", help="Also dispatch tasks assigned to atlas")
@@ -236,12 +244,81 @@ def requeue_failed_spawn(conn: sqlite3.Connection, task_id: str, claim_lock: str
     return True
 
 
-def dispatch(task_id: str, assignee: str, dry_run: bool, log_path: Path) -> int:
+def block_timed_out_dispatch(conn: sqlite3.Connection, task_id: str, claim_lock: str, run_id: int, worker_timeout: int) -> bool:
+    """Stop retrying a worker that exceeded its runtime budget.
+
+    Timeouts usually mean the worker is stuck in an agent/model/tool loop or a
+    task is too broad. Re-queueing immediately would recreate the same loop, so
+    leave the task blocked for an operator to inspect or split into smaller work.
+    """
+    now = int(time.time())
+    summary = f"Worker dispatch timed out after {worker_timeout} seconds; task blocked for operator review."
+    cur = conn.execute(
+        """
+        UPDATE tasks
+           SET status = 'blocked',
+               claim_lock = NULL,
+               claim_expires = NULL,
+               worker_pid = NULL,
+               current_run_id = NULL
+         WHERE id = ?
+           AND status = 'running'
+           AND claim_lock = ?
+        """,
+        (task_id, claim_lock),
+    )
+    if cur.rowcount != 1:
+        conn.rollback()
+        return False
+    run_cols = table_columns(conn, "task_runs")
+    assignments = ["status = ?", "outcome = ?", "ended_at = ?"]
+    values: List[object] = ["blocked", "timed_out", now]
+    if "summary" in run_cols:
+        assignments.append("summary = ?")
+        values.append(summary)
+    if "error" in run_cols:
+        assignments.append("error = ?")
+        values.append(summary)
+    values.append(run_id)
+    conn.execute(f"UPDATE task_runs SET {', '.join(assignments)} WHERE id = ?", values)
+    append_event(
+        conn,
+        task_id,
+        "dispatch_timed_out",
+        {"timeout_seconds": worker_timeout, "blocked": True},
+        run_id=run_id,
+    )
+    conn.commit()
+    return True
+
+
+def dispatch_container_name(task_id: str, assignee: str) -> str:
+    safe_task = "".join(ch if ch.isalnum() or ch in "_.-" else "-" for ch in task_id)
+    safe_assignee = "".join(ch if ch.isalnum() or ch in "_.-" else "-" for ch in assignee)
+    return f"team-nexus-{safe_assignee}-task-{safe_task}"
+
+
+def cleanup_timed_out_container(task_id: str, assignee: str, log_path: Path) -> None:
+    name = dispatch_container_name(task_id, assignee)
+    try:
+        subprocess.run(["docker", "rm", "-f", name], cwd=str(REPO_ROOT), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        log(log_path, f"timeout cleanup attempted container={name}")
+    except Exception as exc:  # pragma: no cover - defensive logging only
+        log(log_path, f"timeout cleanup failed container={name} error={exc}")
+
+
+def dispatch(task_id: str, assignee: str, dry_run: bool, log_path: Path, worker_timeout: int) -> int:
     if dry_run:
         log(log_path, f"dry-run dispatch assignee={assignee} task={task_id}")
         return 0
     log(log_path, f"dispatch start assignee={assignee} task={task_id}")
-    proc = subprocess.run([str(DISPATCH_SCRIPT), assignee, task_id], cwd=str(REPO_ROOT))
+    timeout = worker_timeout if worker_timeout and worker_timeout > 0 else None
+    try:
+        proc = subprocess.run([str(DISPATCH_SCRIPT), assignee, task_id], cwd=str(REPO_ROOT), timeout=timeout)
+    except subprocess.TimeoutExpired:
+        log(log_path, f"dispatch timed out assignee={assignee} task={task_id} timeout_seconds={worker_timeout}")
+        cleanup_timed_out_container(task_id, assignee, log_path)
+        return DISPATCH_TIMEOUT_EXIT_CODE
     log(log_path, f"dispatch end assignee={assignee} task={task_id} exit_code={proc.returncode}")
     return proc.returncode
 
@@ -281,11 +358,17 @@ def run_pass(args: argparse.Namespace, agents: Dict[str, str], log_path: Path) -
             continue
 
         log(log_path, f"claimed task={task_id} assignee={assignee} run_id={claim[1]}")
-        code = dispatch(task_id, assignee, args.dry_run, log_path)
+        code = dispatch(task_id, assignee, args.dry_run, log_path, args.worker_timeout)
         with sqlite3.connect(db) as conn:
             row = conn.execute("SELECT status FROM tasks WHERE id = ?", (task_id,)).fetchone()
             status = row[0] if row else "missing"
-            if code != 0 and status == "running":
+            if code == DISPATCH_TIMEOUT_EXIT_CODE and status == "running":
+                if block_timed_out_dispatch(conn, task_id, claim[0], claim[1], args.worker_timeout):
+                    status = "blocked"
+                    log(log_path, f"dispatch timed out for task={task_id}; blocked for operator review")
+                else:
+                    log(log_path, f"dispatch timed out for task={task_id}; claim already changed, status={status}")
+            elif code != 0 and status == "running":
                 if requeue_failed_spawn(conn, task_id, claim[0], claim[1], code):
                     status = "ready"
                     log(log_path, f"dispatch failed for task={task_id}; requeued from running to ready")

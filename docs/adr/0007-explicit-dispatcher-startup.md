@@ -63,15 +63,17 @@ The dispatcher service uses Docker-outside-of-Docker:
 
 ```yaml
 volumes:
-  - .:/Users/sage/team-nexus
+  - ./team-nexus:/team-nexus
   - /var/run/docker.sock:/var/run/docker.sock
 ```
 
-The image includes Docker CLI and Docker Compose v2 so the dispatcher can run worker containers with:
+The image includes Docker CLI and Docker Compose v2 so the dispatcher can run named worker containers with:
 
 ```bash
-docker compose run --rm <agent> chat -q "work kanban task <task-id>"
+docker compose run --rm --name team-nexus-<agent>-task-<task-id> <agent> chat -q "work kanban task <task-id>"
 ```
+
+Worker dispatch has a hard timeout. On timeout, the dispatcher removes the named one-off container, records `dispatch_timed_out`, closes the run as `timed_out`, and blocks the task for operator review instead of requeueing it into a loop.
 
 Safe dry-run:
 
@@ -84,4 +86,5 @@ Tuning:
 ```bash
 KANBAN_DISPATCH_INTERVAL=60
 KANBAN_DISPATCH_MAX_TASKS=1
+KANBAN_DISPATCH_WORKER_TIMEOUT=900
 ```

@@ -84,12 +84,12 @@ kanban-dispatch: guard-agent ## Run one Kanban task in the assigned agent contai
 
 kanban-dispatcher-once: ## Run one Dockerized Compose-aware dispatcher pass; add DRY_RUN=1 to avoid spawning
 	@if [ "$(DRY_RUN)" = "1" ]; then \
-		$(COMPOSE) --profile dispatcher run --rm kanban-dispatcher bash -lc 'python3 scripts/kanban-compose-dispatcher.py --dry-run --max-tasks $${MAX_TASKS:-1}'; \
+		$(COMPOSE) --profile dispatcher run --rm kanban-dispatcher bash -lc 'python3 scripts/kanban-compose-dispatcher.py --dry-run --max-tasks $${MAX_TASKS:-1} --worker-timeout $${KANBAN_DISPATCH_WORKER_TIMEOUT:-900}'; \
 	else \
-		$(COMPOSE) --profile dispatcher run --rm kanban-dispatcher bash -lc 'python3 scripts/kanban-compose-dispatcher.py --max-tasks $${MAX_TASKS:-1}'; \
+		$(COMPOSE) --profile dispatcher run --rm kanban-dispatcher bash -lc 'python3 scripts/kanban-compose-dispatcher.py --max-tasks $${MAX_TASKS:-1} --worker-timeout $${KANBAN_DISPATCH_WORKER_TIMEOUT:-900}'; \
 	fi
 
-kanban-dispatcher-daemon: ## Start the Dockerized Compose-aware Kanban dispatcher daemon; KANBAN_DISPATCH_INTERVAL=60 KANBAN_DISPATCH_MAX_TASKS=1
+kanban-dispatcher-daemon: ## Start the Dockerized Compose-aware Kanban dispatcher daemon; KANBAN_DISPATCH_INTERVAL=60 KANBAN_DISPATCH_MAX_TASKS=1 KANBAN_DISPATCH_WORKER_TIMEOUT=900
 	$(COMPOSE) --profile dispatcher up -d kanban-dispatcher
 
 kanban-dispatcher-stop: ## Stop the Dockerized Kanban dispatcher daemon
