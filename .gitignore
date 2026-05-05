@@ -9,6 +9,7 @@
 # Agent-local env/auth files. The canonical template is the repo-root .env.example;
 # per-agent .env files are intentionally ignored.
 agents/*/home/*
+!agents/*/home/profile.jpg
 !agents/*/home/SOUL.md
 !agents/*/home/AGENTS.md
 !agents/*/home/plugins/

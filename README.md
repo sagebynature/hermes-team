@@ -74,15 +74,15 @@ shared/dashboard-themes  ->    /opt/data/dashboard-themes:ro
 
 Inside the container:
 
-| Path              | Purpose                                                                                |
-| ----------------- | -------------------------------------------------------------------------------------- |
-| `/opt/data`       | Durable Hermes home: `config.yaml`, `.env`, auth state, sessions, skills, memory, logs |
-| `/workspace`      | Agent-owned working area for notes, prototypes, deliverables, and artifacts            |
-| `/shared/project` | Read-only mission brief and project context, with `/shared/project/artifacts` as a writable handoff submount |
-| `/shared/skills`  | Read-only team skill library                                                           |
-| `/shared/mcp`     | Read-only MCP registry, templates, scripts, and docs                                   |
-| `/opt/data/plugins` | Shared Hermes plugin library mounted from `shared/plugins`                          |
-| `/opt/data/dashboard-themes` | Shared dashboard theme YAMLs mounted from `shared/dashboard-themes`       |
+| Path                         | Purpose                                                                                                      |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `/opt/data`                  | Durable Hermes home: `config.yaml`, `.env`, auth state, sessions, skills, memory, logs                       |
+| `/workspace`                 | Agent-owned working area for notes, prototypes, deliverables, and artifacts                                  |
+| `/shared/project`            | Read-only mission brief and project context, with `/shared/project/artifacts` as a writable handoff submount |
+| `/shared/skills`             | Read-only team skill library                                                                                 |
+| `/shared/mcp`                | Read-only MCP registry, templates, scripts, and docs                                                         |
+| `/opt/data/plugins`          | Shared Hermes plugin library mounted from `shared/plugins`                                                   |
+| `/opt/data/dashboard-themes` | Shared dashboard theme YAMLs mounted from `shared/dashboard-themes`                                          |
 
 Every agent runs terminal tools from `/workspace` by default:
 
@@ -104,15 +104,6 @@ team-nexus/
   .gitignore
 
   .docs/
-    image/                         # team portraits
-      atlas.jpeg
-      vega.jpeg
-      scout.jpeg
-      forge.jpeg
-      lumen.jpeg
-      blitz.jpeg
-      ledger.jpeg
-      sentinel.jpeg
 
   docker/
     Dockerfile
@@ -295,16 +286,16 @@ Gateway/API endpoints:
 
 Dashboard UI endpoints:
 
-| Agent    | Direct dashboard URL    | Nginx dashboard URL                  |
-| -------- | ----------------------- | ------------------------------------ |
-| Atlas    | <http://127.0.0.1:9119> | <http://127.0.0.1:9130/atlas>        |
-| Vega     | <http://127.0.0.1:9120> | <http://127.0.0.1:9130/vega>         |
-| Scout    | <http://127.0.0.1:9121> | <http://127.0.0.1:9130/scout>        |
-| Forge    | <http://127.0.0.1:9122> | <http://127.0.0.1:9130/forge>        |
-| Lumen    | <http://127.0.0.1:9123> | <http://127.0.0.1:9130/lumen>        |
-| Blitz    | <http://127.0.0.1:9124> | <http://127.0.0.1:9130/blitz>        |
-| Ledger   | <http://127.0.0.1:9125> | <http://127.0.0.1:9130/ledger>       |
-| Sentinel | <http://127.0.0.1:9126> | <http://127.0.0.1:9130/sentinel>     |
+| Agent    | Direct dashboard URL    | Nginx dashboard URL              |
+| -------- | ----------------------- | -------------------------------- |
+| Atlas    | <http://127.0.0.1:9119> | <http://127.0.0.1:9130/atlas>    |
+| Vega     | <http://127.0.0.1:9120> | <http://127.0.0.1:9130/vega>     |
+| Scout    | <http://127.0.0.1:9121> | <http://127.0.0.1:9130/scout>    |
+| Forge    | <http://127.0.0.1:9122> | <http://127.0.0.1:9130/forge>    |
+| Lumen    | <http://127.0.0.1:9123> | <http://127.0.0.1:9130/lumen>    |
+| Blitz    | <http://127.0.0.1:9124> | <http://127.0.0.1:9130/blitz>    |
+| Ledger   | <http://127.0.0.1:9125> | <http://127.0.0.1:9130/ledger>   |
+| Sentinel | <http://127.0.0.1:9126> | <http://127.0.0.1:9130/sentinel> |
 
 The Nginx port defaults to `9130`; override it by setting `NGINX_PORT` in the repo-root `.env`, then restart `dashboard-nginx`.
 
