@@ -10,6 +10,8 @@ Kanban is the durable task and coordination layer. Discord is the human visibili
 - Specialists execute, review, and request routed support through Atlas.
 - user can ask for a direct specialist answer, but multi-agent work should still be captured in Kanban.
 
+Registered Kanban assignees are `atlas`, `vega`, `scout`, `forge`, `lumen`, `blitz`, `ledger`, and `sentinel`. Do not invent assignee names; map generic roles to these agents.
+
 ## Required inter-agent request shape
 
 Every inter-agent request must include:
@@ -28,9 +30,25 @@ Keep deliverables bounded. If a request is too broad, block with a precise quest
 
 ## Collaboration modes
 
+### Deep interview / clarification
+
+Atlas interviews the user before routing when ambiguity would materially change scope, cost, risk, timeline, success criteria, or assignee choice. Atlas should ask a bounded set of 3-7 numbered questions, label required vs optional answers, propose defaults for low-stakes choices, and stop once the mission is route-ready. Specialists should not interview the user directly unless Atlas routes a focused clarification task to them. Atlas should not create Kanban tasks for a new mission until the user explicitly approves execution or asks Atlas to create tasks.
+
 ### Mission graph
 
 Atlas breaks a mission into specialist tasks, links dependencies, and posts a compact assignment summary.
+
+Mission routes should include:
+
+- `conversation_id`
+- objective and success criteria
+- accepted assumptions and excluded scope
+- task graph with registered Team Nexus assignee, objective, dependency, expected output, artifact path, and optional max runtime
+- specialist rationale for each chosen assignee
+- review gates
+- final Atlas synthesis plan
+
+Use relevant specialists, not all specialists blindly. Display generic role labels only as rationale; route and Kanban assignee fields must use registered agent names. When tasks are created, dependencies should be represented in Kanban using task parents or `kanban link`, not only described in Discord prose.
 
 ### Fan-out / fan-in
 

@@ -12,7 +12,7 @@ ifneq ($(strip $(SERVER)),)
 endif
 
 .PHONY: help build up down restart ps logs shell doctor doctor-all compose-config workspace-init \
-	kanban-init kanban-list kanban-stats kanban-watch kanban-create kanban-dispatch \
+	kanban-init kanban-list kanban-stats kanban-watch kanban-create kanban-link kanban-dispatch \
 	kanban-dispatcher-once kanban-dispatcher-daemon kanban-dispatcher-stop kanban-dispatcher-logs discord-status-dry-run \
 	mcp-list mcp-list-all mcp-test mcp-remove mcp-add-command mcp-add-url \
 	mcp-register-template mcp-register-template-all mcp-templates mcp-show-template \
@@ -85,6 +85,11 @@ kanban-create: ## Create a shared Kanban task: make kanban-create TITLE='...' AS
 	@if [ -z "$(TITLE)" ]; then echo "TITLE is required" >&2; exit 2; fi
 	@if [ -z "$(ASSIGNEE)" ]; then echo "ASSIGNEE is required, e.g. atlas" >&2; exit 2; fi
 	$(COMPOSE) run --rm atlas kanban create "$(TITLE)" --assignee "$(ASSIGNEE)"
+
+kanban-link: ## Link parent->child dependency: make kanban-link PARENT=K... CHILD=K...
+	@if [ -z "$(PARENT)" ]; then echo "PARENT is required" >&2; exit 2; fi
+	@if [ -z "$(CHILD)" ]; then echo "CHILD is required" >&2; exit 2; fi
+	$(COMPOSE) run --rm atlas kanban link "$(PARENT)" "$(CHILD)"
 
 kanban-dispatch: guard-agent ## Run one Kanban task in the assigned agent container: make kanban-dispatch AGENT=forge TASK=K...
 	@if [ -z "$(TASK)" ]; then echo "TASK is required" >&2; exit 2; fi

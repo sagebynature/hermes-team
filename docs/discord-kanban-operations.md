@@ -206,6 +206,14 @@ Create a task:
 make kanban-create TITLE="Draft public dashboard scope" ASSIGNEE=vega
 ```
 
+Link an existing parent task to a child task dependency:
+
+```bash
+make kanban-link PARENT=<parent-task-id> CHILD=<child-task-id>
+```
+
+Atlas should use task dependencies for mission routes rather than only describing order in Discord. Parent work should produce a compact `[handoff]` comment and artifact path before child work starts.
+
 List tasks:
 
 ```bash
@@ -223,6 +231,59 @@ Show summary counts:
 ```bash
 make kanban-stats
 ```
+
+## Atlas deep interview and mission routes
+
+Atlas should classify each meaningful new Discord mission before acting:
+
+- `direct-answer`: answer directly; no Kanban fan-out.
+- `clarify-first`: ask a bounded set of numbered questions before routing.
+- `route-ready`: draft a mission route and ask for approval, or proceed if user already authorized execution.
+- `user-decision-required`: ask user to choose between meaningful tradeoffs.
+
+For ambiguous missions, Atlas asks 3-7 numbered questions in one pass, labels each as required or optional, and proposes defaults for low-stakes choices. Atlas should stop interviewing once it can safely route the work, then record any remaining assumptions in the route.
+
+For multi-agent work, Atlas should post a compact mission route before creating tasks. The route should include:
+
+- `conversation_id`, usually `mission_<slug>_<yyyymmdd>`.
+- Objective, success criteria, assumptions, and excluded scope.
+- Task graph with assignee, objective, dependency, expected output, artifact path, and review gate.
+- Specialist rationale: why each selected agent is involved.
+- Final synthesis plan owned by Atlas.
+
+Template:
+
+```text
+Mission route proposed: <mission>
+conversation_id: <id>
+Tasks:
+- Vega: <objective> (depends: none, artifact: /shared/project/artifacts/<mission>/vega-*.md)
+- Scout: <objective> (depends: Vega, artifact: /shared/project/artifacts/<mission>/scout-*.md)
+- Forge: <objective> (depends: Vega, artifact: /shared/project/artifacts/<mission>/forge-*.md)
+- Sentinel: <review objective> (depends: Forge, artifact: /shared/project/artifacts/<mission>/sentinel-*.md)
+Final: Atlas synthesis after required handoffs land.
+```
+
+Shared route template for durable artifacts:
+
+```text
+shared/project/atlas-mission-route-template.md
+```
+
+When executing a route, Atlas can create child tasks with parents directly:
+
+```bash
+docker compose run --rm atlas kanban create "Define scope" --assignee vega --body "..." --json
+docker compose run --rm atlas kanban create "Design implementation" --assignee forge --parent <vega-task-id> --body "..." --json
+```
+
+Or link tasks after creation:
+
+```bash
+make kanban-link PARENT=<parent-task-id> CHILD=<child-task-id>
+```
+
+Remember: the board exists after `make kanban-init`, but automatic worker dispatch only runs when the dispatcher profile is started with `make kanban-dispatcher-daemon` or an equivalent `docker compose --profile dispatcher ...` command.
 
 ## Discord setup
 
