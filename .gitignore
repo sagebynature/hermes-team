@@ -16,6 +16,8 @@ agents/*/home/*
 !agents/*/home/plugins/hermes-command-center/**
 !agents/*/home/plugins/agent-identity-dashboard/
 !agents/*/home/plugins/agent-identity-dashboard/**
+!agents/*/home/plugins/kanban/
+!agents/*/home/plugins/kanban/**
 !agents/*/home/dashboard-themes
 agents/*/home/.env
 agents/*/home/.env.*
