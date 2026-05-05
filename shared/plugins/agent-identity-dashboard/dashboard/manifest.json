@@ -1,7 +1,7 @@
 {
   "name": "agent-identity-dashboard",
   "label": "Agent Identity",
-  "description": "Shows the current agent identity in the Hermes dashboard using dashboard.agent_name from config.yaml, which may expand AGENT_NAME.",
+  "description": "Shows the current agent identity and replaces the dashboard brand with $HERMES_HOME/profile.jpg when present.",
   "icon": "Users",
   "version": "1.0.0",
   "tab": {
@@ -13,5 +13,6 @@
     "header-banner"
   ],
   "entry": "dist/index.js",
-  "css": "dist/style.css"
+  "css": "dist/style.css",
+  "api": "plugin_api.py"
 }
