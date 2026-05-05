@@ -10,5 +10,6 @@ idiomatic_version_file_enable_tools = ["node", "python"]
 # Node is needed for many MCP servers invoked through `npx`.
 node = "lts"
 
-# Keep uv available for Python-based MCP servers/tools invoked through `uvx`.
-uv = "latest"
+# uv is installed in the Dockerfile via Astral's installer instead of mise.
+# Reason: mise's aqua backend can fail Docker builds when GitHub artifact
+# attestation metadata for astral-sh/uv is unavailable or mismatched.

@@ -210,8 +210,9 @@ Global mise config lives at `docker/mise/config.toml`:
 ```toml
 [tools]
 node = "lts"
-uv = "latest"
 ```
+
+`uv` / `uvx` are installed directly in the Dockerfile with Astral's installer instead of through mise. This avoids fragile mise/aqua GitHub artifact attestation failures during image builds while keeping Python MCP tooling available.
 
 Each agent can carry extra gear in its own workspace-level mise file:
 

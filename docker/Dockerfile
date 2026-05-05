@@ -62,6 +62,15 @@ RUN mise trust /etc/mise/config.toml \
     && mise install --yes \
     && mise reshim
 
+# Install uv/uvx directly instead of through mise's aqua backend. The mise uv
+# plugin verifies GitHub artifact attestations, and uv releases can fail Docker
+# builds when that attestation metadata is missing or not in the expected
+# workflow shape. Astral's installer keeps uv available for Hermes and MCP
+# tooling without making the whole image build depend on mise/aqua attestation.
+RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh \
+    && uv --version \
+    && uvx --version
+
 # Install voice extras into the upstream Hermes venv for CLI/gateway voice mode.
 RUN cd /opt/hermes \
     && uv pip install --no-cache --python /opt/hermes/.venv/bin/python '.[voice]' \
