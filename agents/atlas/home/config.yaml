@@ -197,7 +197,7 @@ display:
   copy_shortcut: auto
   tool_progress: true
 dashboard:
-  theme: default
+  theme: chronos-forge
 privacy:
   redact_pii: false
 tts:

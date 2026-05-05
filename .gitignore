@@ -11,6 +11,8 @@
 agents/*/home/*
 !agents/*/home/SOUL.md
 !agents/*/home/AGENTS.md
+!agents/*/home/plugins
+!agents/*/home/dashboard-themes
 agents/*/home/.env
 agents/*/home/.env.*
 agents/*/home/auth.json
@@ -102,3 +104,6 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Python
+__pycache__
