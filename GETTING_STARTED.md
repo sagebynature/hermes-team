@@ -455,7 +455,7 @@ It provides:
 - Profile image from `agents/<agent>/home/profile.jpg`.
 - Per-agent dashboard accent colors.
 
-Per-agent colors are configured in each agent config:
+Per-agent colors are configured in each agent config under `dashboard.accent_colors`:
 
 ```yaml
 dashboard:
