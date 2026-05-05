@@ -11,7 +11,7 @@
 agents/*/home/*
 !agents/*/home/SOUL.md
 !agents/*/home/AGENTS.md
-!agents/*/home/plugins
+!agents/*/home/plugins/hermes-command-center
 !agents/*/home/dashboard-themes
 agents/*/home/.env
 agents/*/home/.env.*
