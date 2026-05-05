@@ -13,6 +13,7 @@ For day-to-day operations, use the registry-driven runbook:
 - Getting started guide: `GETTING_STARTED.md`
 - Operations runbook: `docs/team-nexus-operations.md`
 - Discord/Kanban deep dive: `docs/discord-kanban-operations.md`
+- Agent message router guide: `docs/agent-message-router.md`
 - Dedicated runtime rationale: `docs/adr/0011-dedicated-agent-runtimes-vs-profiles.md`
 - Registry-driven roster decision: `docs/adr/0012-registry-driven-agent-roster-and-generated-runtime-artifacts.md`
 
@@ -81,6 +82,7 @@ Team Nexus gives each agent a clean lane and a hard boundary.
 - Shared project files, skills, MCP material, plugins, and dashboard themes are mounted read-only; `/shared/project/artifacts` is a writable handoff submount for cross-agent deliverables.
 - Secrets stay out of the image and out of git.
 - Atlas is the default point of coordination, so specialist output gets synthesized instead of scattered.
+- Discord bot mentions are not guaranteed dispatch; use the agent message router guide (`docs/agent-message-router.md`) and Kanban as the A2A work path.
 
 The result is simple: autonomous agents with their own identity, their own tools, and a common operating picture.
 

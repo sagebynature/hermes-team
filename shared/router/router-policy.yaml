@@ -1,0 +1,29 @@
+routes:
+  atlas:
+    can_send_to: [vega, scout, forge, lumen, blitz, ledger, sentinel, product, delivery]
+  vega:
+    can_send_to: [atlas]
+  scout:
+    can_send_to: [atlas]
+  forge:
+    can_send_to: [atlas]
+  lumen:
+    can_send_to: [atlas]
+  blitz:
+    can_send_to: [atlas]
+  ledger:
+    can_send_to: [atlas]
+  sentinel:
+    can_send_to: [atlas]
+
+groups:
+  product: [vega, scout, lumen]
+  delivery: [forge, sentinel]
+  all-workers: [vega, scout, forge, lumen, blitz, ledger, sentinel]
+
+limits:
+  default_ttl: 3
+  max_ttl: 5
+  max_fanout: 3
+  max_summary_chars: 240
+  max_body_chars: 4000

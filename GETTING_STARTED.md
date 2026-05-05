@@ -9,6 +9,7 @@ Use this file when you want the practical step-by-step path. For deeper operatio
 - README.md
 - docs/team-nexus-operations.md
 - docs/discord-kanban-operations.md
+- docs/agent-message-router.md
 - docs/adr/README.md
 
 ---
@@ -42,6 +43,7 @@ Team Nexus runs these layers:
 5. Atlas as default coordinator
    - Atlas is the default mission coordinator.
    - Specialists should receive bounded work through Kanban or explicit operator instruction.
+   - Discord bot mentions are not guaranteed dispatch; the agent message router (`docs/agent-message-router.md`) and Kanban are the A2A work path.
    - Atlas synthesizes specialist output for the user.
 
 ---

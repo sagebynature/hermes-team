@@ -12,6 +12,15 @@ Team Nexus uses three layers:
 
 Atlas remains the default coordinator and synthesizer. Specialists receive bounded Kanban work, complete it, add handoff comments/artifacts, and let Atlas synthesize the result back to the user.
 
+Discord bot mentions are not durable dispatch. If Atlas posts `@Vega @Forge ...` in Discord, that is a human-visible status cue only; it does not create tracked work for those agents. Use the Team Nexus message router or Kanban tasks for actual agent-to-agent work:
+
+```bash
+make router-send FROM=atlas TO=forge SUMMARY="Review the implementation" GOAL="Inspect the router MVP" DELIVERABLE="Concise review with blockers"
+make router-dispatch
+```
+
+Keep `DISCORD_ALLOW_BOTS` unset/default for normal Team Nexus operation. Do not set `DISCORD_ALLOW_BOTS=all`; it turns Discord into an unbounded bot-to-bot bus and can create loop storms, duplicate work, and wasteful token consumption.
+
 ## What is already wired
 
 Every agent service in `docker-compose.yml` sets:

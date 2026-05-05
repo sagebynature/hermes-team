@@ -22,6 +22,7 @@ endif
 	generate check-generated validate preflight registry-list registry-validate registry-next-ports validate-plugins dashboards-up dashboards-restart \
 	agent-add agent-disable agent-archive \
 	kanban-init kanban-list kanban-stats kanban-watch kanban-create kanban-link kanban-dispatch \
+	router-init router-send router-list router-inspect router-dispatch \
 	kanban-dispatcher-once kanban-dispatcher-daemon kanban-dispatcher-stop kanban-dispatcher-logs discord-status-dry-run \
 	mcp-list mcp-list-all mcp-test mcp-remove mcp-add-command mcp-add-url \
 	mcp-register-template mcp-register-template-all mcp-templates mcp-show-template \
@@ -167,6 +168,32 @@ kanban-link: ## Link parent->child dependency: make kanban-link PARENT=K... CHIL
 kanban-dispatch: guard-agent ## Run one Kanban task in the assigned agent container: make kanban-dispatch AGENT=forge TASK=K...
 	@if [ -z "$(TASK)" ]; then echo "TASK is required" >&2; exit 2; fi
 	COMPOSE='$(COMPOSE)' ./scripts/kanban-dispatch-compose.sh $(AGENT) $(TASK)
+
+router-init: ## Initialize the Team Nexus message router database
+	python3 scripts/team-message-router.py init
+
+router-send: ## Send a router message: make router-send FROM=atlas TO=forge SUMMARY='...' GOAL='...' DELIVERABLE='...'
+	@if [ -z "$(FROM)" ]; then echo "FROM is required" >&2; exit 2; fi
+	@if [ -z "$(TO)" ]; then echo "TO is required" >&2; exit 2; fi
+	@if [ -z "$(SUMMARY)" ]; then echo "SUMMARY is required" >&2; exit 2; fi
+	@if [ -z "$(GOAL)" ]; then echo "GOAL is required" >&2; exit 2; fi
+	@if [ -z "$(DELIVERABLE)" ]; then echo "DELIVERABLE is required" >&2; exit 2; fi
+	python3 scripts/team-message-router.py send --from "$(FROM)" --to "$(TO)" --summary "$(SUMMARY)" --goal "$(GOAL)" --deliverable "$(DELIVERABLE)"
+
+router-list: ## List Team Nexus router messages; optional STATUS=pending
+	@if [ -n "$(STATUS)" ]; then \
+		python3 scripts/team-message-router.py list --status "$(STATUS)"; \
+	else \
+		python3 scripts/team-message-router.py list; \
+	fi
+
+router-inspect: ## Inspect a router message: make router-inspect MESSAGE=msg_...
+	@if [ -z "$(MESSAGE)" ]; then echo "MESSAGE is required" >&2; exit 2; fi
+	python3 scripts/team-message-router.py inspect "$(MESSAGE)"
+
+MAX_MESSAGES ?= 1
+router-dispatch: ## Dispatch pending router messages to Kanban; MAX_MESSAGES defaults to 1
+	python3 scripts/team-message-router.py dispatch-pending --max "$(MAX_MESSAGES)"
 
 kanban-dispatcher-once: ## Run one Dockerized Compose-aware dispatcher pass; add DRY_RUN=1 to avoid spawning
 	@if [ "$(DRY_RUN)" = "1" ]; then \
