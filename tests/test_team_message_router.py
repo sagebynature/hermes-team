@@ -152,7 +152,14 @@ def test_dispatch_pending_success_creates_kanban_task_with_body_and_idempotency(
 
     def fake_run(cmd, **kwargs):
         calls.append(cmd)
-        return SimpleNamespace(returncode=0, stdout='{"id":"K123"}\n', stderr="")
+        return SimpleNamespace(returncode=0, stdout='''Fixing ownership of /opt/data to hermes (501)
+{
+  "id": "t_123abc",
+  "title": "[router:msg] dispatch me",
+  "status": "ready"
+}
+ Container team-nexus-atlas-run Created
+''', stderr="")
 
     ids = router.send_messages(db, "atlas", "forge", "task.request", "dispatch me", "goal", "deliverable")
     dispatched = router.dispatch_pending(db, max_messages=1, run_cmd=fake_run)
@@ -160,7 +167,7 @@ def test_dispatch_pending_success_creates_kanban_task_with_body_and_idempotency(
     assert dispatched == ids
     msg = rows(db, "SELECT status, kanban_task_id, error FROM messages WHERE id=?", (ids[0],))[0]
     assert msg["status"] == "dispatched"
-    assert msg["kanban_task_id"] == "K123"
+    assert msg["kanban_task_id"] == "t_123abc"
     assert msg["error"] is None
     cmd = calls[0]
     assert "--body" in cmd

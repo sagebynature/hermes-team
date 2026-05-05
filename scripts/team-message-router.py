@@ -352,15 +352,20 @@ def inspect_message(db: str | os.PathLike[str] | None, message_id: str, out: Any
 
 
 def parse_kanban_task_id(output: str) -> str | None:
-    # Prefer JSON emitted by `kanban create --json`, then fall back to obvious IDs.
-    for line in output.splitlines():
+    # Prefer JSON emitted by `kanban create --json`. Compose/run wrappers may add
+    # log lines before or after a pretty-printed JSON object, so parse from every
+    # object start instead of assuming one compact JSON object per line.
+    decoder = json.JSONDecoder()
+    for match in re.finditer(r"\{", output):
         try:
-            payload = json.loads(line)
+            payload, _ = decoder.raw_decode(output[match.start():])
         except json.JSONDecodeError:
             continue
         if isinstance(payload, dict) and payload.get("id"):
             return str(payload["id"])
-    m = re.search(r"\b(K[0-9][A-Za-z0-9_-]*)\b", output)
+    # Fall back to obvious Kanban task IDs in either legacy K... or current t_...
+    # formats.
+    m = re.search(r"\b(K[0-9][A-Za-z0-9_-]*|t_[A-Za-z0-9_-]+)\b", output)
     return m.group(1) if m else None
 
 
