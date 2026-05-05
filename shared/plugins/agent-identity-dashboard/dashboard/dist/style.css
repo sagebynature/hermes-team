@@ -1,37 +1,55 @@
-.agent-profile-brand {
-  display: inline-flex;
+#app-sidebar > div:first-child {
+  padding-inline: 1.25rem 0.75rem;
+}
+
+.agent-sidebar-identity {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-width: 0;
+  gap: 0.625rem;
+  margin: 0.5rem 0.625rem 0.75rem;
+  padding: 0.5rem;
+  border: 1px solid color-mix(in srgb, currentColor 24%, transparent);
+  background: color-mix(in srgb, var(--background) 72%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, currentColor 10%, transparent);
+  color: currentColor;
+  line-height: 1;
   text-decoration: none;
 }
 
-.agent-profile-brand-image {
+.agent-sidebar-identity-image {
   display: block;
-  width: 6.75rem;
-  max-width: 8rem;
-  height: 2.25rem;
+  flex: 0 0 auto;
+  width: 3.6rem;
+  height: 4.8rem;
   object-fit: contain;
+  object-position: center;
 }
 
-.agent-profile-branding-active [data-sidebar="header"] a[href="/sessions"] > svg,
-.agent-profile-branding-active [data-sidebar="header"] a[href="/sessions"] > span,
-.agent-profile-branding-active [data-sidebar="header"] a[href="/sessions"] .truncate,
-.agent-profile-branding-active aside a[href="/sessions"] > svg,
-.agent-profile-branding-active aside a[href="/sessions"] > span,
-.agent-profile-branding-active aside a[href="/sessions"] .truncate,
-.agent-profile-branding-active #app-sidebar .agent-profile-brand + span {
-  display: none !important;
-}
-
-.agent-profile-branding-active [data-sidebar="header"] a[href="/sessions"],
-.agent-profile-branding-active aside a[href="/sessions"] {
+.agent-sidebar-identity-copy {
+  display: inline-flex;
+  flex-direction: column;
   justify-content: center;
+  min-width: 0;
+  gap: 0.25rem;
 }
 
-.agent-profile-branding-active #app-sidebar .agent-profile-brand {
-  justify-content: flex-start;
+.agent-sidebar-identity-name {
+  overflow: hidden;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.agent-sidebar-identity-role {
+  overflow: hidden;
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  opacity: 0.68;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .agent-identity-badge {
@@ -78,14 +96,6 @@
   flex: 0 0 auto;
   gap: 0.65rem;
   min-width: 0;
-}
-
-.agent-identity-mobile-image {
-  display: none;
-  width: 7rem;
-  max-width: calc(100vw - 5rem);
-  height: 2.05rem;
-  object-fit: contain;
 }
 
 .agent-identity-banner-label {
@@ -148,14 +158,18 @@
 }
 
 @media (max-width: 768px) {
-  .agent-profile-brand-image {
-    width: 5.75rem;
-    max-width: 6.5rem;
-    height: 2rem;
+  .agent-sidebar-identity {
+    margin-inline: 0.5rem;
+    padding: 0.4rem;
   }
 
-  .agent-identity-mobile-image {
-    display: block;
+  .agent-sidebar-identity-image {
+    width: 2.6rem;
+    height: 3.45rem;
+  }
+
+  .agent-sidebar-identity-copy {
+    display: none;
   }
 
   .agent-identity-banner {

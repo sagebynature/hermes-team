@@ -60,16 +60,6 @@
       return () => { cancelled = true; };
     }, []);
 
-    useEffect(() => {
-      const enabled = Boolean(identity.hasProfileImage);
-      document.documentElement.classList.toggle("agent-profile-branding-active", enabled);
-      document.body.classList.toggle("agent-profile-branding-active", enabled);
-      return () => {
-        document.documentElement.classList.remove("agent-profile-branding-active");
-        document.body.classList.remove("agent-profile-branding-active");
-      };
-    }, [identity.hasProfileImage]);
-
     return identity;
   }
 
@@ -92,20 +82,111 @@
     return agents;
   }
 
-  function ProfileBrand() {
-    const identity = useIdentity();
-    if (!identity.hasProfileImage) return null;
+  function profileImageUrl(identity) {
+    return `${identity.profileUrl}${identity.profileUrl.includes("?") ? "&" : "?"}v=${Date.now()}`;
+  }
 
-    const src = `${identity.profileUrl}${identity.profileUrl.includes("?") ? "&" : "?"}v=${Date.now()}`;
-    return React.createElement(
-      "a",
-      { className: "agent-profile-brand", href: "/sessions", title: identity.title || identity.name },
-      React.createElement("img", {
-        className: "agent-profile-brand-image",
-        src,
-        alt: identity.name || "Agent profile",
-      }),
+  function findSidebarRoot() {
+    return (
+      document.querySelector("#app-sidebar") ||
+      document.querySelector('[data-sidebar="sidebar"]') ||
+      document.querySelector('[data-sidebar]') ||
+      document.querySelector("aside")
     );
+  }
+
+  function findSystemAnchor(sidebar) {
+    const candidates = sidebar.querySelectorAll(
+      '[data-sidebar="group-label"], [role="heading"], h2, h3, p, span, div'
+    );
+    for (const candidate of candidates) {
+      if ((candidate.textContent || "").trim().toLowerCase() !== "system") continue;
+      return candidate.closest('[data-sidebar="group"], li, section, nav > div, div') || candidate;
+    }
+    return null;
+  }
+
+  function upsertSidebarIdentity(identity) {
+    const existing = document.querySelector(".agent-sidebar-identity");
+    if (!identity.hasProfileImage) {
+      if (existing) existing.remove();
+      return false;
+    }
+
+    const sidebar = findSidebarRoot();
+    if (!sidebar) return false;
+    const anchor = findSystemAnchor(sidebar);
+    if (!anchor || !anchor.parentElement) return false;
+
+    const key = JSON.stringify({
+      name: identity.name || "",
+      role: identity.role || "",
+      title: identity.title || "",
+      profileUrl: identity.profileUrl || "",
+    });
+    const alreadyPlaced = existing && existing.parentElement === anchor.parentElement && existing.nextElementSibling === anchor;
+    if (existing && existing.dataset.identityKey === key && alreadyPlaced) return true;
+
+    const card = existing || document.createElement("a");
+    card.className = "agent-sidebar-identity";
+    card.dataset.identityKey = key;
+    card.href = "/sessions";
+    card.title = identity.title || identity.name || "Agent dashboard";
+    card.setAttribute("aria-label", card.title);
+    card.innerHTML = "";
+
+    const image = document.createElement("img");
+    image.className = "agent-sidebar-identity-image";
+    image.src = profileImageUrl(identity);
+    image.alt = identity.name || "Agent profile";
+    card.appendChild(image);
+
+    const copy = document.createElement("span");
+    copy.className = "agent-sidebar-identity-copy";
+
+    const name = document.createElement("span");
+    name.className = "agent-sidebar-identity-name";
+    name.textContent = identity.name || "Hermes Agent";
+    copy.appendChild(name);
+
+    if (identity.role) {
+      const role = document.createElement("span");
+      role.className = "agent-sidebar-identity-role";
+      role.textContent = identity.role;
+      copy.appendChild(role);
+    }
+
+    card.appendChild(copy);
+
+    if (!existing || existing.parentElement !== anchor.parentElement) {
+      anchor.parentElement.insertBefore(card, anchor);
+    }
+    return true;
+  }
+
+  function useSidebarIdentity(identity) {
+    useEffect(() => {
+      let disposed = false;
+      let frame = 0;
+
+      const sync = () => {
+        if (disposed) return;
+        cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(() => upsertSidebarIdentity(identity));
+      };
+
+      sync();
+      const observer = new MutationObserver(sync);
+      observer.observe(document.body, { childList: true, subtree: true });
+
+      return () => {
+        disposed = true;
+        cancelAnimationFrame(frame);
+        observer.disconnect();
+        const existing = document.querySelector(".agent-sidebar-identity");
+        if (existing) existing.remove();
+      };
+    }, [identity.hasProfileImage, identity.name, identity.role, identity.title, identity.profileUrl]);
   }
 
   function AgentNavbar() {
@@ -133,17 +214,10 @@
 
   function HeaderBanner() {
     const identity = useIdentity();
+    useSidebarIdentity(identity);
     return React.createElement(
       "div",
       { className: "agent-identity-banner" },
-      identity.hasProfileImage
-        ? React.createElement("img", {
-            className: "agent-identity-mobile-image",
-            src: identity.profileUrl,
-            alt: "",
-            "aria-hidden": "true",
-          })
-        : null,
       React.createElement(
         "div",
         { className: "agent-identity-banner-copy" },
@@ -159,6 +233,5 @@
   window.__HERMES_PLUGINS__.register(PLUGIN_NAME, function AgentIdentityPage() {
     return null;
   });
-  window.__HERMES_PLUGINS__.registerSlot(PLUGIN_NAME, "header-left", ProfileBrand);
   window.__HERMES_PLUGINS__.registerSlot(PLUGIN_NAME, "header-banner", HeaderBanner);
 })();

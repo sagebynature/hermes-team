@@ -1,7 +1,7 @@
 {
   "name": "agent-identity-dashboard",
   "label": "Agent Identity",
-  "description": "Shows the current agent identity and replaces the dashboard brand with $HERMES_HOME/profile.jpg when present.",
+  "description": "Shows the current agent identity, dashboard navbar, and a sidebar profile card from $HERMES_HOME/profile.jpg when present.",
   "icon": "Users",
   "version": "1.0.0",
   "tab": {
@@ -9,7 +9,6 @@
     "hidden": true
   },
   "slots": [
-    "header-left",
     "header-banner"
   ],
   "entry": "dist/index.js",
