@@ -1,0 +1,5 @@
+mcp_servers:
+  sequential-thinking:
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    connect_timeout: 15
