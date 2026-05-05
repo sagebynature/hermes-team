@@ -48,7 +48,7 @@ Team Nexus gives each agent a clean lane and a hard boundary.
 
 - Every specialist has a private Hermes home under `agents/<agent>/home`.
 - Every specialist has a private workspace under `agents/<agent>/workspace`.
-- Shared project files, skills, and MCP material are mounted read-only; `/shared/project/artifacts` is a writable handoff submount for cross-agent deliverables.
+- Shared project files, skills, MCP material, plugins, and dashboard themes are mounted read-only; `/shared/project/artifacts` is a writable handoff submount for cross-agent deliverables.
 - Secrets stay out of the image and out of git.
 - Atlas is the default point of coordination, so specialist output gets synthesized instead of scattered.
 
@@ -68,6 +68,8 @@ shared/project           ->    /shared/project:ro
 shared/project/artifacts ->    /shared/project/artifacts:rw (writable handoff submount)
 shared/skills            ->    /shared/skills:ro
 shared/mcp               ->    /shared/mcp:ro
+shared/plugins           ->    /opt/data/plugins:ro
+shared/dashboard-themes  ->    /opt/data/dashboard-themes:ro
 ```
 
 Inside the container:
@@ -79,6 +81,8 @@ Inside the container:
 | `/shared/project` | Read-only mission brief and project context, with `/shared/project/artifacts` as a writable handoff submount |
 | `/shared/skills`  | Read-only team skill library                                                           |
 | `/shared/mcp`     | Read-only MCP registry, templates, scripts, and docs                                   |
+| `/opt/data/plugins` | Shared Hermes plugin library mounted from `shared/plugins`                          |
+| `/opt/data/dashboard-themes` | Shared dashboard theme YAMLs mounted from `shared/dashboard-themes`       |
 
 Every agent runs terminal tools from `/workspace` by default:
 
@@ -129,6 +133,8 @@ team-nexus/
     project/                       # shared project context, mounted read-only
     skills/                        # shared team-wide skills, mounted read-only
     mcp/                           # shared MCP registry/templates/docs
+    plugins/                       # shared Hermes/dashboard plugins, mounted at /opt/data/plugins
+    dashboard-themes/              # shared dashboard theme YAMLs, mounted at /opt/data/dashboard-themes
 
   .env.example                    # template for the shared repo-root .env
 
@@ -494,6 +500,122 @@ docker compose run --rm atlas skills browse
 Tool or skill changes may require a new Hermes session or gateway restart.
 
 ---
+
+## Shared plugins and dashboard themes
+
+Team Nexus uses shared dashboard extensions so every agent dashboard has the same command deck while still keeping each agent's config, sessions, auth state, and memory private.
+
+Hermes discovery rules matter:
+
+```text
+shared/plugins/          -> /opt/data/plugins:ro
+shared/dashboard-themes/ -> /opt/data/dashboard-themes:ro
+```
+
+Do not mount a directory at `/opt/data/dashboard` and expect Hermes to scan it. Hermes does not use that path.
+
+Shared dashboard plugins live under `shared/plugins/<plugin-name>/dashboard/`:
+
+```text
+shared/plugins/agent-identity-dashboard/
+  dashboard/
+    manifest.json
+    dist/
+      index.js
+      style.css
+
+shared/plugins/kanban/
+  dashboard/
+    manifest.json
+    plugin_api.py        # optional backend API router
+    dist/
+      index.js
+      style.css
+```
+
+If a plugin also has an agent runtime component, it may include a top-level manifest:
+
+```text
+shared/plugins/<plugin-name>/plugin.yaml
+```
+
+Dashboard plugins are discovered from:
+
+```text
+$HERMES_HOME/plugins/<plugin-name>/dashboard/manifest.json
+```
+
+Because every service sets `HERMES_HOME=/opt/data`, the Compose mount must land on `/opt/data/plugins` for both the gateway services and the `*-dashboard` services. The mount is read-only by default so one dashboard cannot mutate the shared plugin library for every agent. Change it to `:rw` only if you intentionally want the dashboard plugin install/update/remove UI to manage shared plugin code.
+
+Shared themes are simpler: Hermes reads YAML files directly from:
+
+```text
+$HERMES_HOME/dashboard-themes/*.yaml
+```
+
+So Team Nexus themes live here:
+
+```text
+shared/dashboard-themes/chronos-forge.yaml
+```
+
+Each agent chooses the active theme in its own config:
+
+```yaml
+dashboard:
+  theme: chronos-forge
+  agent_name: ${AGENT_NAME}
+  agent_role: ${AGENT_ROLE}
+  title: ${AGENT_NAME} Dashboard
+```
+
+Theme YAMLs are discovered on each `/api/dashboard/themes` request, but Compose mount changes require recreating the running containers:
+
+```bash
+docker compose --profile dashboard up -d --force-recreate
+```
+
+Plugin changes have two refresh paths:
+
+```bash
+# frontend-only dashboard plugin changes
+curl -fsS http://127.0.0.1:9119/api/dashboard/plugins/rescan
+
+# plugin backend API changes or new plugin_api.py routes
+# restart/recreate the dashboard service because FastAPI routes mount at process startup
+docker compose --profile dashboard restart atlas-dashboard dashboard-nginx
+```
+
+Verify the shared mounts, selected theme, and plugin discovery:
+
+```bash
+docker compose --profile dashboard config >/tmp/team-nexus-dashboard.yaml
+python3 - <<'PY'
+import json
+import urllib.request
+import yaml
+from pathlib import Path
+
+cfg = yaml.safe_load(Path('/tmp/team-nexus-dashboard.yaml').read_text())
+agents = {'atlas','vega','scout','forge','lumen','blitz','ledger','sentinel'}
+services = [n for n in cfg['services'] if n in agents or n.endswith('-dashboard')]
+for target in ['/opt/data/plugins', '/opt/data/dashboard-themes']:
+    missing = []
+    for name in services:
+        vols = cfg['services'][name].get('volumes') or []
+        if not any(isinstance(v, dict) and v.get('target') == target for v in vols):
+            missing.append(name)
+    print(target, 'missing:', missing)
+
+ports = {'atlas':9119,'vega':9120,'scout':9121,'forge':9122,'lumen':9123,'blitz':9124,'ledger':9125,'sentinel':9126}
+for agent, port in ports.items():
+    themes = json.loads(urllib.request.urlopen(f'http://127.0.0.1:{port}/api/dashboard/themes').read())
+    plugins = json.loads(urllib.request.urlopen(f'http://127.0.0.1:{port}/api/dashboard/plugins').read())
+    print(agent, 'theme=', themes.get('active'), 'plugins=', ','.join(p.get('name','') for p in plugins))
+PY
+```
+
+Important caveat: there is no static `/dashboard-themes/...` asset route. If a theme needs local images, fonts, or other files, either use remote URLs/data URLs/inline CSS in the YAML or ship the static assets through a dashboard plugin and reference them via `/dashboard-plugins/<plugin-name>/...`.
 
 ## MCP arsenal
 
