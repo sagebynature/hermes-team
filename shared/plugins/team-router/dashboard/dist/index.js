@@ -189,8 +189,9 @@
     );
   }
 
-  SDK.registerPlugin({
-    name: "team-router",
-    routes: [{ path: "/team-router", component: App }]
-  });
+  if (window.__HERMES_PLUGINS__ && typeof window.__HERMES_PLUGINS__.register === "function") {
+    window.__HERMES_PLUGINS__.register("team-router", App);
+  } else {
+    console.error("Team Router: missing plugin registry");
+  }
 })();

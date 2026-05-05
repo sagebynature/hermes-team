@@ -30,6 +30,7 @@ sys.modules.setdefault("fastapi", fastapi_stub)
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ROUTER_SCRIPT = REPO_ROOT / "scripts" / "team-message-router.py"
 PLUGIN_API = REPO_ROOT / "shared" / "plugins" / "team-router" / "dashboard" / "plugin_api.py"
+PLUGIN_JS = REPO_ROOT / "shared" / "plugins" / "team-router" / "dashboard" / "dist" / "index.js"
 
 router_spec = importlib.util.spec_from_file_location("team_message_router_for_plugin_tests", ROUTER_SCRIPT)
 router_cli = importlib.util.module_from_spec(router_spec)
@@ -101,3 +102,10 @@ def test_plugin_conversation_returns_events(tmp_path, monkeypatch):
     assert payload["conversation_id"] == "conv-plugin"
     assert payload["messages"][0]["id"] == ids[0]
     assert payload["messages"][0]["events"][0]["kind"] == "created"
+
+
+def test_plugin_frontend_uses_dashboard_registry_api():
+    script = PLUGIN_JS.read_text()
+
+    assert "window.__HERMES_PLUGINS__.register(\"team-router\", App)" in script
+    assert "SDK.registerPlugin" not in script

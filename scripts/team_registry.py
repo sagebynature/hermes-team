@@ -392,8 +392,9 @@ def emit_compose_dashboards(agents: OrderedDict[str, dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
-SUB_FILTER_PATHS = ["sessions", "analytics", "models", "logs", "cron", "skills", "plugins", "profiles", "config", "env", "docs", "chat", "kanban", "command-center"]
+SUB_FILTER_PATHS = ["sessions", "analytics", "models", "logs", "cron", "skills", "plugins", "profiles", "config", "env", "docs", "chat", "kanban", "command-center", "team-router"]
 PLUGIN_PREFIXES = ["command-center", "achievements", "kanban", "team-router", "example"]
+DASHBOARD_SHORTCUT_PATHS = ["sessions", "kanban", "command-center", "team-router"]
 
 
 def nginx_block(slug: str) -> str:
@@ -442,13 +443,31 @@ def nginx_block(slug: str) -> str:
     return "\n".join(lines)
 
 
+def nginx_shortcuts(default_slug: str) -> str:
+    lines: list[str] = []
+    for path in DASHBOARD_SHORTCUT_PATHS:
+        lines += [
+            f"  location = /{path} {{",
+            f"    return 302 /{default_slug}/{path};",
+            "  }",
+            "",
+            f"  location = /{path}/ {{",
+            f"    return 302 /{default_slug}/{path};",
+            "  }",
+            "",
+        ]
+    return "\n".join(lines).rstrip()
+
+
 def emit_nginx(agents: OrderedDict[str, dict[str, Any]]) -> str:
     default = default_route_slug(agents)
+    shortcuts = nginx_shortcuts(default)
     locations = "\n\n".join(nginx_block(slug) for slug in dashboard_agents(agents))
     if locations:
         locations += "\n"
     return render_template("dashboards.conf.tmpl", {
         "default_route": default,
+        "dashboard_shortcuts": shortcuts,
         "dashboard_locations": locations,
     })
 
