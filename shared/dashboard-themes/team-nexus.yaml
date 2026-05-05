@@ -1,0 +1,401 @@
+name: team-nexus
+label: Team Nexus
+description: NERV-inspired operations-console skin for Team Nexus Hermes operators. True-black void surfaces, NERV orange classification chrome, green nominal readouts, cyan telemetry, compact controls, and plugin-ready HUD slots.
+
+palette:
+  background: { hex: "#000000", alpha: 1 }
+  midground: { hex: "#ff9830", alpha: 1 }
+  foreground: { hex: "#50ff50", alpha: 1 }
+  warmGlow: "rgba(255, 152, 48, 0.34)"
+  noiseOpacity: 0.72
+
+typography:
+  fontSans: '"JetBrains Mono", "Cascadia Mono", ui-monospace, monospace'
+  fontMono: '"JetBrains Mono", "Cascadia Mono", ui-monospace, monospace'
+  fontDisplay: '"Noto Serif Display", "Times New Roman", serif'
+  fontUrl: "https://fonts.googleapis.com/css2?family=Noto+Serif+Display:wght@700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Saira+Extra+Condensed:wght@600;700;800&family=Shippori+Mincho+B1:wght@700;800&display=swap"
+  baseSize: "14px"
+  lineHeight: "1.5"
+  letterSpacing: "0.015em"
+
+layout:
+  radius: "0.125rem"
+  density: compact
+layoutVariant: cockpit
+
+assets:
+  bg: "#000000"
+  hero: "radial-gradient(circle at center, rgba(32,240,255,0.18), rgba(255,152,48,0.08) 35%, transparent 62%)"
+  logo: "linear-gradient(135deg, #ff9830, #ffcc50 52%, #50ff50)"
+  crest: "radial-gradient(circle, rgba(255,152,48,0.24), rgba(32,240,255,0.14) 48%, transparent 70%)"
+  sidebar: "linear-gradient(180deg, rgba(255,152,48,0.08), rgba(80,255,80,0.04), transparent)"
+  header: "#000000"
+  custom:
+    command-grid: "linear-gradient(rgba(216,216,208,0.10) 1px, transparent 1px), linear-gradient(90deg, rgba(216,216,208,0.10) 1px, transparent 1px)"
+    amber-radar: "conic-gradient(from 210deg, rgba(255,152,48,0.0), rgba(255,152,48,0.34), rgba(80,255,80,0.0), rgba(255,152,48,0.0))"
+
+componentStyles:
+  page:
+    background: "var(--theme-asset-bg)"
+  backdrop:
+    background: "radial-gradient(circle at 50% 0%, rgba(80,230,255,0.10), transparent 42%)"
+  header:
+    background: "#000000"
+    borderColor: "rgba(255,152,48,0.55)"
+    boxShadow: "inset 0 -1px rgba(255,152,48,0.25)"
+  sidebar:
+    background: "linear-gradient(180deg, rgba(0,0,0,0.98), rgba(8,8,7,0.96)), var(--theme-asset-sidebar)"
+    borderColor: "rgba(255,152,48,0.55)"
+    boxShadow: "inset -1px 0 rgba(255,152,48,0.18)"
+  card:
+    background: "#080807"
+    borderColor: "rgba(216,216,208,0.18)"
+    boxShadow: "none"
+    clipPath: "none"
+  tab:
+    background: "#0c0c0a"
+    borderColor: "rgba(255,152,48,0.45)"
+    clipPath: "none"
+  progress:
+    background: "linear-gradient(90deg, #50ff50, #ff9830)"
+  badge:
+    background: "rgba(255,152,48,0.10)"
+    borderColor: "rgba(255,152,48,0.45)"
+    color: "#ffcc50"
+  footer:
+    background: "#000000"
+
+colorOverrides:
+  card: "#080807"
+  cardForeground: "#d8d8d0"
+  popover: "#0c0c0a"
+  popoverForeground: "#d8d8d0"
+  primary: "#50ff50"
+  primaryForeground: "#000000"
+  secondary: "rgba(255,152,48,0.10)"
+  secondaryForeground: "#ffcc50"
+  muted: "rgba(216,216,208,0.08)"
+  mutedForeground: "#888880"
+  accent: "rgba(32,240,255,0.12)"
+  accentForeground: "#20f0ff"
+  destructive: "#ff3030"
+  destructiveForeground: "#000000"
+  border: "rgba(255,152,48,0.45)"
+  input: "rgba(216,216,208,0.16)"
+  ring: "#50ff50"
+
+customCSS: |
+  body {
+    background: #000000 fixed;
+    color: #50ff50;
+    font-family: var(--font-mono);
+    text-rendering: geometricPrecision;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      linear-gradient(rgba(0,0,0,0.04) 50%, transparent 50%),
+      radial-gradient(circle at 50% 0%, rgba(255,152,48,0.08), transparent 50%);
+    background-size: 100% 3px, 100% 100%;
+    mix-blend-mode: screen;
+    opacity: 0.55;
+  }
+
+  body::after {
+    content: "";
+    position: fixed;
+    top: -44px;
+    left: -44px;
+    width: calc(100% + 44px);
+    height: calc(100% + 44px);
+    pointer-events: none;
+    z-index: 0;
+    background-image: var(--theme-asset-custom-command-grid);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(circle at 50% 35%, black, transparent 72%);
+    opacity: 0.36;
+    will-change: transform;
+    animation: chronos-grid-drift 26s linear infinite;
+  }
+
+  h1, h2, h3, .font-display {
+    color: #ff9830;
+    font-family: var(--font-display);
+    font-weight: 900;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    transform: scaleX(0.85);
+    transform-origin: left center;
+  }
+
+  button, a, [role="tab"], [data-slot="button"] {
+    transition: box-shadow 150ms ease, transform 150ms ease, border-color 150ms ease;
+  }
+
+  button:hover, a:hover, [role="tab"]:hover, [data-slot="button"]:hover {
+    box-shadow: 0 0 0 1px rgba(80,255,80,0.24), 0 0 18px rgba(80,255,80,0.12);
+  }
+
+  [data-slot="card"]::before,
+  .rounded-lg.border::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(90deg, rgba(255,152,48,0.22), transparent 28%, transparent 72%, rgba(80,255,80,0.12)),
+      linear-gradient(180deg, rgba(255,255,255,0.025), transparent 32%);
+    opacity: 0.28;
+  }
+
+  [data-slot="card"], .rounded-lg.border {
+    position: relative;
+    overflow: hidden;
+  }
+
+  #app-sidebar > div:first-child span {
+    color: #ff9830 !important;
+    font-family: var(--font-display) !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.16em !important;
+    text-shadow: 0 0 8px rgba(255,152,48,0.35);
+    text-transform: uppercase;
+  }
+
+  #app-sidebar nav a {
+    font-family: var(--font-mono) !important;
+  }
+
+  #app-sidebar nav a svg {
+    color: #ff9830 !important;
+  }
+
+  #app-sidebar nav a[aria-current="page"],
+  #app-sidebar nav a:hover {
+    color: #50ff50 !important;
+    text-shadow: 0 0 8px rgba(80,255,80,0.35);
+  }
+
+  main .border.border-border.bg-card\/80 {
+    position: relative !important;
+    background:
+      linear-gradient(90deg, rgba(255,152,48,0.10), transparent 18rem),
+      linear-gradient(180deg, rgba(80,255,80,0.035), transparent 18rem),
+      #050504 !important;
+    border-color: rgba(255,152,48,0.58) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255,152,48,0.22),
+      inset 0 -1px 0 rgba(80,255,80,0.12),
+      0 0 0 1px rgba(255,152,48,0.06),
+      0 18px 38px rgba(0,0,0,0.42) !important;
+  }
+
+  main .border.border-border.bg-card\/80::before {
+    content: "";
+    position: absolute;
+    top: -1px;
+    right: 1rem;
+    padding: 0.16rem 0.55rem 0.18rem;
+    background: #ff9830;
+    color: #000000;
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    font-weight: 900;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    z-index: 2;
+  }
+
+  main .p-4.grid.gap-3 > .border.border-border,
+  main .flex.flex-col.gap-1\.5 > .border.overflow-hidden {
+    position: relative !important;
+    background:
+      linear-gradient(90deg, rgba(255,152,48,0.18) 0 0.18rem, transparent 0.18rem),
+      repeating-linear-gradient(90deg, rgba(80,255,80,0.028) 0 1px, transparent 1px 5.4rem),
+      rgba(8,8,7,0.92) !important;
+    border-color: rgba(255,152,48,0.36) !important;
+    border-left-color: #ff9830 !important;
+    border-left-width: 3px !important;
+    clip-path: polygon(0 0, calc(100% - 0.75rem) 0, 100% 0.75rem, 100% 100%, 0.75rem 100%, 0 calc(100% - 0.75rem));
+    box-shadow: inset 0 0 0 1px rgba(80,255,80,0.055) !important;
+  }
+
+  main .p-4.grid.gap-3 > .border.border-border:hover,
+  main .flex.flex-col.gap-1\.5 > .border.overflow-hidden:hover {
+    background:
+      linear-gradient(90deg, rgba(80,255,80,0.26) 0 0.18rem, transparent 0.18rem),
+      repeating-linear-gradient(90deg, rgba(80,255,80,0.04) 0 1px, transparent 1px 5.4rem),
+      rgba(12,12,9,0.98) !important;
+    border-color: rgba(80,255,80,0.62) !important;
+    box-shadow: 0 0 0 1px rgba(80,255,80,0.18), 0 0 22px rgba(80,255,80,0.10) !important;
+  }
+
+  main .p-4.grid.gap-3 > .border.border-border::after,
+  main .flex.flex-col.gap-1\.5 > .border.overflow-hidden::after {
+    content: "";
+    position: absolute;
+    top: 0.42rem;
+    right: 0.42rem;
+    width: 0.42rem;
+    height: 0.42rem;
+    border-top: 1px solid rgba(32,240,255,0.8);
+    border-right: 1px solid rgba(32,240,255,0.8);
+    pointer-events: none;
+  }
+
+  main h3,
+  main .font-expanded {
+    color: #ff9830 !important;
+    text-shadow: 0 0 10px rgba(255,152,48,0.16);
+  }
+
+  main [class*="text-muted"],
+  main .text-muted-foreground {
+    color: rgba(216,216,208,0.76) !important;
+  }
+
+  main button[aria-label="Delete session"] {
+    border: 1px solid rgba(255,48,48,0.35) !important;
+    color: rgba(255,152,48,0.82) !important;
+    background: rgba(255,48,48,0.05) !important;
+  }
+
+  .hermes-kanban {
+    color: #f4f4e8 !important;
+  }
+
+  .hermes-kanban-column {
+    background:
+      linear-gradient(180deg, rgba(255,152,48,0.06), transparent 5.5rem),
+      rgba(4,4,3,0.96) !important;
+    border: 1px solid rgba(255,152,48,0.34) !important;
+    box-shadow: inset 0 0 0 1px rgba(216,216,208,0.025), 0 16px 28px rgba(0,0,0,0.24) !important;
+  }
+
+  .hermes-kanban-column-header {
+    border-bottom: 1px solid rgba(255,152,48,0.32) !important;
+    background: linear-gradient(90deg, rgba(255,152,48,0.16), transparent) !important;
+    color: #ffc072 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.12em !important;
+  }
+
+  .hermes-kanban-column-sub {
+    color: rgba(228,228,216,0.76) !important;
+    text-transform: none !important;
+    font-variant-caps: normal !important;
+    letter-spacing: 0.025em !important;
+    line-height: 1.35 !important;
+    font-size: 0.76rem !important;
+  }
+
+  .hermes-kanban-empty {
+    color: rgba(228,228,216,0.50) !important;
+    text-transform: none !important;
+    letter-spacing: 0.05em !important;
+  }
+
+  .hermes-kanban-card > .border,
+  .hermes-kanban-card .border.border-border.bg-card\/80 {
+    background:
+      linear-gradient(90deg, rgba(255,152,48,0.10) 0 0.18rem, transparent 0.18rem),
+      rgba(7,7,6,0.99) !important;
+    border-color: rgba(255,152,48,0.30) !important;
+    border-left: 3px solid rgba(255,152,48,0.78) !important;
+    box-shadow: inset 0 0 0 1px rgba(216,216,208,0.04) !important;
+  }
+
+  .hermes-kanban-card:hover > .border,
+  .hermes-kanban-card:hover .border.border-border.bg-card\/80 {
+    border-color: rgba(80,255,80,0.46) !important;
+    border-left-color: #50ff50 !important;
+    box-shadow: 0 0 0 1px rgba(80,255,80,0.12), 0 0 18px rgba(80,255,80,0.08) !important;
+  }
+
+  .hermes-kanban-card-content {
+    padding: 0.72rem 0.78rem 0.76rem !important;
+    display: grid !important;
+    gap: 0.34rem !important;
+  }
+
+  .hermes-kanban-card-title {
+    color: #f6f0d8 !important;
+    font-weight: 900 !important;
+    font-size: 0.86rem !important;
+    line-height: 1.28 !important;
+    letter-spacing: 0.045em !important;
+    text-transform: uppercase !important;
+    text-shadow: none !important;
+  }
+
+  .hermes-kanban-card-content > div:not(.hermes-kanban-card-title),
+  .hermes-kanban-card-content span,
+  .hermes-kanban-card-content p,
+  .hermes-kanban-card-content small {
+    color: rgba(228,228,216,0.78) !important;
+    font-size: 0.74rem !important;
+    line-height: 1.38 !important;
+    letter-spacing: 0.015em !important;
+    text-transform: none !important;
+    font-variant-caps: normal !important;
+    text-shadow: none !important;
+  }
+
+  .hermes-kanban-card-content [class*="font-mono"],
+  .hermes-kanban-card-content [class*="tracking"],
+  .hermes-kanban-card-content [class*="uppercase"] {
+    text-transform: none !important;
+    letter-spacing: 0.02em !important;
+  }
+
+  .hermes-kanban-card-content .hermes-kanban-card-title,
+  .hermes-kanban-card-content .hermes-kanban-card-title * {
+    text-transform: uppercase !important;
+    letter-spacing: 0.045em !important;
+  }
+
+  .hermes-kanban input,
+  .hermes-kanban button,
+  .hermes-kanban [role="combobox"] {
+    border-radius: 0 !important;
+  }
+
+  .hermes-kanban input,
+  .hermes-kanban [role="combobox"] {
+    color: #f4f4e8 !important;
+    background: rgba(0,0,0,0.86) !important;
+    border-color: rgba(80,255,80,0.40) !important;
+    text-transform: none !important;
+    letter-spacing: 0.015em !important;
+  }
+
+  .hermes-kanban input::placeholder {
+    color: rgba(244,244,232,0.66) !important;
+    text-transform: none !important;
+  }
+
+  .hermes-kanban label,
+  .hermes-kanban .font-mono.group,
+  .hermes-kanban button:not([role="combobox"]) {
+    text-transform: uppercase !important;
+    letter-spacing: 0.12em !important;
+  }
+
+  ::selection {
+    background: rgba(80,255,80,0.28);
+    color: #000000;
+  }
+
+  @keyframes chronos-grid-drift {
+    from { transform: translate3d(0, 0, 0); }
+    to   { transform: translate3d(44px, 44px, 0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    body::after { animation: none; }
+  }

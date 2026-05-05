@@ -197,7 +197,7 @@ display:
   copy_shortcut: auto
   tool_progress: true
 dashboard:
-  theme: chronos-forge
+  theme: team-nexus
   agent_name: ${AGENT_NAME}
   agent_role: ${AGENT_ROLE}
   title: ${AGENT_NAME} Dashboard

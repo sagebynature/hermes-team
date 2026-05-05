@@ -6,13 +6,15 @@
   const { useEffect, useState } = SDK.hooks;
   const PLUGIN_NAME = "agent-identity-dashboard";
   const PROFILE_URL = "/api/plugins/agent-identity-dashboard/profile.jpg";
+  const DEFAULT_BRAND_TEXT = "team nexus";
+  const DEFAULT_BRAND_HTML = "team nexus";
 
   function pickIdentity(config) {
     const dashboard = (config && config.dashboard) || {};
     const startup = (config && config.startup_agent) || {};
     const name = dashboard.agent_name || startup.name || "Hermes Agent";
     const role = dashboard.agent_role || startup.role || "";
-    const title = dashboard.title || `${name} Dashboard`;
+    const title = dashboard.title || `Team Nexus: ${name}`;
     return { name, role, title };
   }
 
@@ -106,6 +108,34 @@
     return null;
   }
 
+  function upsertDefaultBrand() {
+    const sidebar = findSidebarRoot();
+    if (!sidebar) return false;
+
+    const header = sidebar.querySelector(":scope > div:first-child");
+    if (!header) return false;
+
+    const candidates = [
+      ...header.querySelectorAll("span"),
+      ...header.querySelectorAll("a"),
+      ...header.querySelectorAll(":scope > div"),
+    ];
+    for (const candidate of candidates) {
+      const normalized = (candidate.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+      const compact = normalized.replace(/\s+/g, "");
+      const currentBrand = compact === "hermesagent" || compact === "teamnexus";
+      if (!currentBrand) continue;
+      if (compact === "teamnexus" && candidate.dataset.agentBrand === "team-nexus") return true;
+      candidate.innerHTML = DEFAULT_BRAND_HTML;
+      candidate.dataset.agentBrand = "team-nexus";
+      candidate.setAttribute("aria-label", DEFAULT_BRAND_TEXT);
+      candidate.title = DEFAULT_BRAND_TEXT;
+      return true;
+    }
+
+    return false;
+  }
+
   function upsertSidebarIdentity(identity) {
     const existing = document.querySelector(".agent-sidebar-identity");
     if (!identity.hasProfileImage) {
@@ -172,7 +202,10 @@
       const sync = () => {
         if (disposed) return;
         cancelAnimationFrame(frame);
-        frame = requestAnimationFrame(() => upsertSidebarIdentity(identity));
+        frame = requestAnimationFrame(() => {
+          upsertDefaultBrand();
+          upsertSidebarIdentity(identity);
+        });
       };
 
       sync();

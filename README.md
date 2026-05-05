@@ -576,14 +576,14 @@ $HERMES_HOME/dashboard-themes/*.yaml
 So Team Nexus themes live here:
 
 ```text
-shared/dashboard-themes/chronos-forge.yaml
+shared/dashboard-themes/team-nexus.yaml
 ```
 
 Each agent chooses the active theme in its own config:
 
 ```yaml
 dashboard:
-  theme: chronos-forge
+  theme: team-nexus
   agent_name: ${AGENT_NAME}
   agent_role: ${AGENT_ROLE}
   title: ${AGENT_NAME} Dashboard
