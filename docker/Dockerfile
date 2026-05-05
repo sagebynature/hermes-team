@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       curl \
       git \
       gnupg \
+      docker.io \
       ffmpeg \
       jq \
       libopus0 \
@@ -30,6 +31,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       xz-utils \
       zip \
     && rm -rf /var/lib/apt/lists/*
+
+# Docker CLI is used by the Kanban dispatcher sidecar through the mounted host
+# Docker socket. Install Compose v2 as a Docker CLI plugin so `docker compose`
+# works consistently inside the dispatcher container.
+RUN set -eux; \
+    case "$(uname -m)" in \
+      x86_64) compose_arch="x86_64" ;; \
+      aarch64|arm64) compose_arch="aarch64" ;; \
+      *) echo "Unsupported architecture for docker compose plugin: $(uname -m)" >&2; exit 1 ;; \
+    esac; \
+    mkdir -p /usr/local/lib/docker/cli-plugins; \
+    curl -fsSL "https://github.com/docker/compose/releases/download/v2.29.7/docker-compose-linux-${compose_arch}" \
+      -o /usr/local/lib/docker/cli-plugins/docker-compose; \
+    chmod +x /usr/local/lib/docker/cli-plugins/docker-compose; \
+    docker --version; \
+    docker compose version
 
 RUN curl -fsSL https://mise.run | sh \
     && mise --version \

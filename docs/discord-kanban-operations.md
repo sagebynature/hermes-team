@@ -71,7 +71,7 @@ docker compose run --rm atlas kanban init
 
 After initialization, the board exists as `shared/kanban/kanban.db`. If that file already exists, Kanban is already initialized.
 
-The automatic dispatcher is separate. It does not autostart unless you run it.
+The automatic dispatcher is separate. It does not run with the plain gateway stack; start it explicitly through the Docker Compose `dispatcher` profile.
 
 ## Starting Team Nexus
 
@@ -112,13 +112,29 @@ make kanban-stats
 make kanban-list
 ```
 
-Start automatic worker dispatch in a separate terminal:
+Start automatic worker dispatch as the Dockerized dispatcher daemon:
 
 ```bash
 make kanban-dispatcher-daemon
 ```
 
-The dispatcher runs in the foreground. Stop it with Ctrl-C.
+This starts the `kanban-dispatcher` service through the Compose `dispatcher` profile:
+
+```bash
+docker compose --profile dispatcher up -d kanban-dispatcher
+```
+
+Stop it with:
+
+```bash
+make kanban-dispatcher-stop
+```
+
+Follow logs with:
+
+```bash
+make kanban-dispatcher-logs
+```
 
 ## Dispatcher modes
 
@@ -143,7 +159,7 @@ make kanban-dispatcher-daemon
 With explicit interval and concurrency limit:
 
 ```bash
-make kanban-dispatcher-daemon INTERVAL=60 MAX_TASKS=1
+KANBAN_DISPATCH_INTERVAL=60 KANBAN_DISPATCH_MAX_TASKS=1 make kanban-dispatcher-daemon
 ```
 
 Manual dispatch of one task:
@@ -157,6 +173,8 @@ The Compose-aware dispatcher reads `shared/team-agents.yaml` to map a Kanban ass
 ```bash
 docker compose run --rm forge chat -q "work kanban task <task-id>"
 ```
+
+The `kanban-dispatcher` container uses Docker-outside-of-Docker: it mounts the host Docker socket and the repo at `/Users/sage/team-nexus`, then runs nested `docker compose run --rm <agent> ...` commands against the host Docker daemon.
 
 Dispatcher logs go to:
 
@@ -259,6 +277,15 @@ Test webhook payload formatting without sending:
 ```bash
 make discord-status-dry-run MESSAGE='hello from Team Nexus'
 ```
+
+### Optional dispatcher tuning keys
+
+```bash
+KANBAN_DISPATCH_INTERVAL=60
+KANBAN_DISPATCH_MAX_TASKS=1
+```
+
+These tune the Dockerized `kanban-dispatcher` service. They are optional; defaults are 60 seconds and 1 task per pass.
 
 ### Optional tool/integration keys
 

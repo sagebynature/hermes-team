@@ -12,7 +12,7 @@ Using embedded dispatch in this architecture would risk spawning the wrong runti
 
 ## Decision
 
-Disable every embedded Hermes gateway Kanban dispatcher and use a Compose-aware dispatcher script.
+Disable every embedded Hermes gateway Kanban dispatcher and use a Compose-aware dispatcher script, normally run by the Docker Compose service `kanban-dispatcher`.
 
 All agent configs use:
 
@@ -21,7 +21,13 @@ kanban:
   dispatch_in_gateway: false
 ```
 
-The dispatcher is:
+The dispatcher service is:
+
+```text
+kanban-dispatcher
+```
+
+Dispatcher implementation:
 
 ```text
 scripts/kanban-compose-dispatcher.py

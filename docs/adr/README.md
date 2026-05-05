@@ -10,7 +10,7 @@ Team Nexus decisions are recorded here as ADRs.
 - [ADR-0004: Use Discord as the human mission room, not the source of truth](0004-discord-human-mission-room.md)
 - [ADR-0005: Use Hermes Kanban as the durable collaboration source of truth](0005-kanban-source-of-truth.md)
 - [ADR-0006: Use a Compose-aware Kanban dispatcher instead of embedded Hermes profile dispatch](0006-compose-aware-kanban-dispatcher.md)
-- [ADR-0007: Keep automatic dispatch explicit rather than hidden inside startup](0007-explicit-dispatcher-startup.md)
+- [ADR-0007: Keep automatic dispatch explicit and run it as a Compose service](0007-explicit-dispatcher-startup.md)
 - [ADR-0008: Load shared secrets from the repo-root .env](0008-shared-repo-root-env.md)
 - [ADR-0009: Use shared read-only skills and MCP registries with agent-local extensions](0009-shared-readonly-skills-and-mcp.md)
 - [ADR-0010: Mirror only compact status and handoffs to Discord](0010-compact-discord-status-and-handoffs.md)

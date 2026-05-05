@@ -13,7 +13,7 @@ endif
 
 .PHONY: help build up down restart ps logs shell doctor doctor-all compose-config \
 	kanban-init kanban-list kanban-stats kanban-watch kanban-create kanban-dispatch \
-	kanban-dispatcher-once kanban-dispatcher-daemon discord-status-dry-run \
+	kanban-dispatcher-once kanban-dispatcher-daemon kanban-dispatcher-stop kanban-dispatcher-logs discord-status-dry-run \
 	mcp-list mcp-list-all mcp-test mcp-remove mcp-add-command mcp-add-url \
 	mcp-register-template mcp-register-template-all mcp-templates mcp-show-template \
 	guard-agent guard-server guard-command guard-url
@@ -82,11 +82,21 @@ kanban-dispatch: guard-agent ## Run one Kanban task in the assigned agent contai
 	@if [ -z "$(TASK)" ]; then echo "TASK is required" >&2; exit 2; fi
 	./scripts/kanban-dispatch-compose.sh $(AGENT) $(TASK)
 
-kanban-dispatcher-once: ## Run one Compose-aware Kanban dispatcher pass; add DRY_RUN=1 to avoid spawning
-	@if [ "$(DRY_RUN)" = "1" ]; then 		python3 scripts/kanban-compose-dispatcher.py --dry-run --max-tasks $${MAX_TASKS:-1}; 	else 		python3 scripts/kanban-compose-dispatcher.py --max-tasks $${MAX_TASKS:-1}; 	fi
+kanban-dispatcher-once: ## Run one Dockerized Compose-aware dispatcher pass; add DRY_RUN=1 to avoid spawning
+	@if [ "$(DRY_RUN)" = "1" ]; then \
+		$(COMPOSE) --profile dispatcher run --rm kanban-dispatcher bash -lc 'python3 scripts/kanban-compose-dispatcher.py --dry-run --max-tasks $${MAX_TASKS:-1}'; \
+	else \
+		$(COMPOSE) --profile dispatcher run --rm kanban-dispatcher bash -lc 'python3 scripts/kanban-compose-dispatcher.py --max-tasks $${MAX_TASKS:-1}'; \
+	fi
 
-kanban-dispatcher-daemon: ## Run the Compose-aware Kanban dispatcher loop; INTERVAL=60 MAX_TASKS=1
-	python3 scripts/kanban-compose-dispatcher.py --daemon --interval $${INTERVAL:-60} --max-tasks $${MAX_TASKS:-1}
+kanban-dispatcher-daemon: ## Start the Dockerized Compose-aware Kanban dispatcher daemon; KANBAN_DISPATCH_INTERVAL=60 KANBAN_DISPATCH_MAX_TASKS=1
+	$(COMPOSE) --profile dispatcher up -d kanban-dispatcher
+
+kanban-dispatcher-stop: ## Stop the Dockerized Kanban dispatcher daemon
+	$(COMPOSE) --profile dispatcher stop kanban-dispatcher
+
+kanban-dispatcher-logs: ## Follow Dockerized Kanban dispatcher logs
+	$(COMPOSE) --profile dispatcher logs -f kanban-dispatcher
 
 discord-status-dry-run: ## Dry-run a Discord status post: make discord-status-dry-run MESSAGE='...'
 	@if [ -z "$(MESSAGE)" ]; then echo "MESSAGE is required" >&2; exit 2; fi

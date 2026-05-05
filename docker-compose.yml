@@ -211,6 +211,35 @@ services:
       - "127.0.0.1:8649:8642"
     command: ["gateway", "run"]
 
+  kanban-dispatcher:
+    image: team-nexus-agent:latest
+    container_name: hermes-kanban-dispatcher
+    restart: unless-stopped
+    profiles: ["dispatcher"]
+    working_dir: /Users/sage/team-nexus
+    entrypoint: ["/usr/bin/tini", "-g", "--"]
+    environment:
+      HERMES_HOME: /tmp/hermes-dispatcher-home
+      HERMES_KANBAN_HOME: /Users/sage/team-nexus/shared/kanban
+      AGENT_NAME: Kanban Dispatcher
+      AGENT_ROLE: Compose-aware Kanban task router
+    env_file:
+      - ./.env
+    volumes:
+      # Mount the repo at the same absolute path as the host so nested
+      # `docker compose run` resolves bind mounts to host-valid paths.
+      - .:/Users/sage/team-nexus
+      # Docker-outside-of-Docker: use the host Docker daemon to spawn workers.
+      - /var/run/docker.sock:/var/run/docker.sock
+    command:
+      - bash
+      - -lc
+      - >-
+        umask 0002 &&
+        python3 scripts/kanban-compose-dispatcher.py --daemon
+        --interval "$${KANBAN_DISPATCH_INTERVAL:-60}"
+        --max-tasks "$${KANBAN_DISPATCH_MAX_TASKS:-1}"
+
   atlas-dashboard:
     image: team-nexus-agent:latest
     container_name: hermes-atlas-dashboard

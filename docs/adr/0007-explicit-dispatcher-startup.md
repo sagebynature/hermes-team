@@ -1,44 +1,77 @@
-# ADR-0007: Keep automatic dispatch explicit rather than hidden inside startup
+# ADR-0007: Keep automatic dispatch explicit and run it as a Compose service
 
 Status: Accepted
 
 Date: 2026-05-04
 
+Updated: 2026-05-04
+
 ## Context
 
 Automatic worker dispatch has side effects: it can claim tasks, launch containers, spend model tokens, and write task state. During early Team Nexus operation, it is safer for operators to start and observe dispatch intentionally.
 
+The first implementation ran the dispatcher as a host-side foreground Python process. That worked for validation, but it left the daemon outside the Compose runtime even though all other Team Nexus long-running processes are Compose services.
+
 ## Decision
 
-Do not autostart the Compose-aware Kanban dispatcher as part of `docker compose up` yet.
+Run the Compose-aware Kanban dispatcher as a Docker Compose service named `kanban-dispatcher`, but keep it behind the explicit Compose `dispatcher` profile.
 
-Start gateways with:
+Plain gateway startup remains:
 
 ```bash
 make up
 ```
 
-Start automatic dispatch separately with:
+Automatic dispatch starts separately with:
 
 ```bash
 make kanban-dispatcher-daemon
+```
+
+which runs:
+
+```bash
+docker compose --profile dispatcher up -d kanban-dispatcher
+```
+
+Stop and inspect it with:
+
+```bash
+make kanban-dispatcher-stop
+make kanban-dispatcher-logs
 ```
 
 ## Consequences
 
 Positive:
 
-- Safer first live runs.
-- Operators can run dry-run before real dispatch.
-- Dispatcher failures are visible in the terminal.
-- No hidden background worker mutates the board unexpectedly.
+- Dispatcher lifecycle is now visible through Docker Compose.
+- The dispatcher can use `restart: unless-stopped` like the gateways.
+- Operators can still run dry-run before real dispatch.
+- Plain `make up` does not silently start automatic task execution.
+- No hidden profile-based Hermes dispatcher competes with the Compose-aware dispatcher.
 
 Tradeoffs:
 
-- Full automation requires a second terminal/process.
-- If the dispatcher is not running, ready tasks will remain queued.
+- The dispatcher container needs access to the host Docker socket.
+- The repo is mounted into the dispatcher at the same absolute host path so nested `docker compose run` commands resolve bind mounts correctly.
+- If the dispatcher profile is not running, ready tasks remain queued.
 
 ## Implementation notes
+
+The dispatcher service uses Docker-outside-of-Docker:
+
+```yaml
+volumes:
+  - .:/Users/sage/team-nexus
+  - /var/run/docker.sock:/var/run/docker.sock
+```
+
+The image includes Docker CLI and Docker Compose v2 so the dispatcher can run worker containers with:
+
+```bash
+docker compose run --rm <agent> chat -q "work kanban task <task-id>"
+```
 
 Safe dry-run:
 
@@ -46,5 +79,9 @@ Safe dry-run:
 make kanban-dispatcher-once DRY_RUN=1
 ```
 
-Future option: add a dedicated Compose service or launchd/systemd user service for the dispatcher once behavior is trusted.
+Tuning:
 
+```bash
+KANBAN_DISPATCH_INTERVAL=60
+KANBAN_DISPATCH_MAX_TASKS=1
+```

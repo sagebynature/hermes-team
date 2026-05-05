@@ -36,8 +36,10 @@ printf 'started:  %s
 ' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 cd "$repo_root"
+compose_cmd="${COMPOSE:-docker compose}"
 set +e
-docker compose run --rm "$assignee" chat -q "work kanban task $task_id"
+# shellcheck disable=SC2086
+$compose_cmd run --rm "$assignee" chat -q "work kanban task $task_id"
 status="$?"
 set -e
 
