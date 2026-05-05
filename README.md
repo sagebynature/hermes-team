@@ -829,6 +829,33 @@ Check:
 make logs AGENT=<agent>
 ```
 
+### Agent home directories become owned by UID/GID 10000 on Ubuntu
+
+The Hermes Docker image defaults the runtime `hermes` user to UID/GID 10000. Team Nexus passes `HERMES_UID` and `HERMES_GID` from `TEAM_NEXUS_UID` and `TEAM_NEXUS_GID` so Linux bind mounts remain owned by the host operator.
+
+Preferred: use Makefile targets; they export the current user's IDs automatically:
+
+```bash
+make up
+make doctor AGENT=atlas
+make dashboards-up
+```
+
+If you run Docker Compose directly, set these values in `.env` or prefix the command:
+
+```bash
+TEAM_NEXUS_UID=$(id -u) TEAM_NEXUS_GID=$(id -g) docker compose -f docker-compose.yml -f docker-compose.agents.generated.yml -f docker-compose.dashboards.generated.yml --profile dashboard up -d --force-recreate
+```
+
+To repair an existing checkout that was already chowned to UID/GID 10000, stop the stack and run from the repo root:
+
+```bash
+sudo chown -R $(id -u):$(id -g) agents shared/kanban shared/project/artifacts
+find agents shared/kanban shared/project/artifacts -type d -exec chmod u+rwx {} +
+```
+
+Then rebuild/recreate the containers so the updated entrypoint and environment are used.
+
 ### Config/persona changes do not take effect
 
 Restart the relevant gateway:

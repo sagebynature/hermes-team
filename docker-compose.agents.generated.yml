@@ -11,6 +11,10 @@ services:
     environment:
       HERMES_HOME: /opt/data
       HERMES_KANBAN_HOME: /shared/kanban
+      # Match the container runtime user to the host operator so bind-mounted
+      # agent homes stay browsable/editable after startup on Linux.
+      HERMES_UID: ${TEAM_NEXUS_UID:-10000}
+      HERMES_GID: ${TEAM_NEXUS_GID:-10000}
       AGENT_NAME: "Atlas"
       AGENT_ROLE: "Orchestrator / Chief of Staff"
     env_file:
@@ -41,6 +45,10 @@ services:
     environment:
       HERMES_HOME: /opt/data
       HERMES_KANBAN_HOME: /shared/kanban
+      # Match the container runtime user to the host operator so bind-mounted
+      # agent homes stay browsable/editable after startup on Linux.
+      HERMES_UID: ${TEAM_NEXUS_UID:-10000}
+      HERMES_GID: ${TEAM_NEXUS_GID:-10000}
       AGENT_NAME: "Vega"
       AGENT_ROLE: "Product Strategist"
     env_file:
@@ -71,6 +79,10 @@ services:
     environment:
       HERMES_HOME: /opt/data
       HERMES_KANBAN_HOME: /shared/kanban
+      # Match the container runtime user to the host operator so bind-mounted
+      # agent homes stay browsable/editable after startup on Linux.
+      HERMES_UID: ${TEAM_NEXUS_UID:-10000}
+      HERMES_GID: ${TEAM_NEXUS_GID:-10000}
       AGENT_NAME: "Scout"
       AGENT_ROLE: "Market + Customer Research"
     env_file:
@@ -101,6 +113,10 @@ services:
     environment:
       HERMES_HOME: /opt/data
       HERMES_KANBAN_HOME: /shared/kanban
+      # Match the container runtime user to the host operator so bind-mounted
+      # agent homes stay browsable/editable after startup on Linux.
+      HERMES_UID: ${TEAM_NEXUS_UID:-10000}
+      HERMES_GID: ${TEAM_NEXUS_GID:-10000}
       AGENT_NAME: "Forge"
       AGENT_ROLE: "Engineering Lead"
     env_file:
@@ -131,6 +147,10 @@ services:
     environment:
       HERMES_HOME: /opt/data
       HERMES_KANBAN_HOME: /shared/kanban
+      # Match the container runtime user to the host operator so bind-mounted
+      # agent homes stay browsable/editable after startup on Linux.
+      HERMES_UID: ${TEAM_NEXUS_UID:-10000}
+      HERMES_GID: ${TEAM_NEXUS_GID:-10000}
       AGENT_NAME: "Lumen"
       AGENT_ROLE: "UX / Design Lead"
     env_file:
@@ -161,6 +181,10 @@ services:
     environment:
       HERMES_HOME: /opt/data
       HERMES_KANBAN_HOME: /shared/kanban
+      # Match the container runtime user to the host operator so bind-mounted
+      # agent homes stay browsable/editable after startup on Linux.
+      HERMES_UID: ${TEAM_NEXUS_UID:-10000}
+      HERMES_GID: ${TEAM_NEXUS_GID:-10000}
       AGENT_NAME: "Blitz"
       AGENT_ROLE: "Growth + GTM"
     env_file:
@@ -191,6 +215,10 @@ services:
     environment:
       HERMES_HOME: /opt/data
       HERMES_KANBAN_HOME: /shared/kanban
+      # Match the container runtime user to the host operator so bind-mounted
+      # agent homes stay browsable/editable after startup on Linux.
+      HERMES_UID: ${TEAM_NEXUS_UID:-10000}
+      HERMES_GID: ${TEAM_NEXUS_GID:-10000}
       AGENT_NAME: "Ledger"
       AGENT_ROLE: "Finance + Ops"
     env_file:
@@ -221,6 +249,10 @@ services:
     environment:
       HERMES_HOME: /opt/data
       HERMES_KANBAN_HOME: /shared/kanban
+      # Match the container runtime user to the host operator so bind-mounted
+      # agent homes stay browsable/editable after startup on Linux.
+      HERMES_UID: ${TEAM_NEXUS_UID:-10000}
+      HERMES_GID: ${TEAM_NEXUS_GID:-10000}
       AGENT_NAME: "Sentinel"
       AGENT_ROLE: "Code Review / QA / Security Assessment"
     env_file:

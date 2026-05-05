@@ -3,7 +3,9 @@ SHELL := /usr/bin/env bash
 
 COMPOSE_FILES ?= -f docker-compose.yml -f docker-compose.agents.generated.yml -f docker-compose.dashboards.generated.yml
 COMPOSE ?= docker compose $(COMPOSE_FILES)
-export SLUG NAME ROLE GATEWAY_PORT DASHBOARD_PORT FORCE
+TEAM_NEXUS_UID ?= $(shell id -u)
+TEAM_NEXUS_GID ?= $(shell id -g)
+export TEAM_NEXUS_UID TEAM_NEXUS_GID SLUG NAME ROLE GATEWAY_PORT DASHBOARD_PORT FORCE
 -include generated/team-agents.mk
 TEAM_AGENTS ?= atlas vega scout forge lumen blitz ledger sentinel
 DASHBOARD_AGENTS ?= $(TEAM_AGENTS)

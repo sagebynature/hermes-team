@@ -11,6 +11,8 @@ services:
     environment:
       HERMES_HOME: /tmp/hermes-dispatcher-home
       HERMES_KANBAN_HOME: ${PWD}/shared/kanban
+      HERMES_UID: ${TEAM_NEXUS_UID:-10000}
+      HERMES_GID: ${TEAM_NEXUS_GID:-10000}
       AGENT_NAME: Kanban Dispatcher
       AGENT_ROLE: Compose-aware Kanban task router
       COMPOSE: docker compose -f docker-compose.yml -f docker-compose.agents.generated.yml -f docker-compose.dashboards.generated.yml

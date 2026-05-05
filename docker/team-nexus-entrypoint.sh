@@ -10,6 +10,20 @@ HERMES_HOME="${HERMES_HOME:-/opt/data}"
 HERMES_KANBAN_HOME="${HERMES_KANBAN_HOME:-}"
 HERMES_VENV_BIN="${HERMES_VENV_BIN:-/opt/hermes/.venv/bin/hermes}"
 
+# The upstream Hermes entrypoint can remap the runtime `hermes` user with
+# HERMES_UID/HERMES_GID, but Team Nexus creates and chowns shared bind-mounted
+# directories before handing off to it. Apply the same remap first so Ubuntu
+# hosts keep agent homes, Kanban state, and handoff artifacts owned by the
+# operator rather than the image default UID/GID 10000.
+if [ "$(id -u)" = "0" ]; then
+  if [ -n "${HERMES_GID:-}" ] && [ "$HERMES_GID" != "$(id -g hermes)" ]; then
+    groupmod -o -g "$HERMES_GID" hermes 2>/dev/null || true
+  fi
+  if [ -n "${HERMES_UID:-}" ] && [ "$HERMES_UID" != "$(id -u hermes)" ]; then
+    usermod -u "$HERMES_UID" hermes
+  fi
+fi
+
 if [ -n "$HERMES_HOME" ]; then
   mkdir -p "$HERMES_HOME/.local/bin" "$HERMES_HOME/skills/.hub"
 

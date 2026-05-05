@@ -169,6 +169,21 @@ KANBAN_DISPATCH_MAX_TASKS=1
 KANBAN_DISPATCH_WORKER_TIMEOUT=900
 ```
 
+Optional Linux bind-mount ownership setup:
+
+```env
+TEAM_NEXUS_UID=1000
+TEAM_NEXUS_GID=1000
+```
+
+If you use the Makefile targets (`make up`, `make doctor`, `make dashboards-up`, etc.), these values are exported automatically from `id -u` and `id -g`. If you run `docker compose ...` directly on Ubuntu, add them to `.env` or prefix the command:
+
+```bash
+TEAM_NEXUS_UID=$(id -u) TEAM_NEXUS_GID=$(id -g) docker compose -f docker-compose.yml -f docker-compose.agents.generated.yml -f docker-compose.dashboards.generated.yml --profile dashboard up -d
+```
+
+This keeps files created under `agents/<agent>/home`, `shared/kanban`, and `shared/project/artifacts` owned by your host account instead of Docker image UID/GID 10000.
+
 Important:
 
 - Do not commit `.env`.

@@ -32,6 +32,7 @@ Notes:
 
 - `shared/team-agents.yaml` is the source of truth for the active roster.
 - Generated files include `generated/team-agents.mk`, `docker-compose.agents.generated.yml`, `docker-compose.dashboards.generated.yml`, `nginx/dashboards.conf`, and `shared/project/generated/team-roster.md`.
+- On Linux, prefer Makefile targets so `TEAM_NEXUS_UID=$(id -u)` and `TEAM_NEXUS_GID=$(id -g)` are exported automatically. If running `docker compose` directly, set those variables in `.env` or prefix the command so bind-mounted agent homes stay owned by the host operator.
 - If `make validate` reports unknown Kanban assignees from an existing `shared/kanban/kanban.db`, do not rewrite the DB blindly. Reassign or close those tasks deliberately through Kanban operations.
 
 ## 3. Start core gateways
