@@ -131,6 +131,7 @@ validate-plugins: ## Validate shared plugin layout
 
 dashboards-up: ## Start dashboard profile
 	$(COMPOSE) --profile dashboard up -d
+	$(COMPOSE) --profile dashboard restart dashboard-nginx
 
 dashboards-restart: ## Restart dashboard profile services
 	$(COMPOSE) --profile dashboard restart
