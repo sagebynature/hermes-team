@@ -346,7 +346,7 @@ Coordination paths:
    The embedded Hermes profile dispatcher is disabled for every gateway because Team Nexus uses one Compose service per agent rather than local Hermes profiles. Every agent still has the `kanban` toolset enabled for normal sessions, so agents can inspect, create, comment on, and route shared board tasks. Use the Compose-aware dispatcher helper for execution.
 
 3. **Compose-aware dispatch**
-   Hermes' built-in dispatcher assumes assignees are local Hermes profiles. Team Nexus uses one Compose service per agent, so use `scripts/kanban-dispatch-compose.sh` / `make kanban-dispatch AGENT=<agent> TASK=<task-id>` for manual execution, or the Dockerized `kanban-dispatcher` Compose service / `make kanban-dispatcher-daemon` to poll ready tasks and run them in the matching containers.
+   Hermes' built-in dispatcher assumes assignees are local Hermes profiles. Team Nexus uses one Compose service per agent, so use `scripts/kanban-dispatch-compose.sh` / `make kanban-dispatch AGENT=<agent> TASK=<task-id>` for manual execution, or the Dockerized `kanban-dispatcher` Compose service / `make kanban-dispatcher-daemon` to poll ready tasks and run them in the matching containers. Automatic dispatch claims a ready task before spawning the worker, so Kanban shows the visible lifecycle `ready -> running -> done` and records a `claimed` event/run.
 
 4. **Gateway API / Discord webhooks**
    Atlas or helper scripts can call gateway endpoints or Discord status webhooks for compact public updates. Keep broad Discord bot control centralized in Atlas unless there is a deliberate reason to expose more.

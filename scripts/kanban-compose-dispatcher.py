@@ -18,13 +18,14 @@ import sqlite3
 import subprocess
 import sys
 import time
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 KANBAN_DB = REPO_ROOT / "shared" / "kanban" / "kanban.db"
 REGISTRY = REPO_ROOT / "shared" / "team-agents.yaml"
 DISPATCH_SCRIPT = REPO_ROOT / "scripts" / "kanban-dispatch-compose.sh"
 DEFAULT_LOG = REPO_ROOT / "shared" / "kanban" / "dispatcher.log"
+DEFAULT_CLAIM_TTL_SECONDS = 15 * 60
 
 
 def parse_args() -> argparse.Namespace:
@@ -62,6 +63,17 @@ def load_agents(registry: Path) -> Dict[str, str]:
         elif current and raw.startswith("    service:"):
             agents[current] = raw.split(":", 1)[1].strip()
     return agents
+
+
+def table_columns(conn: sqlite3.Connection, table: str) -> set[str]:
+    return {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+
+
+def append_event(conn: sqlite3.Connection, task_id: str, kind: str, payload: dict, *, run_id: Optional[int] = None) -> None:
+    conn.execute(
+        "INSERT INTO task_events(task_id, kind, payload, created_at, run_id) VALUES (?, ?, ?, ?, ?)",
+        (task_id, kind, json.dumps(payload), int(time.time()), run_id),
+    )
 
 
 def promotable_todo_ids(conn: sqlite3.Connection) -> List[str]:
@@ -122,6 +134,108 @@ def ready_tasks(conn: sqlite3.Connection, known_agents: Iterable[str], include_a
     ).fetchall()
 
 
+def claim_for_dispatch(conn: sqlite3.Connection, task_id: str, assignee: str) -> Optional[Tuple[str, int]]:
+    """Atomically claim a ready task so it is visible as running before spawn.
+
+    Hermes' profile dispatcher uses hermes_cli.kanban_db.claim_task(). Team Nexus
+    cannot use that dispatcher directly because assignees are Compose services, so
+    this mirrors the same ready -> running state transition locally against the
+    shared SQLite board before launching the worker container.
+    """
+    now = int(time.time())
+    expires = now + DEFAULT_CLAIM_TTL_SECONDS
+    lock = f"team-nexus-compose-dispatcher:{os.getpid()}:{task_id}"
+    cur = conn.execute(
+        """
+        UPDATE tasks
+           SET status        = 'running',
+               claim_lock    = ?,
+               claim_expires = ?,
+               started_at    = COALESCE(started_at, ?)
+         WHERE id = ?
+           AND status = 'ready'
+           AND claim_lock IS NULL
+        """,
+        (lock, expires, now, task_id),
+    )
+    if cur.rowcount != 1:
+        conn.rollback()
+        return None
+
+    task_cols = table_columns(conn, "tasks")
+    run_cols = table_columns(conn, "task_runs")
+    select_cols = ["assignee"]
+    if "current_step_key" in task_cols:
+        select_cols.append("current_step_key")
+    if "max_runtime_seconds" in task_cols:
+        select_cols.append("max_runtime_seconds")
+    trow = conn.execute(f"SELECT {', '.join(select_cols)} FROM tasks WHERE id = ?", (task_id,)).fetchone()
+    task_values = dict(zip(select_cols, trow or []))
+
+    insert_cols = ["task_id", "profile", "status", "started_at"]
+    values: List[object] = [task_id, task_values.get("assignee") or assignee, "running", now]
+    optional_values = {
+        "step_key": task_values.get("current_step_key"),
+        "claim_lock": lock,
+        "claim_expires": expires,
+        "max_runtime_seconds": task_values.get("max_runtime_seconds"),
+    }
+    for col, value in optional_values.items():
+        if col in run_cols:
+            insert_cols.append(col)
+            values.append(value)
+    placeholders = ", ".join("?" for _ in insert_cols)
+    run_cur = conn.execute(f"INSERT INTO task_runs ({', '.join(insert_cols)}) VALUES ({placeholders})", values)
+    run_id = int(run_cur.lastrowid)
+    conn.execute("UPDATE tasks SET current_run_id = ? WHERE id = ?", (run_id, task_id))
+    append_event(
+        conn,
+        task_id,
+        "claimed",
+        {"lock": lock, "expires": expires, "run_id": run_id, "by": "team-nexus-compose-dispatcher"},
+        run_id=run_id,
+    )
+    conn.commit()
+    return lock, run_id
+
+
+def requeue_failed_spawn(conn: sqlite3.Connection, task_id: str, claim_lock: str, run_id: int, exit_code: int) -> bool:
+    """Release the dispatcher-created claim if the worker container fails.
+
+    The task returns to ready for a later retry. The failed run row and
+    dispatch_failed event preserve why the running state was abandoned.
+    """
+    now = int(time.time())
+    cur = conn.execute(
+        """
+        UPDATE tasks
+           SET status = 'ready',
+               claim_lock = NULL,
+               claim_expires = NULL,
+               worker_pid = NULL,
+               current_run_id = NULL
+         WHERE id = ?
+           AND status = 'running'
+           AND claim_lock = ?
+        """,
+        (task_id, claim_lock),
+    )
+    if cur.rowcount != 1:
+        conn.rollback()
+        return False
+    run_cols = table_columns(conn, "task_runs")
+    assignments = ["status = ?", "outcome = ?", "ended_at = ?"]
+    values: List[object] = ["failed", "spawn_failed", now]
+    if "error" in run_cols:
+        assignments.append("error = ?")
+        values.append(f"Compose dispatch exited with code {exit_code}")
+    values.append(run_id)
+    conn.execute(f"UPDATE task_runs SET {', '.join(assignments)} WHERE id = ?", values)
+    append_event(conn, task_id, "dispatch_failed", {"exit_code": exit_code, "requeued": True}, run_id=run_id)
+    conn.commit()
+    return True
+
+
 def dispatch(task_id: str, assignee: str, dry_run: bool, log_path: Path) -> int:
     if dry_run:
         log(log_path, f"dry-run dispatch assignee={assignee} task={task_id}")
@@ -152,12 +266,32 @@ def run_pass(args: argparse.Namespace, agents: Dict[str, str], log_path: Path) -
     exit_code = 0
     for task_id, assignee, title in tasks:
         log(log_path, f"selected task={task_id} assignee={assignee} title={title!r}")
+        if args.dry_run:
+            log(log_path, f"dry-run would claim and dispatch assignee={assignee} task={task_id}")
+            continue
+
+        with sqlite3.connect(db) as conn:
+            claim = claim_for_dispatch(conn, task_id, assignee)
+        if claim is None:
+            code = 1
+            log(log_path, f"dispatch skipped task={task_id}; task could not be claimed")
+            exit_code = code
+            if not args.daemon:
+                break
+            continue
+
+        log(log_path, f"claimed task={task_id} assignee={assignee} run_id={claim[1]}")
         code = dispatch(task_id, assignee, args.dry_run, log_path)
-        if not args.dry_run:
-            with sqlite3.connect(db) as conn:
-                row = conn.execute("SELECT status FROM tasks WHERE id = ?", (task_id,)).fetchone()
+        with sqlite3.connect(db) as conn:
+            row = conn.execute("SELECT status FROM tasks WHERE id = ?", (task_id,)).fetchone()
             status = row[0] if row else "missing"
-            if status == "ready":
+            if code != 0 and status == "running":
+                if requeue_failed_spawn(conn, task_id, claim[0], claim[1], code):
+                    status = "ready"
+                    log(log_path, f"dispatch failed for task={task_id}; requeued from running to ready")
+                else:
+                    log(log_path, f"dispatch failed for task={task_id}; claim already changed, status={status}")
+            elif status == "ready":
                 log(log_path, f"dispatch failed to advance task={task_id}; status is still ready")
                 code = code or 1
         if code != 0:

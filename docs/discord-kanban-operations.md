@@ -168,11 +168,21 @@ Manual dispatch of one task:
 make kanban-dispatch AGENT=forge TASK=<task-id>
 ```
 
-The Compose-aware dispatcher reads `shared/team-agents.yaml` to map a Kanban assignee like `forge` to the Docker Compose service named `forge`, then runs:
+The Compose-aware dispatcher reads `shared/team-agents.yaml` to map a Kanban assignee like `forge` to the Docker Compose service named `forge`.
+
+For automatic dispatch, the dispatcher first claims the selected ready task in the shared Kanban database. That makes the lifecycle visible as:
+
+```text
+todo -> ready -> running -> done
+```
+
+The claim writes a `claimed` event, sets `tasks.started_at`, creates a running `task_runs` row, and moves the task to `running` / IN PROGRESS before the worker container starts. Then the dispatcher runs:
 
 ```bash
 docker compose run --rm forge chat -q "work kanban task <task-id>"
 ```
+
+If the worker command exits non-zero while the dispatcher-created claim is still active, the dispatcher records a `dispatch_failed` event, closes the failed run as `spawn_failed`, and requeues the task back to `ready` for a later retry.
 
 The `kanban-dispatcher` container uses Docker-outside-of-Docker: it mounts the host Docker socket and the repo at `/Users/sage/team-nexus`, then runs nested `docker compose run --rm <agent> ...` commands against the host Docker daemon.
 
