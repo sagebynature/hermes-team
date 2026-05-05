@@ -46,16 +46,16 @@ User -> Atlas -> specialists -> Atlas -> User
 
 <table>
   <tr>
-    <td align="center" width="25%"><img src=".docs/image/atlas.jpeg" alt="Atlas portrait" width="140"><br><strong>Atlas</strong><br><em>Orchestrator</em></td>
-    <td align="center" width="25%"><img src=".docs/image/vega.jpeg" alt="Vega portrait" width="140"><br><strong>Vega</strong><br><em>Product lead</em></td>
-    <td align="center" width="25%"><img src=".docs/image/scout.jpeg" alt="Scout portrait" width="140"><br><strong>Scout</strong><br><em>Market recon</em></td>
-    <td align="center" width="25%"><img src=".docs/image/forge.jpeg" alt="Forge portrait" width="140"><br><strong>Forge</strong><br><em>Engineering lead</em></td>
+    <td align="center" width="25%"><img src="agents/atlas/home/profile.jpg" alt="Atlas portrait" width="140"><br><strong>Atlas</strong><br><em>Orchestrator</em></td>
+    <td align="center" width="25%"><img src="agents/vega/home/profile.jpg" alt="Vega portrait" width="140"><br><strong>Vega</strong><br><em>Product lead</em></td>
+    <td align="center" width="25%"><img src="agents/scout/home/profile.jpg" alt="Scout portrait" width="140"><br><strong>Scout</strong><br><em>Market recon</em></td>
+    <td align="center" width="25%"><img src="agents/forge/home/profile.jpg" alt="Forge portrait" width="140"><br><strong>Forge</strong><br><em>Engineering lead</em></td>
   </tr>
   <tr>
-    <td align="center" width="25%"><img src=".docs/image/lumen.jpeg" alt="Lumen portrait" width="140"><br><strong>Lumen</strong><br><em>UX and design</em></td>
-    <td align="center" width="25%"><img src=".docs/image/blitz.jpeg" alt="Blitz portrait" width="140"><br><strong>Blitz</strong><br><em>Growth and GTM</em></td>
-    <td align="center" width="25%"><img src=".docs/image/ledger.jpeg" alt="Ledger portrait" width="140"><br><strong>Ledger</strong><br><em>Finance and ops</em></td>
-    <td align="center" width="25%"><img src=".docs/image/sentinel.jpeg" alt="Sentinel portrait" width="140"><br><strong>Sentinel</strong><br><em>Code review, QA, and security</em></td>
+    <td align="center" width="25%"><img src="agents/lumen/home/profile.jpg" alt="Lumen portrait" width="140"><br><strong>Lumen</strong><br><em>UX and design</em></td>
+    <td align="center" width="25%"><img src="agents/blitz/home/profile.jpg" alt="Blitz portrait" width="140"><br><strong>Blitz</strong><br><em>Growth and GTM</em></td>
+    <td align="center" width="25%"><img src="agents/ledger/home/profile.jpg" alt="Ledger portrait" width="140"><br><strong>Ledger</strong><br><em>Finance and ops</em></td>
+    <td align="center" width="25%"><img src="agents/sentinel/home/profile.jpg" alt="Sentinel portrait" width="140"><br><strong>Sentinel</strong><br><em>Code review, QA, and security</em></td>
   </tr>
 </table>
 
