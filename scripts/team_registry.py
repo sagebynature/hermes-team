@@ -276,6 +276,7 @@ def agent_volumes(slug: str, comments: bool = False) -> list[str]:
         lines.append("      # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).")
     lines += [
         "      - ./shared/kanban:/shared/kanban:rw",
+        "      - ./shared/router:/shared/router:rw",
         "      - ./shared/skills:/shared/skills:ro",
         "      - ./shared/mcp:/shared/mcp:ro",
     ]
@@ -392,7 +393,7 @@ def emit_compose_dashboards(agents: OrderedDict[str, dict[str, Any]]) -> str:
 
 
 SUB_FILTER_PATHS = ["sessions", "analytics", "models", "logs", "cron", "skills", "plugins", "profiles", "config", "env", "docs", "chat", "kanban", "command-center"]
-PLUGIN_PREFIXES = ["command-center", "achievements", "kanban", "example"]
+PLUGIN_PREFIXES = ["command-center", "achievements", "kanban", "team-router", "example"]
 
 
 def nginx_block(slug: str) -> str:

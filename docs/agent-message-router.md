@@ -107,13 +107,27 @@ Do not route when:
 ```bash
 make router-send FROM=atlas TO=scout SUMMARY='bounded request' GOAL='...' DELIVERABLE='...'
 make router-list STATUS=pending
+make router-status
 make router-dispatch MAX_MESSAGES=1
-make router-list STATUS=dispatched
 make kanban-dispatcher-once MAX_TASKS=1
 make router-sync
-make router-list STATUS=completed
+make router-conversation CONVERSATION=<conversation-id>
 make router-inspect MESSAGE=<message-id>
 ```
+
+`make router-status` summarizes queue counts, recent messages, and sync/linkage notices. `make router-doctor` emits health checks for router DB, Kanban DB, missing task IDs, bounded pending queue size, and completion sync drift. `make router-conversation CONVERSATION=<id>` is the Atlas/operator view for all messages and events in one conversation.
+
+## Dashboard observability
+
+Team Nexus includes the shared Hermes dashboard plugin `team-router`. After dashboard containers are restarted or plugins rescanned, open the Team Router tab in any agent dashboard. It exposes read-only plugin API endpoints:
+
+- `/api/plugins/team-router/status`
+- `/api/plugins/team-router/doctor`
+- `/api/plugins/team-router/conversations/<conversation-id>`
+
+The dashboard plugin reads `/shared/router/messages.db` and `/shared/kanban/kanban.db`, so generated agent/dashboard Compose services mount `./shared/router:/shared/router:rw` alongside the existing Kanban mount. Plugin routes are observability-only; use the CLI/Make targets for mutation (`router-send`, `router-dispatch`, `router-sync`).
+
+## Troubleshooting
 
 `router-sync` reads the shared Kanban database and records worker outcomes back onto dispatched router messages. Completed Kanban tasks become router `completed`; blocked tasks become router `blocked`; failed task runs become router `failed`. The original Kanban task/run remains the execution record, while the router event log becomes the Atlas-friendly coordination view.
 

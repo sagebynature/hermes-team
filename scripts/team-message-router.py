@@ -551,6 +551,166 @@ def sync_completions(
     return synced
 
 
+def _message_counts(conn: sqlite3.Connection) -> dict[str, int]:
+    counts = {status: 0 for status in sorted(KNOWN_STATUSES)}
+    for row in conn.execute("SELECT status, COUNT(*) AS n FROM messages GROUP BY status"):
+        counts[row["status"]] = int(row["n"])
+    counts["total"] = sum(v for k, v in counts.items() if k != "total")
+    return counts
+
+
+def _recent_messages(conn: sqlite3.Connection, limit: int = 10) -> list[dict[str, Any]]:
+    rows = conn.execute(
+        """
+        SELECT id, conversation_id, sender, recipient, type, priority, ttl,
+               created_at, summary, status, error, kanban_task_id
+        FROM messages
+        ORDER BY created_at DESC, id DESC
+        LIMIT ?
+        """,
+        (int(limit),),
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def router_status(
+    db: str | os.PathLike[str] | None = None,
+    kanban_db: str | os.PathLike[str] | None = None,
+    recent_limit: int = 10,
+) -> dict[str, Any]:
+    """Return a JSON-serializable router status snapshot."""
+    init_db(db)
+    router_path = db_path(db)
+    kanban_path = Path(kanban_db) if kanban_db else DEFAULT_KANBAN_DB_PATH
+    problems: list[dict[str, Any]] = []
+    with connect_db(db) as conn:
+        counts = _message_counts(conn)
+        recent = _recent_messages(conn, recent_limit)
+        missing_task_ids = [
+            r["id"] for r in conn.execute(
+                "SELECT id FROM messages WHERE status='dispatched' AND kanban_task_id IS NULL ORDER BY created_at, id"
+            ).fetchall()
+        ]
+        if missing_task_ids:
+            problems.append({
+                "level": "warning",
+                "kind": "missing_kanban_task_id",
+                "message": "dispatched router messages missing kanban_task_id",
+                "message_ids": missing_task_ids,
+            })
+
+        stale_sync: list[dict[str, Any]] = []
+        if kanban_path.exists():
+            with sqlite3.connect(kanban_path) as kconn:
+                kconn.row_factory = sqlite3.Row
+                rows = conn.execute(
+                    """
+                    SELECT id, kanban_task_id FROM messages
+                    WHERE status='dispatched' AND kanban_task_id IS NOT NULL
+                    ORDER BY created_at, id
+                    """
+                ).fetchall()
+                for row in rows:
+                    task = kconn.execute("SELECT id, status FROM tasks WHERE id=?", (row["kanban_task_id"],)).fetchone()
+                    if task is None:
+                        problems.append({
+                            "level": "warning",
+                            "kind": "kanban_task_missing",
+                            "message": "router message references a missing Kanban task",
+                            "message_id": row["id"],
+                            "kanban_task_id": row["kanban_task_id"],
+                        })
+                    elif task["status"] in {"done", "blocked", "failed"}:
+                        stale_sync.append({
+                            "message_id": row["id"],
+                            "kanban_task_id": row["kanban_task_id"],
+                            "task_status": task["status"],
+                        })
+        else:
+            problems.append({
+                "level": "warning",
+                "kind": "kanban_db_missing",
+                "message": f"kanban db not found: {kanban_path}",
+            })
+        if stale_sync:
+            problems.append({
+                "level": "warning",
+                "kind": "sync_needed",
+                "message": "Kanban outcomes are ready; run router-sync",
+                "items": stale_sync,
+            })
+        event_count = conn.execute("SELECT COUNT(*) AS n FROM route_events").fetchone()["n"]
+    return {
+        "ok": not any(p.get("level") == "error" for p in problems),
+        "generated_at": now_iso(),
+        "router_db": str(router_path),
+        "router_db_exists": router_path.exists(),
+        "kanban_db": str(kanban_path),
+        "kanban_db_exists": kanban_path.exists(),
+        "counts": counts,
+        "event_count": int(event_count),
+        "recent": recent,
+        "problems": problems,
+    }
+
+
+def router_doctor(
+    db: str | os.PathLike[str] | None = None,
+    kanban_db: str | os.PathLike[str] | None = None,
+) -> dict[str, Any]:
+    """Return an operator-focused health report for router/Kanban linkage."""
+    status = router_status(db, kanban_db, recent_limit=5)
+    checks: list[dict[str, Any]] = []
+    checks.append({"name": "router_db_exists", "ok": bool(status["router_db_exists"]), "detail": status["router_db"]})
+    checks.append({"name": "kanban_db_exists", "ok": bool(status["kanban_db_exists"]), "detail": status["kanban_db"]})
+    counts = status["counts"]
+    checks.append({"name": "pending_queue_bounded", "ok": counts.get("pending", 0) <= 10, "detail": f"pending={counts.get('pending', 0)}"})
+    checks.append({"name": "no_missing_kanban_task_ids", "ok": not any(p["kind"] == "missing_kanban_task_id" for p in status["problems"]), "detail": "dispatched messages should link to Kanban tasks"})
+    checks.append({"name": "completion_sync_current", "ok": not any(p["kind"] == "sync_needed" for p in status["problems"]), "detail": "run make router-sync if false"})
+    return {
+        "ok": all(c["ok"] for c in checks),
+        "generated_at": now_iso(),
+        "checks": checks,
+        "status": status,
+    }
+
+
+def router_conversation(
+    db: str | os.PathLike[str] | None,
+    conversation_id: str,
+) -> dict[str, Any]:
+    init_db(db)
+    with connect_db(db) as conn:
+        rows = conn.execute(
+            "SELECT * FROM messages WHERE conversation_id=? ORDER BY created_at, id",
+            (conversation_id,),
+        ).fetchall()
+        if not rows:
+            raise RouterError(f"conversation not found: {conversation_id}")
+        messages: list[dict[str, Any]] = []
+        for row in rows:
+            envelope = row_to_envelope(row)
+            events = conn.execute(
+                "SELECT kind, payload_json, created_at FROM route_events WHERE message_id=? ORDER BY id",
+                (row["id"],),
+            ).fetchall()
+            envelope["events"] = [
+                {"kind": e["kind"], "payload": json.loads(e["payload_json"]), "created_at": e["created_at"]}
+                for e in events
+            ]
+            messages.append(envelope)
+    return {
+        "ok": True,
+        "conversation_id": conversation_id,
+        "message_count": len(messages),
+        "messages": messages,
+    }
+
+
+def print_json(payload: dict[str, Any], out: Any = None) -> None:
+    print(json.dumps(payload, indent=2, sort_keys=True), file=out or sys.stdout)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Team Nexus message router")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -589,6 +749,19 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("sync-completions")
     p.add_argument("--db")
     p.add_argument("--kanban-db")
+
+    p = sub.add_parser("status")
+    p.add_argument("--db")
+    p.add_argument("--kanban-db")
+    p.add_argument("--recent-limit", type=int, default=10)
+
+    p = sub.add_parser("doctor")
+    p.add_argument("--db")
+    p.add_argument("--kanban-db")
+
+    p = sub.add_parser("conversation")
+    p.add_argument("--db")
+    p.add_argument("conversation_id")
     return parser
 
 
@@ -618,6 +791,12 @@ def main(argv: list[str] | None = None) -> int:
             ids = sync_completions(args.db, args.kanban_db)
             for mid in ids:
                 print(mid)
+        elif args.command == "status":
+            print_json(router_status(args.db, args.kanban_db, args.recent_limit))
+        elif args.command == "doctor":
+            print_json(router_doctor(args.db, args.kanban_db))
+        elif args.command == "conversation":
+            print_json(router_conversation(args.db, args.conversation_id))
         return 0
     except (RouterError, sqlite3.Error, OSError) as exc:
         print(f"error: {exc}", file=sys.stderr)

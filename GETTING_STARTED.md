@@ -38,6 +38,7 @@ Team Nexus runs these layers:
    - `shared/project` is mounted read-only into all agents.
    - `shared/project/artifacts` is writable and is the preferred handoff area.
    - `shared/kanban` stores the shared Kanban database.
+   - `shared/router` stores the structured Team Nexus message router database.
    - `shared/skills`, `shared/mcp`, `shared/plugins`, and `shared/dashboard-themes` are shared team resources.
 
 5. Atlas as default coordinator
@@ -525,6 +526,15 @@ The shared `team-nexus` dashboard theme consumes those variables while preservin
 ---
 
 ## 12. Verify dashboard plugin API behavior
+
+The structured router is also exposed through the shared `team-router` dashboard plugin. After a dashboard restart or plugin rescan, open the Team Router tab or query the read-only plugin endpoints:
+
+```bash
+curl -sS http://127.0.0.1:9119/api/plugins/team-router/status
+curl -sS http://127.0.0.1:9119/api/plugins/team-router/doctor
+```
+
+If the endpoints return the dashboard HTML instead of JSON, restart dashboards and verify `shared/plugins/team-router/dashboard/manifest.json` is visible in the agent home plugin mount.
 
 After dashboards are running, verify one direct dashboard endpoint:
 

@@ -22,7 +22,7 @@ endif
 	generate check-generated validate preflight registry-list registry-validate registry-next-ports validate-plugins dashboards-up dashboards-restart \
 	agent-add agent-disable agent-archive \
 	kanban-init kanban-list kanban-stats kanban-watch kanban-create kanban-link kanban-dispatch \
-	router-init router-send router-list router-inspect router-dispatch router-sync \
+	router-init router-send router-list router-inspect router-dispatch router-sync router-status router-doctor router-conversation \
 	kanban-dispatcher-once kanban-dispatcher-daemon kanban-dispatcher-stop kanban-dispatcher-logs discord-status-dry-run \
 	mcp-list mcp-list-all mcp-test mcp-remove mcp-add-command mcp-add-url \
 	mcp-register-template mcp-register-template-all mcp-templates mcp-show-template \
@@ -136,7 +136,7 @@ dashboards-restart: ## Restart dashboard profile services
 	$(COMPOSE) --profile dashboard restart
 
 workspace-init: ## Initialize shared workspace directories and artifact handoff placeholder
-	@mkdir -p shared/project/artifacts shared/kanban
+	@mkdir -p shared/project/artifacts shared/kanban shared/router
 	@if [ ! -f shared/project/artifacts/.gitignore ]; then \
 		printf '*\n!.gitignore\n' > shared/project/artifacts/.gitignore; \
 	fi
@@ -195,10 +195,20 @@ MAX_MESSAGES ?= 1
 router-dispatch: ## Dispatch pending router messages to Kanban; MAX_MESSAGES defaults to 1
 	python3 scripts/team-message-router.py dispatch-pending --max "$(MAX_MESSAGES)"
 
-router-sync: ## Sync completed/blocked/failed Kanban task outcomes back into router messages
+router-sync: ## Sync completed/blocked/failed Kanban outcomes back into router messages
 	python3 scripts/team-message-router.py sync-completions
 
-kanban-dispatcher-once: ## Run one Dockerized Compose-aware dispatcher pass; add DRY_RUN=1 to avoid spawning
+router-status: ## Show JSON router queue/status snapshot
+	python3 scripts/team-message-router.py status
+
+router-doctor: ## Show JSON router health checks
+	python3 scripts/team-message-router.py doctor
+
+router-conversation: ## Show JSON router conversation; set CONVERSATION=<conversation-id>
+	@test -n "$(CONVERSATION)" || { echo "CONVERSATION is required" >&2; exit 2; }
+	python3 scripts/team-message-router.py conversation "$(CONVERSATION)"
+
+kanban-dispatcher-once: ## Run compose-aware dispatcher once; DRY_RUN=1 for plan only
 	@if [ "$(DRY_RUN)" = "1" ]; then \
 		$(COMPOSE) --profile dispatcher run --rm kanban-dispatcher bash -lc 'python3 scripts/kanban-compose-dispatcher.py --dry-run --max-tasks $${MAX_TASKS:-1} --worker-timeout $${KANBAN_DISPATCH_WORKER_TIMEOUT:-900}'; \
 	else \

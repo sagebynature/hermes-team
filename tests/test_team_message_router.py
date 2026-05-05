@@ -329,3 +329,67 @@ def test_main_rejects_sensitive_payload(db):
             "--summary", "bad", "--goal", "DISCORD_BOT_TOKEN=abc", "--deliverable", "deliverable",
         ]) == 2
     assert "sensitive" in err.getvalue()
+
+
+
+def test_router_status_reports_counts_and_sync_needed(db, tmp_path):
+    router.init_db(db)
+    ids = router.send_messages(db, "atlas", "scout", "task.request", "status me", "goal", "deliverable")
+    conn = sqlite3.connect(db)
+    conn.execute("UPDATE messages SET status='dispatched', kanban_task_id=? WHERE id=?", ("t_done", ids[0]))
+    conn.commit()
+    conn.close()
+    kanban_db = tmp_path / "kanban.db"
+    create_kanban_db(kanban_db)
+
+    status = router.router_status(db, kanban_db)
+
+    assert status["ok"] is True
+    assert status["counts"]["dispatched"] == 1
+    assert status["counts"]["total"] == 1
+    assert status["recent"][0]["id"] == ids[0]
+    assert any(p["kind"] == "sync_needed" for p in status["problems"])
+
+
+def test_router_doctor_flags_missing_task_id(db, tmp_path):
+    router.init_db(db)
+    ids = router.send_messages(db, "atlas", "scout", "task.request", "doctor me", "goal", "deliverable")
+    conn = sqlite3.connect(db)
+    conn.execute("UPDATE messages SET status='dispatched' WHERE id=?", (ids[0],))
+    conn.commit()
+    conn.close()
+    kanban_db = tmp_path / "kanban.db"
+    create_kanban_db(kanban_db)
+
+    report = router.router_doctor(db, kanban_db)
+
+    assert report["ok"] is False
+    missing = [c for c in report["checks"] if c["name"] == "no_missing_kanban_task_ids"][0]
+    assert missing["ok"] is False
+
+
+def test_router_conversation_returns_messages_and_events(db):
+    ids = router.send_messages(db, "atlas", "scout", "task.request", "conv", "goal", "deliverable", conversation_id="conv-1")
+
+    payload = router.router_conversation(db, "conv-1")
+
+    assert payload["ok"] is True
+    assert payload["conversation_id"] == "conv-1"
+    assert payload["message_count"] == 1
+    assert payload["messages"][0]["id"] == ids[0]
+    assert payload["messages"][0]["events"][0]["kind"] == "created"
+
+
+def test_main_status_doctor_conversation_emit_json(db, tmp_path):
+    ids = router.send_messages(db, "atlas", "scout", "task.request", "cli status", "goal", "deliverable", conversation_id="conv-cli")
+    kanban_db = tmp_path / "kanban.db"
+    create_kanban_db(kanban_db)
+    for command in [
+        ["status", "--db", str(db), "--kanban-db", str(kanban_db)],
+        ["doctor", "--db", str(db), "--kanban-db", str(kanban_db)],
+        ["conversation", "--db", str(db), "conv-cli"],
+    ]:
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            assert router.main(command) == 0
+        assert json.loads(out.getvalue())

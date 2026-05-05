@@ -29,6 +29,7 @@ services:
       - ./shared/project/artifacts:/shared/project/artifacts:rw
       # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
       - ./shared/kanban:/shared/kanban:rw
+      - ./shared/router:/shared/router:rw
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
       # Hermes only discovers user plugins under $HERMES_HOME/plugins.
@@ -63,6 +64,7 @@ services:
       - ./shared/project/artifacts:/shared/project/artifacts:rw
       # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
       - ./shared/kanban:/shared/kanban:rw
+      - ./shared/router:/shared/router:rw
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
       # Hermes only discovers user plugins under $HERMES_HOME/plugins.
@@ -97,6 +99,7 @@ services:
       - ./shared/project/artifacts:/shared/project/artifacts:rw
       # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
       - ./shared/kanban:/shared/kanban:rw
+      - ./shared/router:/shared/router:rw
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
       # Hermes only discovers user plugins under $HERMES_HOME/plugins.
@@ -131,6 +134,7 @@ services:
       - ./shared/project/artifacts:/shared/project/artifacts:rw
       # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
       - ./shared/kanban:/shared/kanban:rw
+      - ./shared/router:/shared/router:rw
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
       # Hermes only discovers user plugins under $HERMES_HOME/plugins.
@@ -165,6 +169,7 @@ services:
       - ./shared/project/artifacts:/shared/project/artifacts:rw
       # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
       - ./shared/kanban:/shared/kanban:rw
+      - ./shared/router:/shared/router:rw
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
       # Hermes only discovers user plugins under $HERMES_HOME/plugins.
@@ -199,6 +204,7 @@ services:
       - ./shared/project/artifacts:/shared/project/artifacts:rw
       # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
       - ./shared/kanban:/shared/kanban:rw
+      - ./shared/router:/shared/router:rw
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
       # Hermes only discovers user plugins under $HERMES_HOME/plugins.
@@ -233,6 +239,7 @@ services:
       - ./shared/project/artifacts:/shared/project/artifacts:rw
       # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
       - ./shared/kanban:/shared/kanban:rw
+      - ./shared/router:/shared/router:rw
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
       # Hermes only discovers user plugins under $HERMES_HOME/plugins.
@@ -267,6 +274,7 @@ services:
       - ./shared/project/artifacts:/shared/project/artifacts:rw
       # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).
       - ./shared/kanban:/shared/kanban:rw
+      - ./shared/router:/shared/router:rw
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
       # Hermes only discovers user plugins under $HERMES_HOME/plugins.
