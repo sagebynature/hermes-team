@@ -10,6 +10,7 @@ This is not a toy swarm. It is an A-Team in a repo.
 
 For day-to-day operations, use the registry-driven runbook:
 
+- Getting started guide: `GETTING_STARTED.md`
 - Operations runbook: `docs/team-nexus-operations.md`
 - Discord/Kanban deep dive: `docs/discord-kanban-operations.md`
 - Dedicated runtime rationale: `docs/adr/0011-dedicated-agent-runtimes-vs-profiles.md`
