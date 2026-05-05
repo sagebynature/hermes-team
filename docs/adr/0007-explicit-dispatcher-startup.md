@@ -54,7 +54,7 @@ Positive:
 Tradeoffs:
 
 - The dispatcher container needs access to the host Docker socket.
-- The repo is mounted into the dispatcher at the same absolute host path so nested `docker compose run` commands resolve bind mounts correctly.
+- The repo is mounted into the dispatcher at the caller's current repo path via `${PWD}` so nested `docker compose run` commands resolve bind mounts correctly without hardcoding a user-specific home path.
 - If the dispatcher profile is not running, ready tasks remain queued.
 
 ## Implementation notes

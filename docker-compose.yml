@@ -224,19 +224,19 @@ services:
     container_name: hermes-kanban-dispatcher
     restart: unless-stopped
     profiles: ["dispatcher"]
-    working_dir: /Users/sage/team-nexus
+    working_dir: ${PWD}
     entrypoint: ["/usr/bin/tini", "-g", "--"]
     environment:
       HERMES_HOME: /tmp/hermes-dispatcher-home
-      HERMES_KANBAN_HOME: /Users/sage/team-nexus/shared/kanban
+      HERMES_KANBAN_HOME: ${PWD}/shared/kanban
       AGENT_NAME: Kanban Dispatcher
       AGENT_ROLE: Compose-aware Kanban task router
     env_file:
       - ./.env
     volumes:
-      # Mount the repo at the same absolute path as the host so nested
-      # `docker compose run` resolves bind mounts to host-valid paths.
-      - .:/Users/sage/team-nexus
+      # Mount the repo at the caller's current repo path so nested
+      # `docker compose run` resolves bind mounts to host-valid paths without hardcoding a user home.
+      - ${PWD}:${PWD}
       # Docker-outside-of-Docker: use the host Docker daemon to spawn workers.
       - /var/run/docker.sock:/var/run/docker.sock
     command:
