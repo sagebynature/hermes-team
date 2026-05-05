@@ -289,18 +289,20 @@ Gateway/API endpoints:
 
 Dashboard UI endpoints:
 
-| Agent    | Dashboard URL           |
-| -------- | ----------------------- |
-| Atlas    | <http://127.0.0.1:9119> |
-| Vega     | <http://127.0.0.1:9120> |
-| Scout    | <http://127.0.0.1:9121> |
-| Forge    | <http://127.0.0.1:9122> |
-| Lumen    | <http://127.0.0.1:9123> |
-| Blitz    | <http://127.0.0.1:9124> |
-| Ledger   | <http://127.0.0.1:9125> |
-| Sentinel | <http://127.0.0.1:9126> |
+| Agent    | Direct dashboard URL    | Nginx dashboard URL                  |
+| -------- | ----------------------- | ------------------------------------ |
+| Atlas    | <http://127.0.0.1:9119> | <http://127.0.0.1:9130/atlas>        |
+| Vega     | <http://127.0.0.1:9120> | <http://127.0.0.1:9130/vega>         |
+| Scout    | <http://127.0.0.1:9121> | <http://127.0.0.1:9130/scout>        |
+| Forge    | <http://127.0.0.1:9122> | <http://127.0.0.1:9130/forge>        |
+| Lumen    | <http://127.0.0.1:9123> | <http://127.0.0.1:9130/lumen>        |
+| Blitz    | <http://127.0.0.1:9124> | <http://127.0.0.1:9130/blitz>        |
+| Ledger   | <http://127.0.0.1:9125> | <http://127.0.0.1:9130/ledger>       |
+| Sentinel | <http://127.0.0.1:9126> | <http://127.0.0.1:9130/sentinel>     |
 
-Dashboard services run with `hermes dashboard --host 0.0.0.0 --port 9119 --insecure --no-open` inside the container. The `--insecure` flag is required because Docker needs the dashboard process to bind inside the container; Compose still publishes every dashboard only to `127.0.0.1` on the host.
+The Nginx port defaults to `9130`; override it by setting `NGINX_PORT` in the repo-root `.env`, then restart `dashboard-nginx`.
+
+Dashboard services run with `hermes dashboard --host 0.0.0.0 --port 9119 --insecure --no-open` inside the container. The `--insecure` flag is required because Docker needs the dashboard process to bind inside the container; Compose still publishes every dashboard and the Nginx reverse proxy only to `127.0.0.1` on the host.
 
 If the team operates through Discord, Telegram, Slack, or another gateway, direct API access is optional.
 

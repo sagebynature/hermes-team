@@ -30,14 +30,17 @@ help: ## Show available targets
 build: ## Build the custom Hermes team image once; all agents share team-nexus-agent:latest
 	$(COMPOSE) build atlas
 
-up: ## Start all Hermes gateways
-	$(COMPOSE) up -d
+up: ## Start all Hermes gateways and dashboard reverse proxy
+	$(COMPOSE) --profile dashboard up -d
+	$(COMPOSE) --profile dispatcher up -d
 
 down: ## Stop all Hermes gateways
-	$(COMPOSE) down
+	$(COMPOSE) --profile dashboard down
+	$(COMPOSE) --profile dispatcher down
 
 restart: ## Restart all Hermes gateways
-	$(COMPOSE) restart
+	$(COMPOSE) --profile dashboard restart
+	$(COMPOSE) --profile dispatcher restart
 
 ps: ## Show Compose service status
 	$(COMPOSE) ps
