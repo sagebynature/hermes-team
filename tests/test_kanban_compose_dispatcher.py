@@ -211,6 +211,11 @@ class KanbanComposeDispatcherTests(unittest.TestCase):
             cleanup.assert_called_once_with("t_ready", "scout", log_path)
             self.assertIn("timed out", log_path.read_text(encoding="utf-8"))
 
+    def test_dispatch_invokes_worker_with_kanban_only_toolset(self):
+        script = (REPO_ROOT / "scripts" / "kanban-dispatch-compose.sh").read_text(encoding="utf-8")
+        self.assertIn('chat -t kanban -q "work kanban task $task_id"', script)
+        self.assertNotIn('chat -q "work kanban task $task_id"', script)
+
     def test_dry_run_does_not_claim_or_dispatch_ready_task(self):
         dispatcher = load_dispatcher_module()
         with tempfile.TemporaryDirectory() as td:

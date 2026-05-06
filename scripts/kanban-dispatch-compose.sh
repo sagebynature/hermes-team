@@ -45,7 +45,7 @@ cleanup() {
 trap cleanup INT TERM
 set +e
 # shellcheck disable=SC2086
-$compose_cmd run --rm --name "$container_name" "$assignee" chat -q "work kanban task $task_id"
+$compose_cmd run --rm --name "$container_name" "$assignee" chat -t kanban -q "work kanban task $task_id"
 status="$?"
 set -e
 trap - INT TERM
