@@ -71,7 +71,7 @@ open http://127.0.0.1:${TEAM_NEXUS_DASHBOARD_PORT:-9119}/
 Dashboard assets are shared through:
 
 ```text
-shared/plugins             -> /opt/data/plugins:ro
+shared/plugins              -> /opt/data/plugins:ro and /opt/data/profiles/<active>/plugins:ro
 shared/dashboard-themes    -> /opt/data/dashboard-themes:ro
 ```
 

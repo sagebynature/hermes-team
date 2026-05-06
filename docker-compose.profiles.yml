@@ -24,6 +24,14 @@ x-profile-runtime: &profile-runtime
     - ./shared/skills:/shared/skills:ro
     - ./shared/mcp:/shared/mcp:ro
     - ./shared/plugins:/opt/data/plugins:ro
+    # Hermes dashboard plugin discovery reads $HERMES_HOME/plugins. Mount the
+    # shared Team Nexus dashboard plugins into each active profile home while
+    # retaining /opt/data/plugins as the shared canonical runtime path.
+    - ./shared/plugins:/opt/data/profiles/atlas/plugins:ro
+    - ./shared/plugins:/opt/data/profiles/forge/plugins:ro
+    - ./shared/plugins:/opt/data/profiles/sentinel/plugins:ro
+    - ./shared/plugins:/opt/data/profiles/scribe/plugins:ro
+    - ./shared/plugins:/opt/data/profiles/curator/plugins:ro
     - ./shared/dashboard-themes:/opt/data/dashboard-themes:ro
 
 services:

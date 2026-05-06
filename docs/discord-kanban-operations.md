@@ -43,7 +43,7 @@ runtime/hermes             -> /opt/data
 repo root                  -> /workspace
 shared/skills              -> /shared/skills:ro
 shared/mcp                 -> /shared/mcp:ro
-shared/plugins             -> /opt/data/plugins:ro
+shared/plugins              -> /opt/data/plugins:ro and /opt/data/profiles/<active>/plugins:ro
 shared/dashboard-themes    -> /opt/data/dashboard-themes:ro
 ```
 
