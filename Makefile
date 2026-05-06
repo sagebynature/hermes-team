@@ -71,9 +71,10 @@ compose-config: ## Validate profile-driven Docker Compose function services
 	$(COMPOSE) --profile dashboard --profile admin --profile dispatcher-once config >/tmp/team-nexus-compose.yaml
 	@echo "compose config OK -> /tmp/team-nexus-compose.yaml"
 
-validate: ## Validate profile specs, manifests, scripts, and profile-driven Compose
+validate: ## Validate profile specs, manifests, scripts, tests, and profile-driven Compose
 	python3 scripts/validate-profile-spec.py
 	python3 -m py_compile scripts/*.py shared/plugins/agent-identity-dashboard/dashboard/plugin_api.py
+	python3 -m unittest discover -s tests -p 'test*.py'
 	$(MAKE) profile-compose-config
 
 preflight: ## Run profile-driven preflight checks

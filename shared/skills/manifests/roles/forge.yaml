@@ -1,6 +1,7 @@
 version: 0.1.0
 profile: forge
 status: draft
+purpose: Role-specific implementation and verification skills for Forge.
 skills:
   - using-git-worktrees
   - test-driven-development

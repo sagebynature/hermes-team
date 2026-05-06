@@ -225,77 +225,20 @@ profiles:
       - competitor_research
       - customer_research
       - source_citation
-  vega:
+  ops:
     status: planned_inactive
-    display_name: Vega
-    one_job: Product Strategist
-    summary: Shapes product scope, user pain, wedge, promise, and the smallest useful proof before implementation expands.
-    source_dir: profiles/vega
+    display_name: Ops
+    one_job: Runtime and Infrastructure Operator
+    summary: Handles deployment, incidents, backups, sandbox/runtime operations, and reliability work after v1 profile runtime stabilizes.
     gateway:
       enabled: false
-    checkpoints:
-      enabled: true
-    skills:
-      base_manifest: shared/skills/manifests/base.yaml
-    owns:
-      - product_scope
-      - user_value
-      - mvp_definition
-      - acceptance_criteria
-  lumen:
+  relay_echo:
     status: planned_inactive
-    display_name: Lumen
-    one_job: UX and Design Lead
-    summary: Shapes UX flows, screens, onboarding, hierarchy, microcopy, and visual coherence so products are understandable
-      and emotionally clear.
-    source_dir: profiles/lumen
+    display_name: Relay/Echo
+    one_job: Notification Relay and Evidence Echo
+    summary: Future notification-only worker identity that may report evidence in mission threads without becoming a worker-to-worker bus.
     gateway:
       enabled: false
-    checkpoints:
-      enabled: true
-    skills:
-      base_manifest: shared/skills/manifests/base.yaml
-    owns:
-      - ux_design
-      - interaction_flows
-      - visual_hierarchy
-      - microcopy
-  blitz:
-    status: planned_inactive
-    display_name: Blitz
-    one_job: Growth and GTM Operator
-    summary: Turns traction into repeatable go-to-market motion through channels, hooks, launches, experiments, and learning
-      loops.
-    source_dir: profiles/blitz
-    gateway:
-      enabled: false
-    checkpoints:
-      enabled: true
-    skills:
-      base_manifest: shared/skills/manifests/base.yaml
-    owns:
-      - gtm_experiments
-      - launch_channels
-      - growth_metrics
-      - traction_learning
-  ledger:
-    status: planned_inactive
-    display_name: Ledger
-    one_job: Finance and Operations Officer
-    summary: Keeps the startup solvent and operationally sane through runway, pricing, unit economics, budgets, hiring, cadence,
-      and resource allocation.
-    source_dir: profiles/ledger
-    gateway:
-      enabled: false
-    checkpoints:
-      enabled: true
-    skills:
-      base_manifest: shared/skills/manifests/base.yaml
-    owns:
-      - runway
-      - pricing
-      - unit_economics
-      - operating_cadence
 secrets:
   commit_real_secrets: false
   examples_only: true

@@ -95,10 +95,40 @@ def validate_repo_path(path_value: str, path_name: str) -> Path:
     return path
 
 
-def validate_manifest_path(path_value: str, profile: str) -> None:
+def validate_manifest_file(path: Path, path_name: str) -> list[str]:
+    """Validate a Team Nexus skill manifest and return its skill names."""
+    manifest = load_yaml(path)
+    validate_required_keys(manifest, {"version", "status", "purpose", "skills"}, path_name)
+    skills = require_list(manifest["skills"], f"{path_name}.skills")
+    if not skills:
+        raise ValidationError(f"{path_name}.skills must not be empty")
+
+    seen: set[str] = set()
+    duplicates: list[str] = []
+    resolved: list[str] = []
+    for index, skill in enumerate(skills):
+        if not isinstance(skill, str) or not skill.strip():
+            raise ValidationError(f"{path_name}.skills[{index}] must be a non-empty string")
+        skill_name = skill.strip()
+        if skill_name in seen:
+            duplicates.append(skill_name)
+        seen.add(skill_name)
+        skill_dir = ROOT / "shared" / "skills" / skill_name
+        skill_file = skill_dir / "SKILL.md"
+        if not skill_file.is_file():
+            raise ValidationError(f"{path_name} missing shared skill: {skill_name} ({skill_file.relative_to(ROOT)})")
+        resolved.append(skill_name)
+
+    if duplicates:
+        raise ValidationError(f"{path_name}.skills contains duplicates: {', '.join(sorted(set(duplicates)))}")
+    return resolved
+
+
+def validate_manifest_path(path_value: str, profile: str) -> list[str]:
     if not path_value:
-        return
-    validate_repo_path(path_value, f"profiles.{profile}.skills.role_manifest")
+        return []
+    path = validate_repo_path(path_value, f"profiles.{profile}.skills.role_manifest")
+    return validate_manifest_file(path, f"profiles.{profile}.skills.role_manifest")
 
 
 def validate_profile_source(profile_name: str, profile: dict[str, Any]) -> None:
@@ -177,7 +207,8 @@ def validate_spec(spec_path: Path) -> list[str]:
             base_manifest = skills.get("base_manifest")
             if not isinstance(base_manifest, str) or not base_manifest:
                 raise ValidationError(f"profiles.{profile_name}.skills.base_manifest must be a path string")
-            validate_repo_path(base_manifest, f"profiles.{profile_name}.skills.base_manifest")
+            base_manifest_path = validate_repo_path(base_manifest, f"profiles.{profile_name}.skills.base_manifest")
+            validate_manifest_file(base_manifest_path, f"profiles.{profile_name}.skills.base_manifest")
             role_manifest = skills.get("role_manifest")
             if not isinstance(role_manifest, str) or not role_manifest:
                 raise ValidationError(f"profiles.{profile_name}.skills.role_manifest must be a path string")

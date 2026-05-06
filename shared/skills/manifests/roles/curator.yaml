@@ -1,6 +1,7 @@
 version: 0.1.0
 profile: curator
 status: draft
+purpose: Role-specific learning and stewardship skills for Curator.
 skills:
   - writing-skills
   - find-skills
