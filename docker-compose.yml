@@ -60,7 +60,9 @@ services:
       - -lc
       - >-
         umask 0002 &&
-        python3 scripts/kanban-compose-dispatcher.py --daemon
+        include_atlas_flag= &&
+        if [ "$${KANBAN_DISPATCH_INCLUDE_ATLAS:-1}" != "0" ]; then include_atlas_flag=--include-atlas; fi &&
+        python3 scripts/kanban-compose-dispatcher.py --daemon $${include_atlas_flag}
         --interval "$${KANBAN_DISPATCH_INTERVAL:-60}"
         --max-tasks "$${KANBAN_DISPATCH_MAX_TASKS:-1}"
         --worker-timeout "$${KANBAN_DISPATCH_WORKER_TIMEOUT:-900}"

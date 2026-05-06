@@ -160,11 +160,13 @@ Continuous dispatcher loop:
 make kanban-dispatcher-daemon
 ```
 
-With explicit interval, concurrency limit, and worker timeout:
+With explicit interval, concurrency limit, worker timeout, and Atlas synthesis dispatch control:
 
 ```bash
-KANBAN_DISPATCH_INTERVAL=60 KANBAN_DISPATCH_MAX_TASKS=1 KANBAN_DISPATCH_WORKER_TIMEOUT=900 make kanban-dispatcher-daemon
+KANBAN_DISPATCH_INTERVAL=60 KANBAN_DISPATCH_MAX_TASKS=1 KANBAN_DISPATCH_WORKER_TIMEOUT=900 KANBAN_DISPATCH_INCLUDE_ATLAS=1 make kanban-dispatcher-daemon
 ```
+
+`KANBAN_DISPATCH_INCLUDE_ATLAS` defaults to `1` for the Compose `kanban-dispatcher` service so ready Atlas synthesis tasks are picked up. Set it to `0` only when deliberately pausing Atlas fan-in execution.
 
 Manual dispatch of one task:
 
@@ -188,6 +190,8 @@ docker compose run --rm forge chat -q "work kanban task <task-id>"
 
 If the worker command exits non-zero while the dispatcher-created claim is still active, the dispatcher records a `dispatch_failed` event, closes the failed run as `spawn_failed`, and requeues the task back to `ready` for a later retry.
 
+If a worker exits with code 0 but leaves the task in `running` (for example, the agent described an error instead of calling `kanban_complete` or `kanban_block`), the dispatcher records `dispatch_incomplete`, closes the run as `incomplete`, and moves the task to `blocked` for operator review. This prevents silent stuck `running` tasks from disappearing from future dispatcher passes.
+
 If a worker exceeds `KANBAN_DISPATCH_WORKER_TIMEOUT` / `--worker-timeout` (default 900 seconds), the dispatcher kills the named one-off worker container, records a `dispatch_timed_out` event, closes the run as `timed_out`, and moves the task to `blocked` instead of requeueing it. This prevents an agent/model/tool loop from being relaunched forever; an operator should inspect, split, or unblock the task deliberately.
 
 The `kanban-dispatcher` container uses Docker-outside-of-Docker: it mounts the host Docker socket and the repo at `./team-nexus`, then runs nested `docker compose run --rm <agent> ...` commands against the host Docker daemon.
@@ -200,7 +204,7 @@ shared/kanban/dispatcher.log
 
 ## Mission notifier and Atlas fan-in
 
-Do not make Atlas periodically scan the whole board. Team Nexus uses Kanban events as the progress signal. `scripts/kanban-mission-notifier.py` tails new `task_events` rows by cursor, writes idempotent rows to `mission_notification_outbox`, and creates one Atlas synthesis task when all worker tasks in a mission are terminal.
+Do not make Atlas periodically scan the whole board. Team Nexus uses Kanban events as the progress signal. `scripts/kanban-mission-notifier.py` tails new `task_events` rows by cursor, writes idempotent rows to `mission_notification_outbox`, and creates one Atlas synthesis task when all worker tasks in a mission are terminal. Worker-completion rows are now Atlas/internal handoff records (`target='atlas:mission'` or `target='atlas:kanban'`, `status='queued'`); only human blockers and completed Atlas final responses are Discord-webhook deliverable by default.
 
 A mission task must include a conversation ID in both its title and body. This is a hard Team Nexus contract, not a style preference: the optional DB enforcement trigger rejects new Kanban tasks that cannot be associated with a notifier mission.
 
@@ -294,7 +298,7 @@ Preview pending Discord status deliveries without posting:
 make kanban-notifier-dry-run
 ```
 
-Deliver pending outbox rows through `scripts/discord-post-status.py` and `DISCORD_STATUS_WEBHOOK_URL`:
+Deliver pending Discord-targeted outbox rows through `scripts/discord-post-status.py` and `DISCORD_STATUS_WEBHOOK_URL`. Internal Atlas handoff rows are not posted to Discord; they remain queued/auditable in `mission_notification_outbox`, while the actual Atlas notification is the ready synthesis task assigned to Atlas.
 
 ```bash
 make kanban-notifier-deliver

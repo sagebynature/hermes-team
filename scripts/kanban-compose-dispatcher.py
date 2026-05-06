@@ -245,6 +245,49 @@ def requeue_failed_spawn(conn: sqlite3.Connection, task_id: str, claim_lock: str
     return True
 
 
+def block_incomplete_dispatch(conn: sqlite3.Connection, task_id: str, claim_lock: str, run_id: int) -> bool:
+    """Block a task when the worker exited cleanly but never completed/blocked it.
+
+    Some agent failures still exit with code 0 because the final assistant response
+    described a blocker instead of calling kanban_block/kanban_complete. Leaving the
+    dispatcher-created claim in `running` hides the task from future passes forever,
+    so convert it to an operator-visible blocked task with durable evidence.
+    """
+    now = int(time.time())
+    summary = "Worker exited with code 0 but left the task running; task blocked for operator review."
+    cur = conn.execute(
+        """
+        UPDATE tasks
+           SET status = 'blocked',
+               claim_lock = NULL,
+               claim_expires = NULL,
+               worker_pid = NULL,
+               current_run_id = NULL
+         WHERE id = ?
+           AND status = 'running'
+           AND claim_lock = ?
+        """,
+        (task_id, claim_lock),
+    )
+    if cur.rowcount != 1:
+        conn.rollback()
+        return False
+    run_cols = table_columns(conn, "task_runs")
+    assignments = ["status = ?", "outcome = ?", "ended_at = ?"]
+    values: List[object] = ["blocked", "incomplete", now]
+    if "summary" in run_cols:
+        assignments.append("summary = ?")
+        values.append(summary)
+    if "error" in run_cols:
+        assignments.append("error = ?")
+        values.append(summary)
+    values.append(run_id)
+    conn.execute(f"UPDATE task_runs SET {', '.join(assignments)} WHERE id = ?", values)
+    append_event(conn, task_id, "dispatch_incomplete", {"blocked": True, "exit_code": 0}, run_id=run_id)
+    conn.commit()
+    return True
+
+
 def block_timed_out_dispatch(conn: sqlite3.Connection, task_id: str, claim_lock: str, run_id: int, worker_timeout: int) -> bool:
     """Stop retrying a worker that exceeded its runtime budget.
 
@@ -349,6 +392,13 @@ def finalize_dispatch_result(
                 log(log_path, f"dispatch failed for task={task_id}; requeued from running to ready")
             else:
                 log(log_path, f"dispatch failed for task={task_id}; claim already changed, status={status}")
+        elif code == 0 and status == "running":
+            if block_incomplete_dispatch(conn, task_id, claim[0], claim[1]):
+                status = "blocked"
+                code = 1
+                log(log_path, f"dispatch incomplete for task={task_id}; blocked because worker exited without completing")
+            else:
+                log(log_path, f"dispatch incomplete for task={task_id}; claim already changed, status={status}")
         elif status == "ready":
             log(log_path, f"dispatch failed to advance task={task_id}; status is still ready")
             code = code or 1

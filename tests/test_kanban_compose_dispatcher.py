@@ -23,11 +23,18 @@ def load_dispatcher_module():
     return module
 
 
-def make_args(db: Path, *, dry_run: bool = False, worker_timeout: int = 900, max_tasks: int = 1) -> argparse.Namespace:
+def make_args(
+    db: Path,
+    *,
+    dry_run: bool = False,
+    worker_timeout: int = 900,
+    max_tasks: int = 1,
+    include_atlas: bool = False,
+) -> argparse.Namespace:
     return argparse.Namespace(
         db=str(db),
         dry_run=dry_run,
-        include_atlas=False,
+        include_atlas=include_atlas,
         max_tasks=max_tasks,
         daemon=False,
         worker_timeout=worker_timeout,
@@ -200,6 +207,44 @@ class KanbanComposeDispatcherTests(unittest.TestCase):
             self.assertEqual(statuses, {"t_ready": "done", "t_ready_2": "done", "t_ready_3": "done"})
             self.assertIn("dispatching 3 claimed task(s) with max_workers=3", log_path.read_text(encoding="utf-8"))
 
+    def test_include_atlas_dispatches_ready_synthesis_tasks(self):
+        dispatcher = load_dispatcher_module()
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            db = tmp / "kanban.db"
+            init_db(db)
+            with sqlite3.connect(db) as conn:
+                conn.execute(
+                    "INSERT INTO tasks (id, title, assignee, status, priority, created_at) VALUES (?, ?, ?, 'ready', 0, ?)",
+                    ("t_synth", "[mission:m1] synthesize final answer", "atlas", 1001),
+                )
+                conn.commit()
+            log_path = tmp / "dispatcher.log"
+            observed = []
+
+            def fake_dispatch(task_id: str, assignee: str, dry_run: bool, log_path: Path, worker_timeout: int) -> int:
+                observed.append((task_id, assignee))
+                with sqlite3.connect(db) as conn:
+                    run_id = conn.execute("SELECT current_run_id FROM tasks WHERE id = ?", (task_id,)).fetchone()[0]
+                    conn.execute(
+                        "UPDATE tasks SET status = 'done', completed_at = 2000, claim_lock = NULL, claim_expires = NULL, current_run_id = NULL WHERE id = ?",
+                        (task_id,),
+                    )
+                    conn.execute("UPDATE task_runs SET status = 'done', outcome = 'completed', ended_at = 2000 WHERE id = ?", (run_id,))
+                    conn.commit()
+                return 0
+
+            with mock.patch.object(dispatcher, "dispatch", fake_dispatch):
+                code = dispatcher.run_pass(
+                    make_args(db, max_tasks=2, include_atlas=True),
+                    {"scout": "scout", "atlas": "atlas"},
+                    log_path,
+                )
+
+            self.assertEqual(code, 0)
+            self.assertEqual({task_id for task_id, _ in observed}, {"t_ready", "t_synth"})
+            self.assertIn(("t_synth", "atlas"), observed)
+
     def test_failed_worker_spawn_requeues_task_but_preserves_failed_run(self):
         dispatcher = load_dispatcher_module()
         with tempfile.TemporaryDirectory() as td:
@@ -226,6 +271,34 @@ class KanbanComposeDispatcherTests(unittest.TestCase):
             self.assertEqual([kind for kind, _ in events], ["claimed", "dispatch_failed"])
             self.assertEqual(runs[0][0:2], ("failed", "spawn_failed"))
             self.assertIsNotNone(runs[0][2])
+
+    def test_successful_exit_without_task_transition_blocks_task(self):
+        dispatcher = load_dispatcher_module()
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            db = tmp / "kanban.db"
+            init_db(db)
+            log_path = tmp / "dispatcher.log"
+
+            def incomplete_dispatch(task_id: str, assignee: str, dry_run: bool, log_path: Path, worker_timeout: int) -> int:
+                return 0
+
+            with mock.patch.object(dispatcher, "dispatch", incomplete_dispatch):
+                code = dispatcher.run_pass(make_args(db), {"scout": "scout"}, log_path)
+
+            self.assertEqual(code, 1)
+            with sqlite3.connect(db) as conn:
+                task = conn.execute(
+                    "SELECT status, claim_lock, claim_expires, current_run_id FROM tasks WHERE id = 't_ready'"
+                ).fetchone()
+                events = conn.execute("SELECT kind, run_id FROM task_events WHERE task_id = 't_ready' ORDER BY id").fetchall()
+                runs = conn.execute("SELECT status, outcome, ended_at, summary FROM task_runs WHERE task_id = 't_ready'").fetchall()
+
+            self.assertEqual(task, ("blocked", None, None, None))
+            self.assertEqual([kind for kind, _ in events], ["claimed", "dispatch_incomplete"])
+            self.assertEqual(runs[0][0:2], ("blocked", "incomplete"))
+            self.assertIsNotNone(runs[0][2])
+            self.assertIn("left the task running", runs[0][3])
 
     def test_timed_out_worker_marks_task_blocked_without_requeueing(self):
         dispatcher = load_dispatcher_module()

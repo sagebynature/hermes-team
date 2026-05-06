@@ -200,6 +200,7 @@ def enqueue_outbox(
     message: str,
     idempotency_key: str,
     target: str = "discord:status",
+    status: str = "pending",
 ) -> bool:
     now = int(time.time())
     trimmed = message.strip()
@@ -209,9 +210,9 @@ def enqueue_outbox(
         """
         INSERT OR IGNORE INTO mission_notification_outbox
             (conversation_id, task_id, kind, target, message, idempotency_key, status, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        (conversation_id, task_id, kind, target, trimmed, idempotency_key, now),
+        (conversation_id, task_id, kind, target, trimmed, idempotency_key, status, now),
     )
     return cur.rowcount == 1
 
@@ -249,6 +250,32 @@ def mission_ready_for_synthesis(conn: sqlite3.Connection, conversation_id: str) 
     return bool(workers) and all((task["status"] in TERMINAL_STATUSES) for task in workers)
 
 
+def latest_completion_summary(conn: sqlite3.Connection, task_id: str, fallback: str) -> str:
+    row = conn.execute(
+        """
+        SELECT payload FROM task_events
+         WHERE task_id = ? AND kind IN ('completed', 'done')
+         ORDER BY id DESC LIMIT 1
+        """,
+        (task_id,),
+    ).fetchone()
+    if row:
+        payload = safe_json_loads(row[0])
+        for key in ("reason", "summary", "error", "message", "result"):
+            value = payload.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+    return fallback.strip() if fallback and fallback.strip() else "No summary recorded."
+
+
+def mission_worker_summary_block(conn: sqlite3.Connection, conversation_id: str) -> str:
+    lines = []
+    for task in worker_mission_tasks(conn, conversation_id):
+        summary = latest_completion_summary(conn, task["id"], task["result"] or "")
+        lines.append(f"- {task['id']} ({task['assignee']}, {task['status']}): {summary}")
+    return "\n".join(lines) if lines else "- No worker tasks found."
+
+
 def synthesis_task_exists(conn: sqlite3.Connection, conversation_id: str) -> bool:
     row = conn.execute(
         "SELECT id FROM tasks WHERE idempotency_key = ? LIMIT 1",
@@ -264,9 +291,15 @@ def create_atlas_synthesis_task(conn: sqlite3.Connection, conversation_id: str) 
     task_id = f"mission-synth-{short_hash(conversation_id)}"
     title = f"[mission:{conversation_id}] synthesize final answer"
     artifact_hint = f"/shared/project/artifacts/missions/{conversation_id}/"
+    worker_summaries = mission_worker_summary_block(conn, conversation_id)
     body = f"""conversation_id: {conversation_id}
 assignee: atlas
 objective: Synthesize the final user-facing answer for this mission.
+
+The notifier created this task because all non-Atlas worker tasks for the mission are terminal.
+
+Worker task summaries available at synthesis time:
+{worker_summaries}
 
 Read completed worker outputs, Kanban task results/comments, and artifacts for this mission.
 Artifact directory convention: {artifact_hint}
@@ -331,6 +364,8 @@ def handle_completed_event(conn: sqlite3.Connection, event: sqlite3.Row, task: s
         kind="human_update",
         message=message,
         idempotency_key=f"notify:{conversation_id}:{event['task_id']}:completed:{event['id']}",
+        target="atlas:mission",
+        status="queued",
     ):
         result.outbox_rows += 1
 
@@ -345,6 +380,8 @@ def handle_completed_event(conn: sqlite3.Connection, event: sqlite3.Row, task: s
                 kind="mission_ready_for_synthesis",
                 message=f"Mission {conversation_id} has all worker tasks complete; queued Atlas synthesis task {synth_id}.",
                 idempotency_key=f"notify:{conversation_id}:synthesis-created",
+                target="atlas:kanban",
+                status="queued",
             ):
                 result.outbox_rows += 1
     return result
@@ -399,7 +436,7 @@ def pending_outbox(conn: sqlite3.Connection, limit: int = 20) -> list[sqlite3.Ro
     conn.row_factory = sqlite3.Row
     ensure_schema(conn)
     return conn.execute(
-        "SELECT * FROM mission_notification_outbox WHERE status = 'pending' ORDER BY id ASC LIMIT ?",
+        "SELECT * FROM mission_notification_outbox WHERE status = 'pending' AND target LIKE 'discord:%' ORDER BY id ASC LIMIT ?",
         (limit,),
     ).fetchall()
 

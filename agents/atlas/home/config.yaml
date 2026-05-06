@@ -6,14 +6,14 @@ providers: {}
 fallback_providers: []
 credential_pool_strategies: {}
 toolsets:
-- hermes-cli
-- kanban
+  - hermes-cli
+  - kanban
 agent:
   max_turns: 90
   gateway_timeout: 1800
   restart_drain_timeout: 180
   api_max_retries: 3
-  service_tier: ''
+  service_tier: ""
   tool_use_enforcement: true
   gateway_timeout_warning: 900
   gateway_notify_interval: 180
@@ -49,7 +49,7 @@ browser:
   record_sessions: false
   allow_private_urls: false
   auto_local_for_private_urls: true
-  cdp_url: ''
+  cdp_url: ""
   dialog_policy: must_respond
   dialog_timeout_s: 300
   camofox:
@@ -89,80 +89,80 @@ openrouter:
   response_cache: true
   response_cache_ttl: 300
 bedrock:
-  region: ''
+  region: ""
   discovery:
     enabled: true
     provider_filter: []
     refresh_interval: 3600
   guardrail:
-    guardrail_identifier: ''
-    guardrail_version: ''
+    guardrail_identifier: ""
+    guardrail_version: ""
     stream_processing_mode: async
     trace: disabled
 auxiliary:
   vision:
     provider: openrouter
     model: google/gemini-2.5-flash-lite
-    base_url: ''
-    api_key: ''
+    base_url: ""
+    api_key: ""
     timeout: 120
     extra_body: {}
     download_timeout: 30
   web_extract:
     provider: openrouter
     model: google/gemini-2.5-flash-lite
-    base_url: ''
-    api_key: ''
+    base_url: ""
+    api_key: ""
     timeout: 360
     extra_body: {}
   compression:
     provider: openrouter
     model: google/gemini-2.5-flash-lite
-    base_url: ''
-    api_key: ''
+    base_url: ""
+    api_key: ""
     timeout: 120
     extra_body: {}
   session_search:
     provider: openrouter
     model: google/gemini-2.5-flash-lite
-    base_url: ''
-    api_key: ''
+    base_url: ""
+    api_key: ""
     timeout: 30
     extra_body: {}
     max_concurrency: 3
   skills_hub:
     provider: openrouter
     model: google/gemini-2.5-flash-lite
-    base_url: ''
-    api_key: ''
+    base_url: ""
+    api_key: ""
     timeout: 30
     extra_body: {}
   approval:
     provider: openrouter
     model: google/gemini-2.5-flash-lite
-    base_url: ''
-    api_key: ''
+    base_url: ""
+    api_key: ""
     timeout: 30
     extra_body: {}
   mcp:
     provider: openrouter
     model: google/gemini-2.5-flash-lite
-    base_url: ''
-    api_key: ''
+    base_url: ""
+    api_key: ""
     timeout: 30
     extra_body: {}
   title_generation:
     provider: openrouter
     model: google/gemini-2.5-flash-lite
-    base_url: ''
-    api_key: ''
+    base_url: ""
+    api_key: ""
     timeout: 30
     extra_body: {}
   curator:
     provider: openrouter
     model: google/gemini-2.5-flash-lite
-    base_url: ''
-    api_key: ''
+    base_url: ""
+    api_key: ""
     timeout: 600
     extra_body: {}
 display:
@@ -191,9 +191,9 @@ display:
   runtime_footer:
     enabled: false
     fields:
-    - model
-    - context_pct
-    - cwd
+      - model
+      - context_pct
+      - cwd
   copy_shortcut: auto
   tool_progress: true
 dashboard:
@@ -225,8 +225,8 @@ tts:
     model: voxtral-mini-tts-2603
     voice_id: c69964a6-ab8b-4f8a-9465-ec0925096ec8
   neutts:
-    ref_audio: ''
-    ref_text: ''
+    ref_audio: ""
+    ref_text: ""
     model: neuphonic/neutts-air-q4-gguf
     device: cpu
   piper:
@@ -236,7 +236,7 @@ stt:
   provider: groq
   local:
     model: base
-    language: ''
+    language: ""
   openai:
     model: whisper-1
   mistral:
@@ -249,7 +249,7 @@ voice:
   silence_threshold: 200
   silence_duration: 3.0
 human_delay:
-  mode: 'off'
+  mode: "off"
   min_ms: 800
   max_ms: 2500
 context:
@@ -259,21 +259,21 @@ memory:
   user_profile_enabled: true
   memory_char_limit: 2200
   user_char_limit: 1375
-  provider: ''
+  provider: ""
 delegation:
-  model: ''
-  provider: ''
-  base_url: ''
-  api_key: ''
+  model: ""
+  provider: ""
+  base_url: ""
+  api_key: ""
   inherit_mcp_toolsets: true
   max_iterations: 50
   child_timeout_seconds: 600
-  reasoning_effort: ''
+  reasoning_effort: ""
   max_concurrent_children: 3
   max_spawn_depth: 1
   orchestrator_enabled: true
   subagent_auto_approve: false
-prefill_messages_file: ''
+prefill_messages_file: ""
 goals:
   max_turns: 20
 skills:
@@ -292,15 +292,15 @@ curator:
     enabled: true
     keep: 5
 honcho: {}
-timezone: ''
+timezone: ""
 discord:
   require_mention: true
-  free_response_channels: '1500571117855703226'
-  allowed_channels: ''
+  free_response_channels: ""
+  allowed_channels: ""
   auto_thread: true
   reactions: true
   channel_prompts: {}
-  server_actions: ''
+  server_actions: ""
 whatsapp: {}
 telegram:
   reactions: false
@@ -364,7 +364,8 @@ startup_agent:
   name: Atlas
   slug: atlas
   role: Orchestrator / Chief of Staff
-  description: Routes work, decomposes startup objectives, tracks decisions, and synthesizes
+  description:
+    Routes work, decomposes startup objectives, tracks decisions, and synthesizes
     specialist output.
   soul_file: /opt/data/SOUL.md
   agents_file: /opt/data/AGENTS.md
@@ -374,11 +375,11 @@ startup_agent:
   artifacts: /workspace/artifacts
 plugins:
   enabled:
-  - spotify
+    - spotify
   disabled: []
 platform_toolsets:
   cli:
-  - spotify
+    - spotify
 
 # ── Fallback Model ────────────────────────────────────────────────────
 # Automatic provider failover when primary is unavailable.

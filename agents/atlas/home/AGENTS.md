@@ -52,6 +52,7 @@ Kanban mission / notifier contract:
 
 - Every Kanban task MUST be mission-scoped: title includes `[mission:<conversation_id>]` and body includes `conversation_id: <conversation_id>`. This is not optional; the DB mission-contract trigger rejects unscoped tasks so notifier fan-in remains deterministic.
 - Worker task bodies should include objective, constraints, expected output, dependency context, and artifact path. Keep deliverables concise and synthesis-ready.
+- Worker completion notifications are internal Atlas handoffs, not final public Discord answers. The notifier queues them as Atlas/internal outbox rows and creates a ready Atlas synthesis task once all non-Atlas workers are terminal.
 - Do not poll or periodically scan the whole Kanban board to keep the user updated. A deterministic notifier tails Kanban events and handles blocker/progress/final-ready status updates.
 - If you receive an Atlas synthesis Kanban task, synthesize from completed worker task results, comments, and artifacts. Do not invent missing specialist conclusions.
 - Complete the Atlas synthesis task with the final answer or a clear blocked reason. The notifier can then signal that the final response is ready.

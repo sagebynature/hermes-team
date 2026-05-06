@@ -173,7 +173,7 @@ class KanbanMissionNotifierTests(unittest.TestCase):
                     "SELECT id, assignee, status, title, body, idempotency_key FROM tasks WHERE assignee = 'atlas'"
                 ).fetchall()
                 outbox = conn.execute(
-                    "SELECT kind, task_id, message FROM mission_notification_outbox ORDER BY id"
+                    "SELECT kind, task_id, target, status, message FROM mission_notification_outbox ORDER BY id"
                 ).fetchall()
                 created_events = conn.execute(
                     "SELECT kind FROM task_events WHERE task_id = ?",
@@ -183,8 +183,12 @@ class KanbanMissionNotifierTests(unittest.TestCase):
             self.assertEqual(synth_tasks[0][1:3], ("atlas", "ready"))
             self.assertIn("[mission:mission_demo_20260506]", synth_tasks[0][3])
             self.assertIn("Read completed worker outputs", synth_tasks[0][4])
+            self.assertIn("Worker task summaries available at synthesis time", synth_tasks[0][4])
+            self.assertIn("t_forge (forge, done): Forge artifact ready", synth_tasks[0][4])
             self.assertEqual(synth_tasks[0][5], "mission:mission_demo_20260506:atlas-synthesis")
             self.assertEqual([row[0] for row in outbox], ["human_update", "mission_ready_for_synthesis"])
+            self.assertEqual([row[2] for row in outbox], ["atlas:mission", "atlas:kanban"])
+            self.assertEqual([row[3] for row in outbox], ["queued", "queued"])
             self.assertEqual(created_events, [("created",)])
 
     def test_worker_completion_waits_when_another_worker_task_is_not_terminal(self):
@@ -203,9 +207,9 @@ class KanbanMissionNotifierTests(unittest.TestCase):
             self.assertEqual(result.created_synthesis_tasks, 0)
             with sqlite3.connect(db) as conn:
                 atlas_count = conn.execute("SELECT COUNT(*) FROM tasks WHERE assignee = 'atlas'").fetchone()[0]
-                outbox_kinds = conn.execute("SELECT kind FROM mission_notification_outbox ORDER BY id").fetchall()
+                outbox_kinds = conn.execute("SELECT kind, target, status FROM mission_notification_outbox ORDER BY id").fetchall()
             self.assertEqual(atlas_count, 0)
-            self.assertEqual(outbox_kinds, [("human_update",)])
+            self.assertEqual(outbox_kinds, [("human_update", "atlas:mission", "queued")])
 
     def test_completed_atlas_synthesis_creates_final_response_notification(self):
         notifier = load_notifier_module()
