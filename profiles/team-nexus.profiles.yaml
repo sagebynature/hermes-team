@@ -2,7 +2,6 @@ version: 0.1.0
 status: draft
 source: docs/architecture/profile-driven-team-nexus.md
 adr: docs/adr/0014-profile-driven-team-nexus.md
-
 runtime:
   canonical_model: hermes_profiles
   modes:
@@ -22,7 +21,6 @@ runtime:
     default: shared_profile_runtime
     sandbox_escape_hatch: docker
     sandbox_required_metadata_key: sandbox_required
-
 interfaces:
   primary_user_surface: discord
   inspection_surface: dashboard
@@ -49,7 +47,6 @@ interfaces:
       - routine_task_completed
       - internal_worker_comment
       - non_blocking_progress
-
 kanban:
   source_of_truth: true
   worker_communication: kanban_only
@@ -84,7 +81,6 @@ kanban:
     - pr_opened
     - learning_candidate
     - final_synthesis
-
 workspace:
   policy: kanban_workspace_type_driven
   coding_default: git_worktree_per_task
@@ -93,12 +89,11 @@ workspace:
     - agent/<profile>/<task-id>-<slug>
     - nexus/<board>/<mission-id>/<slug>
   non_coding_default: scratch_unless_repo_context_required
-
 knowledge:
   repo_visible_learning_importance: high
   hierarchy:
     - docs_and_adrs
-    - profile_specs_and_agents_md
+    - profile_specs_and_generated_agents_md
     - repo_visible_skills
     - hermes_memory_compact_facts_only
     - soul_md_identity_only
@@ -107,13 +102,14 @@ knowledge:
     source: shared/skills
     model: shared_base_plus_role_specific
     local_profile_skills: allowed_but_not_canonical
-
 profiles:
   atlas:
     status: active_v1
     display_name: Atlas
     one_job: Mission Orchestrator
-    summary: Clarifies intent, creates Kanban-backed mission/task graphs, routes work to profiles, tracks evidence, and synthesizes final Discord answers.
+    summary: Clarifies intent, creates Kanban-backed mission/task graphs, routes work to profiles, tracks evidence, and synthesizes
+      final Discord answers.
+    source_dir: profiles/atlas
     gateway:
       enabled: true
       mode: user_command_router
@@ -122,7 +118,7 @@ profiles:
       enabled: false
       note: Enable if Atlas edits files directly.
     skills:
-      base: true
+      base_manifest: shared/skills/manifests/base.yaml
       role_manifest: shared/skills/manifests/roles/atlas.yaml
     owns:
       - mission_intake
@@ -131,57 +127,59 @@ profiles:
       - task_graph_creation
       - discord_notifications
       - final_synthesis
-
   forge:
     status: active_v1
     display_name: Forge
     one_job: Implementation Engineer
-    summary: Performs assigned code changes in task worktrees, runs verification, commits, and reports changed files/tests/branch/PR evidence.
+    summary: Performs assigned code changes in task worktrees, runs verification, commits, and reports changed files/tests/branch/PR
+      evidence.
+    source_dir: profiles/forge
     gateway:
       enabled: false
       optional_future_mode: notification_only
     checkpoints:
       enabled: true
     skills:
-      base: true
+      base_manifest: shared/skills/manifests/base.yaml
       role_manifest: shared/skills/manifests/roles/forge.yaml
     owns:
       - implementation
       - tests_and_checks
       - task_branch_commits
       - draft_pr_creation_when_pr_bound
-
   sentinel:
     status: active_v1
     display_name: Sentinel
     one_job: Quality Gate Reviewer
-    summary: Reviews implementation against acceptance criteria, tests, security, maintainability, and records approve/reject/block verdicts.
+    summary: Reviews implementation against acceptance criteria, tests, security, maintainability, and records approve/reject/block
+      verdicts.
+    source_dir: profiles/sentinel
     gateway:
       enabled: false
       optional_future_mode: notification_only
     checkpoints:
       enabled: true
     skills:
-      base: true
+      base_manifest: shared/skills/manifests/base.yaml
       role_manifest: shared/skills/manifests/roles/sentinel.yaml
     owns:
       - code_review
       - security_quality_review
       - review_verdict_comments
       - required_fix_descriptions
-
   scribe:
     status: active_v1
     display_name: Scribe
     one_job: Documentation Specialist
     summary: Produces repo-visible plans, ADRs, README/runbook/changelog/PR narrative updates from completed work.
+    source_dir: profiles/scribe
     gateway:
       enabled: false
       optional_future_mode: notification_only
     checkpoints:
       enabled: true
     skills:
-      base: true
+      base_manifest: shared/skills/manifests/base.yaml
       role_manifest: shared/skills/manifests/roles/scribe.yaml
     owns:
       - docs
@@ -189,49 +187,115 @@ profiles:
       - runbooks
       - changelogs
       - pr_narrative
-
   curator:
     status: active_v1
     display_name: Curator
     one_job: Learning and Profile Steward
-    summary: Maintains profile specs, shared/team skills, role conventions, and promotes reusable learning into repo-visible artifacts or appropriate Hermes memory/skills.
+    summary: Maintains profile specs, shared/team skills, role conventions, and promotes reusable learning into repo-visible
+      artifacts or appropriate Hermes memory/skills.
+    source_dir: profiles/curator
     gateway:
       enabled: false
       optional_future_mode: notification_only
     checkpoints:
       enabled: true
     skills:
-      base: true
+      base_manifest: shared/skills/manifests/base.yaml
       role_manifest: shared/skills/manifests/roles/curator.yaml
     owns:
       - learning_candidate_review
       - canonical_skill_updates
       - profile_spec_maintenance
       - knowledge_placement_policy
-
   scout:
     status: planned_inactive
     display_name: Scout
-    one_job: Research and Discovery Specialist
-    gateway:
-      enabled: false
-
-  ops:
-    status: planned_inactive
-    display_name: Ops
-    one_job: Infrastructure, diagnostics, and runtime operations specialist
+    one_job: Market Recon Specialist
+    summary: 'Finds the terrain before the team moves: source-backed market, competitor, customer, pricing, category, trend,
+      and signal research.'
+    source_dir: profiles/scout
     gateway:
       enabled: false
     checkpoints:
       enabled: true
-
-  relay:
+    skills:
+      base_manifest: shared/skills/manifests/base.yaml
+    owns:
+      - market_research
+      - competitor_research
+      - customer_research
+      - source_citation
+  vega:
     status: planned_inactive
-    display_name: Relay
-    one_job: Notifications and communications surface specialist
+    display_name: Vega
+    one_job: Product Strategist
+    summary: Shapes product scope, user pain, wedge, promise, and the smallest useful proof before implementation expands.
+    source_dir: profiles/vega
     gateway:
       enabled: false
-
+    checkpoints:
+      enabled: true
+    skills:
+      base_manifest: shared/skills/manifests/base.yaml
+    owns:
+      - product_scope
+      - user_value
+      - mvp_definition
+      - acceptance_criteria
+  lumen:
+    status: planned_inactive
+    display_name: Lumen
+    one_job: UX and Design Lead
+    summary: Shapes UX flows, screens, onboarding, hierarchy, microcopy, and visual coherence so products are understandable
+      and emotionally clear.
+    source_dir: profiles/lumen
+    gateway:
+      enabled: false
+    checkpoints:
+      enabled: true
+    skills:
+      base_manifest: shared/skills/manifests/base.yaml
+    owns:
+      - ux_design
+      - interaction_flows
+      - visual_hierarchy
+      - microcopy
+  blitz:
+    status: planned_inactive
+    display_name: Blitz
+    one_job: Growth and GTM Operator
+    summary: Turns traction into repeatable go-to-market motion through channels, hooks, launches, experiments, and learning
+      loops.
+    source_dir: profiles/blitz
+    gateway:
+      enabled: false
+    checkpoints:
+      enabled: true
+    skills:
+      base_manifest: shared/skills/manifests/base.yaml
+    owns:
+      - gtm_experiments
+      - launch_channels
+      - growth_metrics
+      - traction_learning
+  ledger:
+    status: planned_inactive
+    display_name: Ledger
+    one_job: Finance and Operations Officer
+    summary: Keeps the startup solvent and operationally sane through runway, pricing, unit economics, budgets, hiring, cadence,
+      and resource allocation.
+    source_dir: profiles/ledger
+    gateway:
+      enabled: false
+    checkpoints:
+      enabled: true
+    skills:
+      base_manifest: shared/skills/manifests/base.yaml
+    owns:
+      - runway
+      - pricing
+      - unit_economics
+      - operating_cadence
 secrets:
   commit_real_secrets: false
   examples_only: true
@@ -239,7 +303,6 @@ secrets:
   worker_discord_tokens_optional_disabled_by_default: true
   bootstrap_may_validate_required_vars: true
   bootstrap_must_not_commit_or_copy_secrets_broadly: true
-
 verification_required_before_done:
   - profile_spec_schema_validation
   - skill_manifest_validation

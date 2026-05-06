@@ -10,12 +10,14 @@ ENV MISE_DATA_DIR=/opt/mise \
     MISE_CONFIG_DIR=/etc/mise \
     MISE_INSTALL_PATH=/usr/local/bin/mise \
     MISE_YES=1 \
+    AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium \
     PATH=/opt/mise/shims:/opt/data/.local/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       bash \
       ca-certificates \
       curl \
+      chromium \
       git \
       gnupg \
       docker.io \
@@ -72,14 +74,29 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/b
     && uvx --version
 
 # Install voice extras into the upstream Hermes venv for CLI/gateway voice mode.
+# The upstream Docker image installs Hermes as site-packages; Hermes doctor still
+# checks for a source-tree-style PROJECT_ROOT/.venv/bin/hermes. Add a small
+# compatibility shim so doctor reflects the working runtime entry point.
 RUN cd /opt/hermes \
     && uv pip install --no-cache --python /opt/hermes/.venv/bin/python '.[voice]' \
+    && ln -sfn /opt/hermes/.venv/bin/hermes /usr/local/bin/hermes \
+    && site_packages="$(/opt/hermes/.venv/bin/python -c 'import site; print(site.getsitepackages()[0])')" \
+    && mkdir -p "$site_packages/.venv/bin" \
+    && ln -sfn /opt/hermes/.venv/bin/hermes "$site_packages/.venv/bin/hermes" \
     && rm -rf /root/.cache/uv /tmp/uv-cache
+
+# Install local browser automation support for Hermes' browser toolset. Chromium
+# comes from apt because Chrome for Testing does not publish Linux ARM64 builds.
+RUN npm install -g agent-browser \
+    && ln -sfn /opt/hermes/node_modules/.bin/agent-browser /usr/local/bin/agent-browser \
+    && npm cache clean --force
 
 # Install Hermes' bundled RL backend when the upstream image contains the
 # tinker-atropos submodule. Doctor checks for this package in every agent.
 RUN if [ -d /opt/hermes/tinker-atropos ]; then \
       uv pip install --no-cache --python /opt/hermes/.venv/bin/python -e /opt/hermes/tinker-atropos; \
+      site_packages="$(/opt/hermes/.venv/bin/python -c 'import site; print(site.getsitepackages()[0])')"; \
+      ln -sfn /opt/hermes/tinker-atropos "$site_packages/tinker-atropos"; \
     fi \
     && rm -rf /root/.cache/uv /tmp/uv-cache
 

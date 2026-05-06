@@ -44,7 +44,7 @@ repo root                  -> /workspace
 shared/skills              -> /shared/skills:ro
 shared/mcp                 -> /shared/mcp:ro
 shared/plugins              -> /opt/data/plugins:ro and /opt/data/profiles/<active>/plugins:ro
-shared/dashboard-themes    -> /opt/data/dashboard-themes:ro
+shared/dashboard-themes    -> /opt/data/dashboard-themes:ro and /opt/data/profiles/<active>/dashboard-themes:ro
 ```
 
 The shared Kanban database lives under the ignored runtime tree:

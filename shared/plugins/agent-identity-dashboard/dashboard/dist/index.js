@@ -117,25 +117,6 @@
     return identity;
   }
 
-  function useAgentNav() {
-    const [agents, setAgents] = useState([]);
-
-    useEffect(() => {
-      let cancelled = false;
-      SDK.fetchJSON(`/api/plugins/${PLUGIN_NAME}/agents`)
-        .then((payload) => {
-          if (cancelled) return;
-          setAgents(Array.isArray(payload && payload.agents) ? payload.agents : []);
-        })
-        .catch(() => {
-          if (!cancelled) setAgents([]);
-        });
-      return () => { cancelled = true; };
-    }, []);
-
-    return agents;
-  }
-
   function profileImageUrl(identity) {
     return `${identity.profileUrl}${identity.profileUrl.includes("?") ? "&" : "?"}v=${Date.now()}`;
   }
@@ -186,6 +167,10 @@
     }
 
     return false;
+  }
+
+  function removeLegacyBanner() {
+    document.querySelectorAll(".agent-identity-banner, .agent-dashboard-nav").forEach((element) => element.remove());
   }
 
   function upsertSidebarIdentity(identity) {
@@ -255,6 +240,7 @@
         if (disposed) return;
         cancelAnimationFrame(frame);
         frame = requestAnimationFrame(() => {
+          removeLegacyBanner();
           upsertDefaultBrand();
           upsertSidebarIdentity(identity);
         });
@@ -270,53 +256,19 @@
         observer.disconnect();
         const existing = document.querySelector(".agent-sidebar-identity");
         if (existing) existing.remove();
+        removeLegacyBanner();
       };
     }, [identity.hasProfileImage, identity.name, identity.role, identity.title, identity.profileUrl]);
   }
 
-  function AgentNavbar() {
-    const agents = useAgentNav();
-    if (!agents.length) return null;
-
-    return React.createElement(
-      "nav",
-      { className: "agent-dashboard-nav", "aria-label": "Agent dashboards" },
-      agents.map((agent) =>
-        React.createElement(
-          "a",
-          {
-            key: agent.slug || agent.name,
-            className: `agent-dashboard-nav-link${agent.current ? " is-current" : ""}`,
-            href: agent.href || `/${agent.slug}/sessions`,
-            title: agent.role ? `${agent.name} — ${agent.role}` : `${agent.name} dashboard`,
-            "aria-current": agent.current ? "page" : undefined,
-          },
-          agent.name || agent.slug,
-        ),
-      ),
-    );
-  }
-
-  function HeaderBanner() {
+  function IdentityEffects() {
     const identity = useIdentity();
     useSidebarIdentity(identity);
-    return React.createElement(
-      "div",
-      { className: "agent-identity-banner" },
-      React.createElement(
-        "div",
-        { className: "agent-identity-banner-copy" },
-        React.createElement("span", { className: "agent-identity-banner-label" }, identity.name),
-        identity.role
-          ? React.createElement("span", { className: "agent-identity-banner-role" }, identity.role)
-          : null,
-      ),
-      React.createElement(AgentNavbar, null),
-    );
+    return null;
   }
 
   window.__HERMES_PLUGINS__.register(PLUGIN_NAME, function AgentIdentityPage() {
     return null;
   });
-  window.__HERMES_PLUGINS__.registerSlot(PLUGIN_NAME, "header-banner", HeaderBanner);
+  window.__HERMES_PLUGINS__.registerSlot(PLUGIN_NAME, "header-banner", IdentityEffects);
 })();

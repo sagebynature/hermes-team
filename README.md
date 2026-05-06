@@ -83,7 +83,7 @@ repo root                  -> /workspace
 shared/skills              -> /shared/skills:ro
 shared/mcp                 -> /shared/mcp:ro
 shared/plugins              -> /opt/data/plugins:ro and /opt/data/profiles/<active>/plugins:ro
-shared/dashboard-themes    -> /opt/data/dashboard-themes:ro
+shared/dashboard-themes    -> /opt/data/dashboard-themes:ro and /opt/data/profiles/<active>/dashboard-themes:ro
 ```
 
 `runtime/` is ignored because it may contain profile-local `.env`, auth, sessions, memory, logs, checkpoints, Kanban state, and other user/customer data.

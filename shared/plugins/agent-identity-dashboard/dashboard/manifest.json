@@ -1,9 +1,9 @@
 {
   "name": "agent-identity-dashboard",
   "label": "Agent Identity",
-  "description": "Shows the current agent identity, dashboard navbar, and a sidebar profile card from $HERMES_HOME/profile.jpg when present.",
+  "description": "Applies profile identity colors, document title, and an optional sidebar profile card from $HERMES_HOME/profile.jpg when present.",
   "icon": "Users",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "tab": {
     "path": "/agent-identity",
     "hidden": true

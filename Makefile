@@ -41,19 +41,21 @@ build: ## Build the custom Hermes team image once; all profiles share team-nexus
 	$(COMPOSE) build atlas-gateway
 
 up: profile-runtime-stage ## Start Atlas gateway and dashboard on the profile-driven runtime
-	$(COMPOSE) --profile dashboard up -d atlas-gateway dashboard
+	$(COMPOSE) up -d
+# 	$(COMPOSE) --profile dashboard up -d atlas-gateway dashboard
 
 down: ## Stop profile-driven runtime services
-	$(COMPOSE) --profile dashboard --profile admin --profile dispatcher-once down
+	$(COMPOSE) down
+# 	$(COMPOSE) --profile dashboard --profile admin --profile dispatcher-once down
 
 restart: profile-runtime-stage ## Restart Atlas gateway and dashboard on the profile-driven runtime
-	$(COMPOSE) --profile dashboard up -d --force-recreate atlas-gateway dashboard
+	$(COMPOSE) up -d --force-recreate
 
 ps: ## Show profile-driven Compose service status
-	$(COMPOSE) --profile dashboard --profile admin --profile dispatcher-once ps
+	$(COMPOSE) ps
 
 logs: ## Follow logs for one profile runtime service, e.g. make logs SERVICE=atlas-gateway
-	$(COMPOSE) --profile dashboard logs -f $(SERVICE)
+	$(COMPOSE) logs -f $(SERVICE)
 
 shell: profile-runtime-stage guard-profile ## Open bash in the profile runtime, e.g. make shell PROFILE=forge
 	$(COMPOSE) --profile admin run --rm --entrypoint bash -e HERMES_HOME=/opt/data/profiles/$(PROFILE) admin-shell
@@ -145,14 +147,15 @@ kanban-mission-contract-check: ## Audit existing Kanban tasks for missing missio
 kanban-mission-payload-sample: ## Print a valid deterministic Kanban mission task payload
 	python3 scripts/kanban-mission-contract.py sample-payload
 
-kanban-dispatch: profile-runtime-stage ## Run native one-shot dispatcher for profile-driven tasks
-	$(COMPOSE) --profile dispatcher-once run --rm kanban-dispatcher
+kanban-dispatch: ## Native dispatcher is embedded in atlas-gateway; start/restart the gateway instead
+	$(MAKE) up
 
-kanban-dispatcher-once: profile-runtime-stage ## Run native one-shot dispatcher; MAX_TASKS controls cap; DRY_RUN=1 previews
+kanban-dispatcher-once: profile-runtime-stage ## Preview dispatcher only; MAX_TASKS controls cap; set DRY_RUN=1
 	@if [ "$(DRY_RUN)" = "1" ]; then \
 		$(COMPOSE) --profile dispatcher-once run --rm kanban-dispatcher kanban dispatch --dry-run --max $${MAX_TASKS:-1}; \
 	else \
-		$(COMPOSE) --profile dispatcher-once run --rm kanban-dispatcher kanban dispatch --max $${MAX_TASKS:-1}; \
+		echo "Refusing real one-shot dispatch: Atlas gateway hosts the durable dispatcher. Use 'make up' or DRY_RUN=1 for preview." >&2; \
+		exit 2; \
 	fi
 
 kanban-dispatcher-daemon: ## Native dispatcher is embedded in atlas-gateway; start the gateway instead

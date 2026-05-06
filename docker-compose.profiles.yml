@@ -33,6 +33,14 @@ x-profile-runtime: &profile-runtime
     - ./shared/plugins:/opt/data/profiles/scribe/plugins:ro
     - ./shared/plugins:/opt/data/profiles/curator/plugins:ro
     - ./shared/dashboard-themes:/opt/data/dashboard-themes:ro
+    # Hermes dashboard themes are discovered under $HERMES_HOME/dashboard-themes.
+    # Profile-runtime services set HERMES_HOME=/opt/data/profiles/<profile>, so
+    # mount the shared theme directory into each active profile home too.
+    - ./shared/dashboard-themes:/opt/data/profiles/atlas/dashboard-themes:ro
+    - ./shared/dashboard-themes:/opt/data/profiles/forge/dashboard-themes:ro
+    - ./shared/dashboard-themes:/opt/data/profiles/sentinel/dashboard-themes:ro
+    - ./shared/dashboard-themes:/opt/data/profiles/scribe/dashboard-themes:ro
+    - ./shared/dashboard-themes:/opt/data/profiles/curator/dashboard-themes:ro
 
 services:
   atlas-gateway:
@@ -52,7 +60,6 @@ services:
   dashboard:
     <<: *profile-runtime
     container_name: team-nexus-dashboard
-    profiles: ["dashboard"]
     environment:
       <<: *profile-env
       HERMES_HOME: /opt/data/profiles/atlas
@@ -72,6 +79,20 @@ services:
       HERMES_HOME: /opt/data/profiles/atlas
       AGENT_NAME: Team Nexus Admin
       AGENT_ROLE: Operator shell for profile-driven runtime
+    # Admin shell is the intentional mutation path for shared Team Nexus assets.
+    # Long-running gateway/dashboard/worker services keep these mounts read-only.
+    volumes:
+      - ./runtime/hermes:/opt/data
+      - ${PWD}:/workspace
+      - ./shared/skills:/shared/skills:rw
+      - ./shared/mcp:/shared/mcp:rw
+      - ./shared/plugins:/opt/data/plugins:rw
+      - ./shared/dashboard-themes:/opt/data/dashboard-themes:rw
+      - ./shared/dashboard-themes:/opt/data/profiles/atlas/dashboard-themes:rw
+      - ./shared/dashboard-themes:/opt/data/profiles/forge/dashboard-themes:rw
+      - ./shared/dashboard-themes:/opt/data/profiles/sentinel/dashboard-themes:rw
+      - ./shared/dashboard-themes:/opt/data/profiles/scribe/dashboard-themes:rw
+      - ./shared/dashboard-themes:/opt/data/profiles/curator/dashboard-themes:rw
     command: ["bash", "-lc", "exec bash"]
 
   kanban-dispatcher:

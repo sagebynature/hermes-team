@@ -1,10 +1,6 @@
-# {{ display_name }} operating rules
+# Team Nexus shared operating rules
 
-This file is generated from Team Nexus profile specs. Keep detailed procedures in repo-visible skills and docs.
-
-## One job
-
-{{ one_job }}
+This section is composed into every generated profile AGENTS.md.
 
 ## Evidence policy
 

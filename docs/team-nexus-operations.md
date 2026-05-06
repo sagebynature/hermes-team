@@ -72,7 +72,7 @@ Dashboard assets are shared through:
 
 ```text
 shared/plugins              -> /opt/data/plugins:ro and /opt/data/profiles/<active>/plugins:ro
-shared/dashboard-themes    -> /opt/data/dashboard-themes:ro
+shared/dashboard-themes    -> /opt/data/dashboard-themes:ro and /opt/data/profiles/<active>/dashboard-themes:ro
 ```
 
 Restart after plugin/theme changes:
