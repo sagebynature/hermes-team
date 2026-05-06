@@ -1,120 +1,113 @@
 # Team Nexus
 
-**An autonomous startup strike team, containerized and ready to deploy.**
+**A Hermes-native profile-driven software delivery team, containerized and ready to deploy.**
 
-Team Nexus turns Hermes Agent into a serious multi-agent command center. Each specialist runs as its own Hermes gateway with its own home, workspace, memory, credentials, sessions, skills, and logs. Atlas coordinates the mission. Specialists execute. Shared context keeps everyone reading from the same brief without letting any one agent corrupt the source of truth.
+Team Nexus turns Hermes Agent profiles, Kanban, checkpoints, skills, and gateway runtime into a serious multi-agent command center. Atlas is the only Discord-facing bot in v1. Forge, Sentinel, Scribe, and Curator are Hermes profiles dispatched through Kanban, not separate per-agent Compose services.
 
-This is not a toy swarm. It is an A-Team in a repo.
+This is not a toy swarm. It is a software-delivery-first AI team in a repo.
 
 ## Operator quick start
 
-For day-to-day operations, use the registry-driven runbook:
+The default runtime is now profile-driven:
 
-- Getting started guide: `GETTING_STARTED.md`
-- Operations runbook: `docs/team-nexus-operations.md`
-- Discord/Kanban deep dive: `docs/discord-kanban-operations.md`
-- Dedicated runtime rationale: `docs/adr/0011-dedicated-agent-runtimes-vs-profiles.md`
-- Registry-driven roster decision: `docs/adr/0012-registry-driven-agent-roster-and-generated-runtime-artifacts.md`
+- Architecture plan: `docs/architecture/profile-driven-team-nexus.md`
+- ADR: `docs/adr/0014-profile-driven-team-nexus.md`
+- Profile specs: `profiles/team-nexus.profiles.yaml`
+- Profile Compose runtime: `docker-compose.profiles.yml`
 
 Common operator path:
 
 ```bash
 cp .env.example .env
-# edit .env
-make generate
+# edit .env; Atlas Discord token is required for gateway use
+make profile-runtime-stage
 make validate
 make build
 make up
-make dashboards-up
 ```
 
-Manage agents with lifecycle targets instead of copy/paste:
+Useful profile commands:
 
 ```bash
-make agent-add SLUG=raven NAME=Raven ROLE='Legal / Compliance'
-make agent-disable SLUG=raven
-make agent-archive SLUG=raven
+make compose-config
+make profile-render-dry-run
+make profile-render-docker-dry-run
+make shell PROFILE=forge
+make doctor PROFILE=atlas
+make logs SERVICE=atlas-gateway
 ```
 
 ```text
-User -> Atlas -> specialists -> Atlas -> User
+User -> Atlas Discord gateway -> Kanban -> specialist profiles -> Atlas -> User
 ```
 
 ---
 
-## The Squad
+## The v1 Profile Roster
 
-<table>
-  <tr>
-    <td align="center" width="25%"><img src="agents/atlas/home/profile.jpg" alt="Atlas portrait" width="140"><br><strong>Atlas</strong><br><em>Orchestrator</em></td>
-    <td align="center" width="25%"><img src="agents/vega/home/profile.jpg" alt="Vega portrait" width="140"><br><strong>Vega</strong><br><em>Product lead</em></td>
-    <td align="center" width="25%"><img src="agents/scout/home/profile.jpg" alt="Scout portrait" width="140"><br><strong>Scout</strong><br><em>Market recon</em></td>
-    <td align="center" width="25%"><img src="agents/forge/home/profile.jpg" alt="Forge portrait" width="140"><br><strong>Forge</strong><br><em>Engineering lead</em></td>
-  </tr>
-  <tr>
-    <td align="center" width="25%"><img src="agents/lumen/home/profile.jpg" alt="Lumen portrait" width="140"><br><strong>Lumen</strong><br><em>UX and design</em></td>
-    <td align="center" width="25%"><img src="agents/blitz/home/profile.jpg" alt="Blitz portrait" width="140"><br><strong>Blitz</strong><br><em>Growth and GTM</em></td>
-    <td align="center" width="25%"><img src="agents/ledger/home/profile.jpg" alt="Ledger portrait" width="140"><br><strong>Ledger</strong><br><em>Finance and ops</em></td>
-    <td align="center" width="25%"><img src="agents/sentinel/home/profile.jpg" alt="Sentinel portrait" width="140"><br><strong>Sentinel</strong><br><em>Code review, QA, and security</em></td>
-  </tr>
-</table>
+| Profile | Mission |
+| --- | --- |
+| **Atlas** | Mission intake, routing, Kanban task graph, Discord-facing synthesis |
+| **Forge** | Software implementation in task worktrees, tests, commits, draft PRs |
+| **Sentinel** | Code review, QA, security, and ship/no-ship verdicts |
+| **Scribe** | Docs, ADRs, changelog, and PR narrative |
+| **Curator** | Learning governance, repo-visible skills/docs/profile updates |
 
-| Agent        | Callsign                      | Mission                                                                                        | Persona                                                                                                                        |
-| ------------ | ----------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| **Atlas**    | Mission commander             | Decomposes objectives, routes work, tracks decisions, synthesizes the final answer             | Calm under pressure. Decisive without ego. The one who makes the call when the room gets loud.                                 |
-| **Vega**     | Product strategist            | Sharpens ICP, MVP scope, PRDs, roadmap, positioning, and prioritization                        | Elegant, intense, allergic to vague product thinking. Cuts scope like a blade, but only to protect the product.                |
-| **Scout**    | Market recon                  | Maps competitors, customers, categories, pricing, and weak signals                             | Curious, skeptical, and quietly relentless. Trusts evidence over vibes and is comfortable saying "unknown."                    |
-| **Forge**    | Engineering lead              | Designs systems, builds prototypes, makes technical tradeoffs, ships working code              | Serious, blunt, and straight to the point. Does not crack jokes. Warm heart deep inside, mostly expressed as reliable systems. |
-| **Lumen**    | UX and design                 | Shapes flows, screens, onboarding, interface structure, critique, and copy                     | Warm, perceptive, and exacting. Gentle with people, ruthless with confusing interfaces.                                        |
-| **Blitz**    | Growth and GTM                | Builds launch plans, acquisition loops, messaging, funnels, and distribution plays             | Fast, bold, and tactical. Brings momentum without tolerating spam, vanity metrics, or growth theater.                          |
-| **Ledger**   | Finance and ops               | Models runway, pricing, unit economics, operating cadence, and resource allocation             | Precise, conservative, and unflappable. Makes ambition measurable and survivable.                                              |
-| **Sentinel** | Code review, QA, and security | Reviews code, designs QA coverage, assesses security exposure, and makes the ship/no-ship call | Watchful, exact, and hard to impress. Thinks like a senior reviewer, a QA lead, and an attacker at the same time.              |
+Planned later profiles: Scout, Ops, and Relay. Worker Discord gateways are supported by spec fields but disabled by default.
 
 ---
 
 ## Operating doctrine
 
-Team Nexus gives each agent a clean lane and a hard boundary.
+Team Nexus gives each profile a clean lane and a hard boundary.
 
-- Every specialist has a private Hermes home under `agents/<agent>/home`.
-- Every specialist has a private workspace under `agents/<agent>/workspace`.
-- Shared project files, skills, MCP material, plugins, and dashboard themes are mounted read-only; `/shared/project/artifacts` is a writable handoff submount for cross-agent deliverables.
+- Profiles are rendered from `profiles/team-nexus.profiles.yaml` into `runtime/hermes/profiles/<profile>/` for Docker mode.
+- `runtime/` is ignored because it may contain profile-local env, auth, sessions, memory, logs, checkpoints, and live Kanban state.
+- Atlas is the only Discord gateway in v1.
+- Workers communicate through Kanban and evidence-bearing task comments, not Discord theater.
+- Shared skills, MCP material, plugins, and dashboard themes are mounted read-only.
 - Secrets stay out of the image and out of git.
-- Atlas is the default point of coordination, so specialist output gets synthesized instead of scattered.
 
-The result is simple: autonomous agents with their own identity, their own tools, and a common operating picture.
+The result is simple: one runtime, multiple Hermes profiles, clear role boundaries, and a common operating picture.
 
 ---
 
 ## Runtime map
 
-Each agent is a separate Docker Compose service running Hermes Agent. The container layout follows the Hermes Docker convention:
+The default Docker runtime uses one image and function services from `docker-compose.profiles.yml`:
 
 ```text
-host directory                 container path
-agents/<agent>/home      ->    /opt/data
-agents/<agent>/workspace ->    /workspace
-shared/project           ->    /shared/project:ro
-shared/project/artifacts ->    /shared/project/artifacts:rw (writable handoff submount)
-shared/skills            ->    /shared/skills:ro
-shared/mcp               ->    /shared/mcp:ro
-shared/plugins           ->    /opt/data/plugins:ro
-shared/dashboard-themes  ->    /opt/data/dashboard-themes:ro
+host directory              container path
+runtime/hermes        ->    /opt/data
+repo root             ->    /workspace
+shared/skills         ->    /shared/skills:ro
+shared/mcp            ->    /shared/mcp:ro
+shared/plugins        ->    /opt/data/plugins:ro
+shared/dashboard-themes ->  /opt/data/dashboard-themes:ro
 ```
 
 Inside the container:
 
-| Path                         | Purpose                                                                                                      |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `/opt/data`                  | Durable Hermes home: `config.yaml`, `.env`, auth state, sessions, skills, memory, logs                       |
-| `/workspace`                 | Agent-owned working area for notes, prototypes, deliverables, and artifacts                                  |
-| `/shared/project`            | Read-only mission brief and project context, with `/shared/project/artifacts` as a writable handoff submount |
-| `/shared/skills`             | Read-only team skill library                                                                                 |
-| `/shared/mcp`                | Read-only MCP registry, templates, scripts, and docs                                                         |
-| `/opt/data/plugins`          | Shared Hermes plugin library mounted from `shared/plugins`                                                   |
-| `/opt/data/dashboard-themes` | Shared dashboard theme YAMLs mounted from `shared/dashboard-themes`                                          |
+| Path | Purpose |
+| --- | --- |
+| `/opt/data/profiles/<profile>` | Profile Hermes home: `config.yaml`, `.env`, auth state, sessions, skills, memory, logs |
+| `/opt/data/kanban` | Shared Kanban state for Atlas and worker profiles |
+| `/workspace` | Mounted Team Nexus repo and operator workspace |
+| `/shared/skills` | Read-only repo-visible team skill library |
+| `/shared/mcp` | Read-only MCP registry, templates, scripts, and docs |
+| `/opt/data/plugins` | Shared Hermes plugin library mounted from `shared/plugins` |
+| `/opt/data/dashboard-themes` | Shared dashboard theme YAMLs mounted from `shared/dashboard-themes` |
 
-Every agent runs terminal tools from `/workspace` by default:
+Function services:
+
+| Service | Purpose |
+| --- | --- |
+| `atlas-gateway` | Atlas Discord gateway and native Kanban dispatcher host |
+| `dashboard` | Light Team Nexus inspection/control plane |
+| `admin-shell` | Operator shell using a selected profile home |
+| `kanban-dispatcher` | Optional one-shot dispatcher nudge |
+
+Every profile runs terminal tools from `/workspace` by default:
 
 ```yaml
 terminal:
