@@ -17,11 +17,42 @@ description: Use when designing, implementing, reviewing, debugging, or producti
 
 ## Solver quick chooser
 
-- **Scheduling, rostering, assignment with many Booleans, reified logic, no-overlap, cumulative resources:** CP-SAT.
+- **Scheduling, rostering, assignment with many Booleans, reified logic, no-overlap, cumulative resources (e.g. Job-Shop):** CP-SAT.
 - **Vehicle routes, TSP/VRP, capacity/time windows, pickups-deliveries, optional dropped visits:** Routing library.
 - **Continuous linear programs:** GLOP first; PDLP for very large/approximate LPs; MathOpt when solver interchange matters.
-- **Mixed-integer linear models with general integer quantities and LP-like structure:** SCIP/MPSolver or MathOpt; compare with CP-SAT when variables are mostly Boolean.
+- **Mixed-integer linear models with general integer quantities and LP-like structure (e.g. Bin Packing, Knapsack):** SCIP/MPSolver or MathOpt; compare with CP-SAT when variables are mostly Boolean.
 - **Network flow / assignment primitives:** use OR-Tools specialized graph/assignment APIs before hand-building a general MIP.
+
+## Rapid Implementation Reference
+
+### CP-SAT Basic Pattern (Integer Logic)
+```python
+from ortools.sat.python import cp_model
+
+model = cp_model.CpModel()
+# Variables: NewIntVar(lower, upper, name)
+x = model.NewIntVar(0, 10, 'x')
+y = model.NewIntVar(0, 10, 'y')
+
+model.Add(x + y <= 8)
+model.Maximize(x + 2 * y)
+
+solver = cp_model.CpSolver()
+solver.parameters.max_time_in_seconds = 60.0 # Production requirement
+status = solver.Solve(model)
+
+if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
+    print(f'x = {solver.Value(x)}, y = {solver.Value(y)}')
+```
+
+### Critical Implementation Rules
+
+- **Scale your Floats**: CP-SAT is strictly integer. Convert `1.25` to `125` and adjust coefficients accordingly.
+- **Conditional Constraints**: Do NOT use Python `if` statements inside the model. Use `OnlyEnforceIf` with Boolean variables.
+  - `b = model.NewBoolVar('b')`
+  - `model.Add(x > 5).OnlyEnforceIf(b)`
+- **Index Variables**: To use a variable as an index in an array, use `model.AddElement`.
+- **Symmetry Breaking**: Force an ordering (e.g., `model.Add(x_A <= x_B)`) for identical items to prevent the solver from exploring redundant permutations.
 
 ## Production defaults to enforce
 
@@ -36,7 +67,7 @@ description: Use when designing, implementing, reviewing, debugging, or producti
 When asked to work on `soon-optimizer` or a similar repo:
 
 1. Clone or inspect the local repo. If GitHub returns 404/private, report access blocker and still produce a readiness checklist.
-2. Locate OR-Tools usage: `grep -R "ortools\|cp_model\|RoutingModel\|pywraplp\|math_opt"`.
+2. Locate OR-Tools usage: `grep -R \"ortools\\|cp_model\\|RoutingModel\\|pywraplp\\|math_opt\"`.
 3. Run `python3 skills/ortools-optimization-lifecycle/scripts/ortools_static_audit.py <repo>`.
 4. Map current code to the lifecycle: formulation docs, model builder, solver runner, status handling, limits, logging, infeasibility tooling, and tests.
 5. Recommend the smallest behavior-preserving changes first: explicit limits, feasible incumbent handling, status-aware API response, data validation, and one regression fixture.
