@@ -104,6 +104,8 @@ Do not route when:
 
 ## Operator workflow
 
+Manual one-step-at-a-time path:
+
 ```bash
 make router-send FROM=atlas TO=scout SUMMARY='bounded request' GOAL='...' DELIVERABLE='...'
 make router-list STATUS=pending
@@ -115,7 +117,22 @@ make router-conversation CONVERSATION=<conversation-id>
 make router-inspect MESSAGE=<message-id>
 ```
 
-`make router-status` summarizes queue counts, recent messages, and sync/linkage notices. `make router-doctor` emits health checks for router DB, Kanban DB, missing task IDs, bounded pending queue size, and completion sync drift. `make router-conversation CONVERSATION=<id>` is the Atlas/operator view for all messages and events in one conversation.
+Supervisor path for normal operations:
+
+```bash
+# Run one pass: dispatch pending router messages, sync terminal Kanban outcomes,
+# and optionally create Atlas synthesis tasks for completed/needs-attention conversations.
+make router-supervisor-once MAX_MESSAGES=5 CREATE_REPORT_TASKS=1
+
+# Run continuously as a Compose service.
+ROUTER_SUPERVISOR_CREATE_REPORT_TASKS=1 make router-supervisor-daemon
+make router-supervisor-logs
+
+# If Atlas report tasks should also execute automatically, opt the Kanban dispatcher into atlas tasks.
+KANBAN_DISPATCH_INCLUDE_ATLAS=1 make kanban-dispatcher-daemon
+```
+
+`make router-status` summarizes queue counts, recent messages, and sync/linkage notices. `make router-doctor` emits health checks for router DB, Kanban DB, missing task IDs, bounded pending queue size, completion sync drift, and likely direct multi-agent Kanban tasks without a router envelope. `make router-conversation CONVERSATION=<id>` is the Atlas/operator view for all messages and events in one conversation.
 
 ## Dashboard observability
 
@@ -127,9 +144,9 @@ Team Nexus includes the shared Hermes dashboard plugin `team-router`. After dash
 
 The dashboard plugin reads `/shared/router/messages.db` and `/shared/kanban/kanban.db`, so generated agent/dashboard Compose services mount `./shared/router:/shared/router:rw` alongside the existing Kanban mount. Plugin routes are observability-only; use the CLI/Make targets for mutation (`router-send`, `router-dispatch`, `router-sync`).
 
-## Troubleshooting
+## Sync and supervisor behavior
 
-`router-sync` reads the shared Kanban database and records worker outcomes back onto dispatched router messages. Completed Kanban tasks become router `completed`; blocked tasks become router `blocked`; failed task runs become router `failed`. The original Kanban task/run remains the execution record, while the router event log becomes the Atlas-friendly coordination view.
+`router-sync` reads the shared Kanban database and records worker outcomes back onto dispatched router messages. Completed Kanban tasks become router `completed`; blocked tasks become router `blocked`; failed task runs become router `failed`. The original Kanban task/run remains the execution record, while the router event log becomes the Atlas-friendly coordination view. The router supervisor automates this sync and updates aggregate conversation state to `completed` or `needs_attention`. When report-task creation is enabled, terminal conversations create one idempotent Atlas synthesis task.
 
 ## Troubleshooting
 

@@ -3,8 +3,8 @@
 
 model:
   provider: openrouter
-  default: google/gemma-4-31b-it
-  context_length: 200000
+  default: moonshotai/kimi-k2.6
+  context_length: 250000
 
 # Keep the default Hermes CLI toolset and opt into Kanban tools.
 # Kanban tool handlers are runtime-gated by Hermes: they appear for
@@ -120,7 +120,7 @@ stt:
   provider: groq
   local:
     model: base
-    language: ''
+    language: ""
   openai:
     model: whisper-1
   mistral:

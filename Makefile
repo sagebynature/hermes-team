@@ -199,6 +199,25 @@ router-dispatch: ## Dispatch pending router messages to Kanban; MAX_MESSAGES def
 router-sync: ## Sync completed/blocked/failed Kanban outcomes back into router messages
 	python3 scripts/team-message-router.py sync-completions
 
+router-report-tasks: ## Create Atlas synthesis tasks for terminal router conversations
+	python3 scripts/team-message-router.py create-report-tasks --max "$(MAX_MESSAGES)"
+
+router-supervisor-once: ## Dispatch pending router messages, sync completions, and optionally create Atlas report tasks (CREATE_REPORT_TASKS=1)
+	@if [ "$(CREATE_REPORT_TASKS)" = "1" ]; then \
+		python3 scripts/team-message-router.py supervise --once --max "$(MAX_MESSAGES)" --create-report-tasks; \
+	else \
+		python3 scripts/team-message-router.py supervise --once --max "$(MAX_MESSAGES)"; \
+	fi
+
+router-supervisor-daemon: ## Start Dockerized router supervisor; ROUTER_SUPERVISOR_CREATE_REPORT_TASKS=1 enables Atlas synthesis tasks
+	$(COMPOSE) --profile dispatcher up -d router-supervisor
+
+router-supervisor-stop: ## Stop Dockerized router supervisor
+	$(COMPOSE) --profile dispatcher stop router-supervisor
+
+router-supervisor-logs: ## Follow Dockerized router supervisor logs
+	$(COMPOSE) --profile dispatcher logs -f router-supervisor
+
 router-status: ## Show JSON router queue/status snapshot
 	python3 scripts/team-message-router.py status
 

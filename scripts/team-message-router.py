@@ -15,12 +15,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_DB_PATH = REPO_ROOT / "shared" / "router" / "messages.db"
-DEFAULT_POLICY_PATH = REPO_ROOT / "shared" / "router" / "router-policy.yaml"
-DEFAULT_AGENTS_PATH = REPO_ROOT / "shared" / "team-agents.yaml"
-DEFAULT_KANBAN_DB_PATH = REPO_ROOT / "shared" / "kanban" / "kanban.db"
-ARTIFACT_DIR = REPO_ROOT / "shared" / "project" / "artifacts" / "router"
+REPO_ROOT = Path(os.environ.get("TEAM_NEXUS_ROOT", Path(__file__).resolve().parents[1])).resolve()
+SHARED_ROOT = Path(
+    os.environ.get(
+        "TEAM_NEXUS_SHARED_ROOT",
+        "/shared" if (Path("/shared/router").exists() and Path("/shared/kanban").exists()) else str(REPO_ROOT / "shared"),
+    )
+).resolve()
+DEFAULT_DB_PATH = SHARED_ROOT / "router" / "messages.db"
+DEFAULT_POLICY_PATH = SHARED_ROOT / "router" / "router-policy.yaml"
+DEFAULT_AGENTS_PATH = SHARED_ROOT / "team-agents.yaml"
+DEFAULT_KANBAN_DB_PATH = SHARED_ROOT / "kanban" / "kanban.db"
+ARTIFACT_DIR = SHARED_ROOT / "project" / "artifacts" / "router"
 COMPOSE_CMD = [
     "docker", "compose",
     "-f", "docker-compose.yml",
@@ -92,9 +98,22 @@ def init_db(path: str | os.PathLike[str] | None = None) -> None:
                 payload_json TEXT NOT NULL DEFAULT '{}',
                 created_at TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS conversations(
+                id TEXT PRIMARY KEY,
+                status TEXT NOT NULL DEFAULT 'open',
+                summary TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                completed_at TEXT,
+                expected_count INTEGER NOT NULL DEFAULT 0,
+                terminal_count INTEGER NOT NULL DEFAULT 0,
+                report_task_id TEXT,
+                report_error TEXT
+            );
             CREATE INDEX IF NOT EXISTS idx_messages_status ON messages(status);
             CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
             CREATE INDEX IF NOT EXISTS idx_route_events_message_id ON route_events(message_id);
+            CREATE INDEX IF NOT EXISTS idx_conversations_status ON conversations(status);
             """
         )
 
@@ -253,6 +272,40 @@ def _insert_event(conn: sqlite3.Connection, message_id: str, kind: str, payload:
     )
 
 
+def _conversation_event_id(conversation_id: str) -> str:
+    return f"conversation:{conversation_id}"
+
+
+def _upsert_conversation(conn: sqlite3.Connection, conversation_id: str, summary: str) -> None:
+    now = now_iso()
+    conn.execute(
+        """
+        INSERT INTO conversations(id, status, summary, created_at, updated_at, expected_count, terminal_count)
+        VALUES (?, 'open', ?, ?, ?, 0, 0)
+        ON CONFLICT(id) DO UPDATE SET
+            summary = COALESCE(conversations.summary, excluded.summary),
+            updated_at = excluded.updated_at
+        """,
+        (conversation_id, summary, now, now),
+    )
+
+
+def _refresh_conversation_counts(conn: sqlite3.Connection, conversation_id: str) -> dict[str, int]:
+    counts = {status: 0 for status in sorted(KNOWN_STATUSES)}
+    for row in conn.execute("SELECT status, COUNT(*) AS n FROM messages WHERE conversation_id=? GROUP BY status", (conversation_id,)):
+        counts[row["status"]] = int(row["n"])
+    expected = conn.execute("SELECT COUNT(*) AS n FROM messages WHERE conversation_id=? AND requires_response=1", (conversation_id,)).fetchone()["n"]
+    terminal = conn.execute("SELECT COUNT(*) AS n FROM messages WHERE conversation_id=? AND requires_response=1 AND status IN ('completed','blocked','failed')", (conversation_id,)).fetchone()["n"]
+    conn.execute(
+        "UPDATE conversations SET expected_count=?, terminal_count=?, updated_at=? WHERE id=?",
+        (int(expected), int(terminal), now_iso(), conversation_id),
+    )
+    counts["total"] = sum(counts.values())
+    counts["expected"] = int(expected)
+    counts["terminal"] = int(terminal)
+    return counts
+
+
 def send_messages(
     db: str | os.PathLike[str] | None,
     sender: str,
@@ -276,10 +329,13 @@ def send_messages(
     ids: list[str] = []
     created = now_iso()
     with connect_db(db) as conn:
+        conversation_ids: set[str] = set()
         for rec in recipients:
             mid = new_message_id()
             ids.append(mid)
             conv = conversation_id or mid
+            conversation_ids.add(conv)
+            _upsert_conversation(conn, conv, summary)
             trace_list = list(trace or []) + [sender, rec]
             body_json = json.dumps(body, sort_keys=True, separators=(",", ":"))
             conn.execute(
@@ -295,6 +351,8 @@ def send_messages(
                 ),
             )
             _insert_event(conn, mid, "created", {"requested_recipient": recipient})
+        for conv in conversation_ids:
+            _refresh_conversation_counts(conn, conv)
     return ids
 
 
@@ -548,7 +606,34 @@ def sync_completions(
             )
             _insert_event(router_conn, row["id"], "completion_synced", payload)
             synced.append(row["id"])
+        update_conversation_states(router_conn)
     return synced
+
+
+def update_conversation_states(conn: sqlite3.Connection) -> list[str]:
+    """Refresh aggregate conversation rows and emit terminal conversation events."""
+    changed: list[str] = []
+    convs = conn.execute("SELECT id, status FROM conversations ORDER BY created_at, id").fetchall()
+    for conv in convs:
+        conv_id = conv["id"]
+        previous = conv["status"]
+        counts = _refresh_conversation_counts(conn, conv_id)
+        expected = counts.get("expected", 0)
+        terminal = counts.get("terminal", 0)
+        if expected < 1 or terminal < expected or previous in {"completed", "needs_attention"}:
+            continue
+        blocked_or_failed = counts.get("blocked", 0) + counts.get("failed", 0)
+        new_status = "needs_attention" if blocked_or_failed else "completed"
+        event_kind = "conversation_needs_attention" if blocked_or_failed else "conversation_completed"
+        now = now_iso()
+        updated = conn.execute(
+            "UPDATE conversations SET status=?, completed_at=COALESCE(completed_at, ?), updated_at=? WHERE id=? AND status NOT IN ('completed','needs_attention')",
+            (new_status, now, now, conv_id),
+        ).rowcount
+        if updated:
+            _insert_event(conn, _conversation_event_id(conv_id), event_kind, {"counts": counts})
+            changed.append(conv_id)
+    return changed
 
 
 def _message_counts(conn: sqlite3.Connection) -> dict[str, int]:
@@ -571,6 +656,43 @@ def _recent_messages(conn: sqlite3.Connection, limit: int = 10) -> list[dict[str
         (int(limit),),
     ).fetchall()
     return [dict(row) for row in rows]
+
+
+def detect_direct_kanban_smells(kanban_conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    """Find likely multi-agent tasks that bypassed the router envelope."""
+    worker_names = {"vega", "scout", "forge", "lumen", "blitz", "ledger", "sentinel"}
+    smells: list[dict[str, Any]] = []
+    rows = kanban_conn.execute(
+        """
+        SELECT id, title, assignee, status
+        FROM tasks
+        WHERE COALESCE(assignee, '') != 'atlas'
+        ORDER BY id DESC
+        LIMIT 100
+        """
+    ).fetchall()
+    for row in rows:
+        title = row["title"] or ""
+        assignee = (row["assignee"] or "").lower()
+        looks_multi_agent = (
+            assignee in worker_names
+            and (
+                re.search(r"(?i)\b(introduction|introduce|all[- ]workers|team|specialist|standup)\b", title)
+                or re.search(r"(?i)\b(vega|scout|forge|lumen|blitz|ledger|sentinel)\b", title)
+            )
+        )
+        has_router_envelope = "[router:" in title or "router:" in title or "router-dispatched" in title.lower()
+        if looks_multi_agent and not has_router_envelope:
+            smells.append({
+                "level": "warning",
+                "kind": "direct_kanban_without_router",
+                "message": "likely multi-agent Kanban task without router envelope/audit trail",
+                "kanban_task_id": row["id"],
+                "title": title,
+                "assignee": row["assignee"],
+                "status": row["status"],
+            })
+    return smells
 
 
 def router_status(
@@ -603,6 +725,7 @@ def router_status(
         if kanban_path.exists():
             with sqlite3.connect(kanban_path) as kconn:
                 kconn.row_factory = sqlite3.Row
+                problems.extend(detect_direct_kanban_smells(kconn))
                 rows = conn.execute(
                     """
                     SELECT id, kanban_task_id FROM messages
@@ -667,6 +790,7 @@ def router_doctor(
     checks.append({"name": "pending_queue_bounded", "ok": counts.get("pending", 0) <= 10, "detail": f"pending={counts.get('pending', 0)}"})
     checks.append({"name": "no_missing_kanban_task_ids", "ok": not any(p["kind"] == "missing_kanban_task_id" for p in status["problems"]), "detail": "dispatched messages should link to Kanban tasks"})
     checks.append({"name": "completion_sync_current", "ok": not any(p["kind"] == "sync_needed" for p in status["problems"]), "detail": "run make router-sync if false"})
+    checks.append({"name": "no_direct_kanban_without_router", "ok": not any(p["kind"] == "direct_kanban_without_router" for p in status["problems"]), "detail": "multi-agent fanout should have router envelope evidence"})
     return {
         "ok": all(c["ok"] for c in checks),
         "generated_at": now_iso(),
@@ -681,12 +805,22 @@ def router_conversation(
 ) -> dict[str, Any]:
     init_db(db)
     with connect_db(db) as conn:
+        conv = conn.execute("SELECT * FROM conversations WHERE id=?", (conversation_id,)).fetchone()
         rows = conn.execute(
             "SELECT * FROM messages WHERE conversation_id=? ORDER BY created_at, id",
             (conversation_id,),
         ).fetchall()
-        if not rows:
+        if not rows and conv is None:
             raise RouterError(f"conversation not found: {conversation_id}")
+        if conv is None:
+            _upsert_conversation(conn, conversation_id, rows[0]["summary"] if rows else conversation_id)
+            _refresh_conversation_counts(conn, conversation_id)
+            conv = conn.execute("SELECT * FROM conversations WHERE id=?", (conversation_id,)).fetchone()
+        counts = _refresh_conversation_counts(conn, conversation_id)
+        conv_events = conn.execute(
+            "SELECT kind, payload_json, created_at FROM route_events WHERE message_id=? ORDER BY id",
+            (_conversation_event_id(conversation_id),),
+        ).fetchall()
         messages: list[dict[str, Any]] = []
         for row in rows:
             envelope = row_to_envelope(row)
@@ -702,9 +836,136 @@ def router_conversation(
     return {
         "ok": True,
         "conversation_id": conversation_id,
+        "id": conversation_id,
+        "status": conv["status"],
+        "summary": conv["summary"],
+        "created_at": conv["created_at"],
+        "updated_at": conv["updated_at"],
+        "completed_at": conv["completed_at"],
+        "expected_count": conv["expected_count"],
+        "terminal_count": conv["terminal_count"],
+        "report_task_id": conv["report_task_id"],
+        "counts": counts,
+        "events": [{"kind": e["kind"], "payload": json.loads(e["payload_json"]), "created_at": e["created_at"]} for e in conv_events],
         "message_count": len(messages),
         "messages": messages,
     }
+
+
+def build_report_body(conversation: dict[str, Any], artifact_path: Path) -> str:
+    lines = [
+        "Router-supervised Team Nexus conversation is terminal.",
+        "",
+        f"Conversation: {conversation['conversation_id']}",
+        f"Status: {conversation['status']}",
+        f"Summary: {conversation.get('summary') or ''}",
+        f"Router conversation artifact: {artifact_display_path(artifact_path)}",
+        "",
+        "Synthesize the worker outcomes for Sage. Cite router message IDs and Kanban task IDs. Do not claim a worker replied unless its message/task evidence is present.",
+        "",
+        "Messages:",
+    ]
+    for msg in conversation["messages"]:
+        body = msg.get("body", {})
+        lines.append(f"- {msg['id']} -> {msg['recipient']} status={msg['status']} kanban_task_id={msg.get('kanban_task_id') or 'none'} summary={msg.get('summary') or ''}")
+        if msg.get("error"):
+            lines.append(f"  error: {msg['error']}")
+        if body.get("deliverable"):
+            lines.append(f"  deliverable: {body['deliverable']}")
+    return "\n".join(lines)
+
+
+def create_report_tasks(
+    db: str | os.PathLike[str] | None = None,
+    max_conversations: int = 5,
+    run_cmd: Any = None,
+) -> list[str]:
+    if int(max_conversations) < 1:
+        raise RouterError("max_conversations must be >= 1")
+    init_db(db)
+    ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+    run_cmd = run_cmd or subprocess.run
+    created: list[str] = []
+    with connect_db(db) as conn:
+        convs = conn.execute(
+            """
+            SELECT id FROM conversations
+            WHERE status IN ('completed','needs_attention') AND report_task_id IS NULL
+            ORDER BY completed_at, created_at, id
+            LIMIT ?
+            """,
+            (int(max_conversations),),
+        ).fetchall()
+        for conv_row in convs:
+            conv_id = conv_row["id"]
+            conversation = router_conversation(db, conv_id)
+            artifact_path = ARTIFACT_DIR / f"conversation-{conv_id}.json"
+            artifact_path.write_text(json.dumps(conversation, indent=2, sort_keys=True) + "\n")
+            title = f"[router-conversation:{conv_id}] Synthesize Team Nexus results"
+            body = build_report_body(conversation, artifact_path)
+            cmd = COMPOSE_CMD + [
+                "run", "--rm", "atlas", "kanban", "create", title,
+                "--assignee", "atlas",
+                "--body", body,
+                "--idempotency-key", f"router-conversation:{conv_id}:report",
+                "--json",
+            ]
+            payload: dict[str, Any] = {"command": cmd, "artifact_path": str(artifact_path)}
+            try:
+                completed = run_cmd(cmd, cwd=str(REPO_ROOT), text=True, capture_output=True, check=False)
+                output = (completed.stdout or "") + (completed.stderr or "")
+                payload["returncode"] = completed.returncode
+                payload["output"] = output
+                task_id = parse_kanban_task_id(output)
+                if completed.returncode != 0 or not task_id:
+                    error = output.strip() or f"kanban command exited {completed.returncode}"
+                    conn.execute("UPDATE conversations SET report_error=?, updated_at=? WHERE id=?", (error, now_iso(), conv_id))
+                    _insert_event(conn, _conversation_event_id(conv_id), "report_task_failed", payload)
+                    continue
+            except Exception as exc:  # pragma: no cover - defensive
+                payload["error"] = str(exc)
+                conn.execute("UPDATE conversations SET report_error=?, updated_at=? WHERE id=?", (str(exc), now_iso(), conv_id))
+                _insert_event(conn, _conversation_event_id(conv_id), "report_task_failed", payload)
+                continue
+            conn.execute(
+                "UPDATE conversations SET report_task_id=?, report_error=NULL, updated_at=? WHERE id=? AND report_task_id IS NULL",
+                (task_id, now_iso(), conv_id),
+            )
+            _insert_event(conn, _conversation_event_id(conv_id), "report_task_created", {**payload, "kanban_task_id": task_id})
+            created.append(conv_id)
+    return created
+
+
+def supervisor_pass(
+    db: str | os.PathLike[str] | None = None,
+    kanban_db: str | os.PathLike[str] | None = None,
+    max_messages: int = 5,
+    create_reports: bool = False,
+    run_cmd: Any = None,
+) -> dict[str, list[str]]:
+    dispatched = dispatch_pending(db, max_messages=max_messages, run_cmd=run_cmd)
+    synced = sync_completions(db, kanban_db)
+    report_conversations = create_report_tasks(db, max_conversations=max_messages, run_cmd=run_cmd) if create_reports else []
+    return {"dispatched": dispatched, "synced": synced, "report_conversations": report_conversations}
+
+
+def run_supervisor(
+    db: str | os.PathLike[str] | None = None,
+    kanban_db: str | os.PathLike[str] | None = None,
+    interval: int = 30,
+    max_messages: int = 5,
+    create_reports: bool = False,
+    once: bool = False,
+    run_cmd: Any = None,
+) -> None:
+    import time
+    if int(interval) < 1:
+        raise RouterError("interval must be >= 1")
+    while True:
+        print_json(supervisor_pass(db, kanban_db, max_messages, create_reports, run_cmd))
+        if once:
+            return
+        time.sleep(int(interval))
 
 
 def print_json(payload: dict[str, Any], out: Any = None) -> None:
@@ -762,6 +1023,18 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("conversation")
     p.add_argument("--db")
     p.add_argument("conversation_id")
+
+    p = sub.add_parser("create-report-tasks")
+    p.add_argument("--db")
+    p.add_argument("--max", type=int, default=5, dest="max_conversations")
+
+    p = sub.add_parser("supervise")
+    p.add_argument("--db")
+    p.add_argument("--kanban-db")
+    p.add_argument("--interval", type=int, default=30)
+    p.add_argument("--max", type=int, default=5, dest="max_messages")
+    p.add_argument("--create-report-tasks", action="store_true")
+    p.add_argument("--once", action="store_true")
     return parser
 
 
@@ -797,6 +1070,15 @@ def main(argv: list[str] | None = None) -> int:
             print_json(router_doctor(args.db, args.kanban_db))
         elif args.command == "conversation":
             print_json(router_conversation(args.db, args.conversation_id))
+        elif args.command == "create-report-tasks":
+            ids = create_report_tasks(args.db, args.max_conversations)
+            for conv_id in ids:
+                print(conv_id)
+        elif args.command == "supervise":
+            if args.once:
+                print_json(supervisor_pass(args.db, args.kanban_db, args.max_messages, args.create_report_tasks))
+            else:
+                run_supervisor(args.db, args.kanban_db, args.interval, args.max_messages, args.create_report_tasks)
         return 0
     except (RouterError, sqlite3.Error, OSError) as exc:
         print(f"error: {exc}", file=sys.stderr)

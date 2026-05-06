@@ -277,6 +277,8 @@ def agent_volumes(slug: str, comments: bool = False) -> list[str]:
     lines += [
         "      - ./shared/kanban:/shared/kanban:rw",
         "      - ./shared/router:/shared/router:rw",
+        "      - ./shared/team-agents.yaml:/shared/team-agents.yaml:ro",
+        "      - ./scripts:/shared/scripts:ro",
         "      - ./shared/skills:/shared/skills:ro",
         "      - ./shared/mcp:/shared/mcp:ro",
     ]
