@@ -155,12 +155,14 @@ kanban-stats: ## Show shared Kanban task counts
 kanban-watch: ## Watch shared Kanban board events
 	$(COMPOSE) run --rm atlas kanban watch
 
-kanban-create: ## Create a mission-scoped Kanban task: make kanban-create TITLE='...' ASSIGNEE=vega CONVERSATION_ID=mission_slug BODY='...'
+kanban-create: ## Create a mission-scoped Kanban task: make kanban-create TITLE='...' ASSIGNEE=vega CONVERSATION_ID=mission_slug [DISCORD_THREAD_ID=123] BODY='...'
 	@if [ -z "$(TITLE)" ]; then echo "TITLE is required" >&2; exit 2; fi
 	@if [ -z "$(ASSIGNEE)" ]; then echo "ASSIGNEE is required, e.g. atlas" >&2; exit 2; fi
 	@if [ -z "$(CONVERSATION_ID)" ]; then echo "CONVERSATION_ID is required, e.g. mission_readiness_20260506" >&2; exit 2; fi
 	@if [ -z "$(BODY)" ]; then echo "BODY is required and must include bounded task instructions" >&2; exit 2; fi
-	@body="$$(printf 'conversation_id: %s\nfrom: atlas\nto: %s\nassignee: %s\n%s\n' "$(CONVERSATION_ID)" "$(ASSIGNEE)" "$(ASSIGNEE)" "$(BODY)")"; \
+	@thread_line=""; \
+		if [ -n "$(DISCORD_THREAD_ID)" ]; then thread_line="$$(printf 'discord_thread_id: %s\n' "$(DISCORD_THREAD_ID)")"; fi; \
+		body="$$(printf 'conversation_id: %s\n%sfrom: atlas\nto: %s\nassignee: %s\n%s\n' "$(CONVERSATION_ID)" "$$thread_line" "$(ASSIGNEE)" "$(ASSIGNEE)" "$(BODY)")"; \
 		$(COMPOSE) run --rm atlas kanban create "[mission:$(CONVERSATION_ID)] $(TITLE)" --assignee "$(ASSIGNEE)" --body "$$body" --json
 
 kanban-mission-contract-install: ## Install DB triggers rejecting Kanban tasks without mission markers

@@ -28,7 +28,10 @@ TERMINAL_STATUSES = {"done", "archived"}
 ATLAS_SYNTHESIS_SUFFIX = ":atlas-synthesis"
 MISSION_RE = re.compile(r"\bconversation_id\s*[:=]\s*([A-Za-z0-9_.:-]+)")
 MISSION_TITLE_RE = re.compile(r"\[mission:([^\]]+)\]")
+DISCORD_THREAD_RE = re.compile(r"\b(?:discord_)?thread_id\s*[:=]\s*([0-9]{15,25})")
+DISCORD_SNOWFLAKE_RE = re.compile(r"^[0-9]{15,25}$")
 MAX_MESSAGE_CHARS = 1800
+MAX_EMBED_DESCRIPTION_CHARS = 4096
 
 
 class RunResult:
@@ -104,6 +107,7 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
             kind TEXT NOT NULL,
             target TEXT NOT NULL DEFAULT 'discord:status',
             message TEXT NOT NULL,
+            payload_json TEXT,
             idempotency_key TEXT NOT NULL UNIQUE,
             status TEXT NOT NULL DEFAULT 'pending',
             created_at INTEGER NOT NULL,
@@ -114,6 +118,9 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_mission_outbox_conversation ON mission_notification_outbox(conversation_id);
         """
     )
+    columns = table_columns(conn, "mission_notification_outbox")
+    if "payload_json" not in columns:
+        conn.execute("ALTER TABLE mission_notification_outbox ADD COLUMN payload_json TEXT")
     conn.commit()
 
 
@@ -165,6 +172,75 @@ def extract_conversation_id(task: sqlite3.Row, payload: dict[str, Any]) -> Optio
     return None
 
 
+def extract_discord_thread_id(task: sqlite3.Row, payload: dict[str, Any], conversation_id: str) -> Optional[str]:
+    for key in ("discord_thread_id", "thread_id", "discord_thread"):
+        value = payload.get(key)
+        if isinstance(value, str) and DISCORD_SNOWFLAKE_RE.match(value.strip()):
+            return value.strip()
+        if isinstance(value, int):
+            text = str(value)
+            if DISCORD_SNOWFLAKE_RE.match(text):
+                return text
+    for source in (task["body"] or "", task["title"] or ""):
+        match = DISCORD_THREAD_RE.search(source)
+        if match:
+            return match.group(1)
+    if DISCORD_SNOWFLAKE_RE.match(conversation_id):
+        return conversation_id
+    return None
+
+
+def discord_target(channel: str = "status", thread_id: Optional[str] = None) -> str:
+    return f"discord:{channel}:{thread_id}" if thread_id else f"discord:{channel}"
+
+
+def parse_discord_target(target: str) -> tuple[str, Optional[str]]:
+    parts = target.split(":", 2)
+    if len(parts) < 2 or parts[0] != "discord":
+        return "status", None
+    channel = parts[1] or "status"
+    thread_id = parts[2] if len(parts) == 3 and DISCORD_SNOWFLAKE_RE.match(parts[2]) else None
+    return channel, thread_id
+
+
+def discord_embed_payload(*, title: str, description: str, conversation_id: str, task_id: Optional[str], kind: str) -> str:
+    trimmed_description = description.strip()
+    if len(trimmed_description) > MAX_EMBED_DESCRIPTION_CHARS:
+        trimmed_description = trimmed_description[: MAX_EMBED_DESCRIPTION_CHARS - 1] + "…"
+    fields = [
+        {"name": "Conversation", "value": conversation_id, "inline": True},
+        {"name": "Kind", "value": kind, "inline": True},
+    ]
+    if task_id:
+        fields.append({"name": "Kanban task", "value": task_id, "inline": True})
+    return json.dumps(
+        {
+            "content": None,
+            "embeds": [
+                {
+                    "title": title,
+                    "description": trimmed_description,
+                    "color": 0x7C5CFF,
+                    "fields": fields,
+                    "footer": {"text": "Team Nexus / Atlas"},
+                }
+            ],
+            "allowed_mentions": {"parse": []},
+        },
+        sort_keys=True,
+    )
+
+
+def final_response_payload(conversation_id: str, task_id: str, summary: str) -> str:
+    return discord_embed_payload(
+        title="Atlas final response",
+        description=summary,
+        conversation_id=conversation_id,
+        task_id=task_id,
+        kind="final_response_ready",
+    )
+
+
 def is_atlas_synthesis_task(task: sqlite3.Row, conversation_id: Optional[str] = None) -> bool:
     key = task["idempotency_key"] if "idempotency_key" in task.keys() else None
     if key and key.endswith(ATLAS_SYNTHESIS_SUFFIX):
@@ -201,6 +277,7 @@ def enqueue_outbox(
     idempotency_key: str,
     target: str = "discord:status",
     status: str = "pending",
+    payload_json: Optional[str] = None,
 ) -> bool:
     now = int(time.time())
     trimmed = message.strip()
@@ -209,10 +286,10 @@ def enqueue_outbox(
     cur = conn.execute(
         """
         INSERT OR IGNORE INTO mission_notification_outbox
-            (conversation_id, task_id, kind, target, message, idempotency_key, status, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (conversation_id, task_id, kind, target, message, payload_json, idempotency_key, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        (conversation_id, task_id, kind, target, trimmed, idempotency_key, status, now),
+        (conversation_id, task_id, kind, target, trimmed, payload_json, idempotency_key, status, now),
     )
     return cur.rowcount == 1
 
@@ -276,6 +353,16 @@ def mission_worker_summary_block(conn: sqlite3.Connection, conversation_id: str)
     return "\n".join(lines) if lines else "- No worker tasks found."
 
 
+def mission_discord_thread_id(conn: sqlite3.Connection, conversation_id: str) -> Optional[str]:
+    for task in mission_tasks(conn, conversation_id):
+        thread_id = extract_discord_thread_id(task, {}, conversation_id)
+        if thread_id:
+            return thread_id
+    if DISCORD_SNOWFLAKE_RE.match(conversation_id):
+        return conversation_id
+    return None
+
+
 def synthesis_task_exists(conn: sqlite3.Connection, conversation_id: str) -> bool:
     row = conn.execute(
         "SELECT id FROM tasks WHERE idempotency_key = ? LIMIT 1",
@@ -292,8 +379,10 @@ def create_atlas_synthesis_task(conn: sqlite3.Connection, conversation_id: str) 
     title = f"[mission:{conversation_id}] synthesize final answer"
     artifact_hint = f"/shared/project/artifacts/missions/{conversation_id}/"
     worker_summaries = mission_worker_summary_block(conn, conversation_id)
+    thread_id = mission_discord_thread_id(conn, conversation_id)
+    discord_thread_line = f"discord_thread_id: {thread_id}\n" if thread_id else ""
     body = f"""conversation_id: {conversation_id}
-assignee: atlas
+{discord_thread_line}assignee: atlas
 objective: Synthesize the final user-facing answer for this mission.
 
 The notifier created this task because all non-Atlas worker tasks for the mission are terminal.
@@ -343,6 +432,7 @@ def handle_completed_event(conn: sqlite3.Connection, event: sqlite3.Row, task: s
     result = RunResult()
     summary = event_summary(task, payload)
     if is_atlas_synthesis_task(task, conversation_id):
+        thread_id = extract_discord_thread_id(task, payload, conversation_id)
         message = f"Final answer ready for {conversation_id}: {summary}"
         if enqueue_outbox(
             conn,
@@ -351,6 +441,8 @@ def handle_completed_event(conn: sqlite3.Connection, event: sqlite3.Row, task: s
             kind="final_response_ready",
             message=message,
             idempotency_key=f"final:{conversation_id}:{event['task_id']}:{event['id']}",
+            target=discord_target("status", thread_id),
+            payload_json=final_response_payload(conversation_id, event["task_id"], summary),
         ):
             result.outbox_rows += 1
             result.final_responses_ready += 1
@@ -445,7 +537,14 @@ def deliver_pending(conn: sqlite3.Connection, *, dry_run: bool = False, limit: i
     rows = pending_outbox(conn, limit=limit)
     delivered = 0
     for row in rows:
-        cmd = [sys.executable, str(DISCORD_STATUS_SCRIPT), "--message", row["message"]]
+        channel, thread_id = parse_discord_target(row["target"])
+        cmd = [sys.executable, str(DISCORD_STATUS_SCRIPT), "--channel", channel]
+        if row["payload_json"]:
+            cmd.extend(["--payload-json", row["payload_json"]])
+        else:
+            cmd.extend(["--message", row["message"]])
+        if thread_id:
+            cmd.extend(["--thread-id", thread_id])
         if dry_run:
             cmd.append("--dry-run")
         try:

@@ -218,6 +218,8 @@ Required body shape / sample payload:
 
 ```text
 conversation_id: mission_<slug>_<yyyymmdd>
+# Optional, but required for thread-specific Discord delivery when conversation_id is not already the Discord thread snowflake:
+discord_thread_id: <discord-thread-or-forum-post-id>
 from: atlas
 to: <registered-agent-slug>
 assignee: <registered-agent-slug>
@@ -299,6 +301,8 @@ make kanban-notifier-dry-run
 ```
 
 Deliver pending Discord-targeted outbox rows through `scripts/discord-post-status.py` and `DISCORD_STATUS_WEBHOOK_URL`. Internal Atlas handoff rows are not posted to Discord; they remain queued/auditable in `mission_notification_outbox`, while the actual Atlas notification is the ready synthesis task assigned to Atlas.
+
+Final Atlas responses are delivered as structured Discord webhook payloads (`embeds` plus `allowed_mentions: {parse: []}`), not raw free-form content. If the mission metadata includes `discord_thread_id: <snowflake>`, or the `conversation_id` itself is a Discord thread/forum-post snowflake, the notifier stores the outbox target as `discord:status:<thread_id>` and delivery calls Discord's webhook `thread_id` parameter so the final answer lands in the original thread.
 
 ```bash
 make kanban-notifier-deliver

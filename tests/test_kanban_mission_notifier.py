@@ -211,7 +211,7 @@ class KanbanMissionNotifierTests(unittest.TestCase):
             self.assertEqual(atlas_count, 0)
             self.assertEqual(outbox_kinds, [("human_update", "atlas:mission", "queued")])
 
-    def test_completed_atlas_synthesis_creates_final_response_notification(self):
+    def test_completed_atlas_synthesis_creates_threaded_structured_final_response_notification(self):
         notifier = load_notifier_module()
         with tempfile.TemporaryDirectory() as td:
             db = Path(td) / "kanban.db"
@@ -222,9 +222,11 @@ class KanbanMissionNotifierTests(unittest.TestCase):
                     "t_synth",
                     assignee="atlas",
                     status="done",
-                    title="[mission:mission_demo_20260506] synthesize final answer",
+                    conversation_id="1501451632569880636",
+                    title="[mission:1501451632569880636] synthesize final answer",
+                    body="conversation_id: 1501451632569880636\ndiscord_thread_id: 1501451632569880636\nassignee: atlas",
                     result="Final answer for the user.",
-                    idempotency_key="mission:mission_demo_20260506:atlas-synthesis",
+                    idempotency_key="mission:1501451632569880636:atlas-synthesis",
                 )
                 append_event(conn, "t_synth", "completed", '{"summary":"Final answer for the user."}')
                 conn.commit()
@@ -236,10 +238,15 @@ class KanbanMissionNotifierTests(unittest.TestCase):
             self.assertEqual(second.final_responses_ready, 0)
             with sqlite3.connect(db) as conn:
                 rows = conn.execute(
-                    "SELECT conversation_id, task_id, kind, message FROM mission_notification_outbox"
+                    "SELECT conversation_id, task_id, kind, target, message, payload_json FROM mission_notification_outbox"
                 ).fetchall()
-            self.assertEqual(rows[0][0:3], ("mission_demo_20260506", "t_synth", "final_response_ready"))
-            self.assertIn("Final answer for the user", rows[0][3])
+            self.assertEqual(rows[0][0:4], ("1501451632569880636", "t_synth", "final_response_ready", "discord:status:1501451632569880636"))
+            self.assertIn("Final answer for the user", rows[0][4])
+            self.assertIsNotNone(rows[0][5])
+            payload = __import__("json").loads(rows[0][5])
+            self.assertEqual(payload["allowed_mentions"], {"parse": []})
+            self.assertEqual(payload["embeds"][0]["title"], "Atlas final response")
+            self.assertIn("Final answer for the user", payload["embeds"][0]["description"])
 
 
 if __name__ == "__main__":
