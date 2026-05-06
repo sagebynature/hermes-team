@@ -15,6 +15,7 @@ def test_atlas_treats_multi_agent_introduction_as_durable_dispatch():
     assert "Vega, Scout, Forge, Lumen, Blitz, Ledger, and Sentinel" in agents_text
     assert "role, primary expertise, and what they bring to Team Nexus" in agents_text
     assert "that is execution approval" in soul_text
+    assert "Never write first-person content pretending to be Vega, Scout, Forge, Lumen, Blitz, Ledger, or Sentinel" in agents_text
 
 
 def test_atlas_discord_mentions_are_not_claimed_as_dispatch():
