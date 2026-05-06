@@ -50,7 +50,7 @@ Before multi-agent execution, produce a route with:
 
 Kanban mission / notifier contract:
 
-- Multi-agent mission task titles should include `[mission:<conversation_id>]` and task bodies should include `conversation_id: <conversation_id>` so event-driven progress notification can work without Atlas scanning the board.
+- Every Kanban task MUST be mission-scoped: title includes `[mission:<conversation_id>]` and body includes `conversation_id: <conversation_id>`. This is not optional; the DB mission-contract trigger rejects unscoped tasks so notifier fan-in remains deterministic.
 - Worker task bodies should include objective, constraints, expected output, dependency context, and artifact path. Keep deliverables concise and synthesis-ready.
 - Do not poll or periodically scan the whole Kanban board to keep the user updated. A deterministic notifier tails Kanban events and handles blocker/progress/final-ready status updates.
 - If you receive an Atlas synthesis Kanban task, synthesize from completed worker task results, comments, and artifacts. Do not invent missing specialist conclusions.

@@ -155,10 +155,25 @@ kanban-stats: ## Show shared Kanban task counts
 kanban-watch: ## Watch shared Kanban board events
 	$(COMPOSE) run --rm atlas kanban watch
 
-kanban-create: ## Create a shared Kanban task: make kanban-create TITLE='...' ASSIGNEE=atlas
+kanban-create: ## Create a mission-scoped Kanban task: make kanban-create TITLE='...' ASSIGNEE=vega CONVERSATION_ID=mission_slug BODY='...'
 	@if [ -z "$(TITLE)" ]; then echo "TITLE is required" >&2; exit 2; fi
 	@if [ -z "$(ASSIGNEE)" ]; then echo "ASSIGNEE is required, e.g. atlas" >&2; exit 2; fi
-	$(COMPOSE) run --rm atlas kanban create "$(TITLE)" --assignee "$(ASSIGNEE)"
+	@if [ -z "$(CONVERSATION_ID)" ]; then echo "CONVERSATION_ID is required, e.g. mission_readiness_20260506" >&2; exit 2; fi
+	@if [ -z "$(BODY)" ]; then echo "BODY is required and must include bounded task instructions" >&2; exit 2; fi
+	@body="$$(printf 'conversation_id: %s\nfrom: atlas\nto: %s\nassignee: %s\n%s\n' "$(CONVERSATION_ID)" "$(ASSIGNEE)" "$(ASSIGNEE)" "$(BODY)")"; \
+		$(COMPOSE) run --rm atlas kanban create "[mission:$(CONVERSATION_ID)] $(TITLE)" --assignee "$(ASSIGNEE)" --body "$$body" --json
+
+kanban-mission-contract-install: ## Install DB triggers rejecting Kanban tasks without mission markers
+	python3 scripts/kanban-mission-contract.py install
+
+kanban-mission-contract-uninstall: ## Remove DB mission-contract triggers
+	python3 scripts/kanban-mission-contract.py uninstall
+
+kanban-mission-contract-check: ## Audit existing Kanban tasks for missing mission markers
+	python3 scripts/kanban-mission-contract.py check
+
+kanban-mission-payload-sample: ## Print a valid deterministic Kanban mission task payload
+	python3 scripts/kanban-mission-contract.py sample-payload
 
 kanban-link: ## Link parent->child dependency: make kanban-link PARENT=K... CHILD=K...
 	@if [ -z "$(PARENT)" ]; then echo "PARENT is required" >&2; exit 2; fi

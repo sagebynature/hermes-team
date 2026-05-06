@@ -202,15 +202,84 @@ shared/kanban/dispatcher.log
 
 Do not make Atlas periodically scan the whole board. Team Nexus uses Kanban events as the progress signal. `scripts/kanban-mission-notifier.py` tails new `task_events` rows by cursor, writes idempotent rows to `mission_notification_outbox`, and creates one Atlas synthesis task when all worker tasks in a mission are terminal.
 
-A mission task must include a conversation ID in its title or body:
+A mission task must include a conversation ID in both its title and body. This is a hard Team Nexus contract, not a style preference: the optional DB enforcement trigger rejects new Kanban tasks that cannot be associated with a notifier mission.
+
+Required title shape:
 
 ```text
 [mission:mission_<slug>_<yyyymmdd>] <short objective>
+```
 
+Required body shape / sample payload:
+
+```text
 conversation_id: mission_<slug>_<yyyymmdd>
-objective: ...
-expected_output: ...
+from: atlas
+to: <registered-agent-slug>
+assignee: <registered-agent-slug>
+objective: <bounded worker objective>
+constraints:
+- <constraint 1>
+- <constraint 2>
+expected_output: <concise, synthesis-ready deliverable>
 artifact_path: /shared/project/artifacts/missions/mission_<slug>_<yyyymmdd>/<agent>.md
+reply_to: atlas
+ttl: 1
+```
+
+A concrete readiness-check example:
+
+```text
+Title:
+[mission:mission_readiness_20260506] Readiness Check: Vega
+
+Body:
+conversation_id: mission_readiness_20260506
+from: atlas
+to: vega
+assignee: vega
+objective: Perform a one-paragraph readiness check for Sage.
+constraints:
+- Keep the response concise.
+- Do not invent completed work or hidden context.
+expected_output: One paragraph covering responsibilities, one risk being watched, and one way Vega can help Sage this week.
+artifact_path: /shared/project/artifacts/missions/mission_readiness_20260506/vega.md
+reply_to: atlas
+ttl: 1
+```
+
+Print this sample from the repo with:
+
+```bash
+make kanban-mission-payload-sample
+```
+
+Install deterministic DB enforcement with:
+
+```bash
+make kanban-mission-contract-install
+```
+
+Audit existing rows with:
+
+```bash
+make kanban-mission-contract-check
+```
+
+Use the guarded Make target for operator-created tasks:
+
+```bash
+make kanban-create \
+  CONVERSATION_ID=mission_readiness_20260506 \
+  ASSIGNEE=vega \
+  TITLE='Readiness Check: Vega' \
+  BODY='objective: Perform a one-paragraph readiness check for Sage.
+constraints:
+- Keep it concise.
+expected_output: responsibilities, one risk, one way to help this week
+artifact_path: /shared/project/artifacts/missions/mission_readiness_20260506/vega.md
+reply_to: atlas
+ttl: 1'
 ```
 
 Process newly appended events once:

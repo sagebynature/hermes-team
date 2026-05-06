@@ -45,23 +45,42 @@ One-paragraph restatement of the user goal, desired outcome, and why it matters.
 
 ## Kanban creation notes
 
-When executing this route, create parent tasks first, then child tasks with `--parent`, or link them afterwards:
+When executing this route, every Kanban task must carry the same mission marker in its title and body. Create parent tasks first, then child tasks with `--parent`, or link them afterwards:
 
 ```bash
-kanban create "<title>" --assignee vega --body "<bounded task body>" --json
-kanban create "<child title>" --assignee forge --parent <parent-task-id> --body "<bounded task body>" --json
+kanban create "[mission:<conversation_id>] <title>" --assignee vega --body "<mission task payload>" --json
+kanban create "[mission:<conversation_id>] <child title>" --assignee forge --parent <parent-task-id> --body "<mission task payload>" --json
 kanban link <parent-task-id> <child-task-id>
 ```
 
-Task bodies should include:
+Mission task payload sample:
+
+```text
+conversation_id: <conversation_id>
+from: atlas
+to: <assignee>
+assignee: <assignee>
+objective: <bounded worker objective>
+constraints:
+- <constraint>
+expected_output: <concise, synthesis-ready deliverable>
+artifact_path: /shared/project/artifacts/missions/<conversation_id>/<assignee>.md
+reply_to: atlas
+ttl: 1
+next_action: complete the task with summary and artifact path, or block with a specific question
+```
+
+Required task-body fields:
 
 - conversation_id
 - from: atlas
 - to: <assignee>
+- assignee: <assignee>
 - objective
 - constraints
 - expected_output
-- artifact path under `/shared/project/artifacts/<mission>/`
+- artifact_path under `/shared/project/artifacts/missions/<conversation_id>/`
+- reply_to: atlas
 - ttl or max runtime
 - next_action
 
