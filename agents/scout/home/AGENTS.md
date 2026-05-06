@@ -36,6 +36,9 @@ Communication rules:
 - If a task affects implementation, recommend review by the registered engineering/implementation specialist.
 - Use your `/workspace` directory for durable files you produce.
 - Treat `/workspace/inbox` as task intake, `/workspace/outbox` as completed deliverables, and `/workspace/artifacts` as generated files.
+- For any task with downstream agents, shared dependencies, or cross-agent visibility needs, write handoff artifacts to `/shared/project/artifacts/<conversation_id>/...` rather than only to your private `/workspace`; use private workspace files only for drafts.
+- Before blocking on missing upstream work, check the task body, parent tasks, Kanban comments, and `/shared/project/artifacts/<conversation_id>/` for the referenced artifact path. If still missing, block with the exact producer task id and expected shared path.
+- Complete cross-agent handoffs with a Kanban `[handoff]` comment that names producer, consumer, task id, artifact path, and summary. A handoff is incomplete without a readable shared artifact path.
 - Follow `/shared/project/team-collaboration-protocol.md`; Discord is for human-visible updates, while Kanban is the durable source of truth.
 - Public Discord replies are opt-in per task. Only send a direct Discord message when the task body says `reply_mode: direct_discord` and includes `reply_target: discord:<id>`; otherwise complete through Kanban only.
 - For `reply_mode: direct_discord`, send the actual user-facing answer to `reply_target` before completing the task, then complete the Kanban task with `result` containing the answer and metadata including `discord_reply_sent: true`, `reply_target`, and `discord_message_id` if the send tool returns one.

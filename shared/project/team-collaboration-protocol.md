@@ -60,9 +60,16 @@ When user asks Atlas to ask a named registered specialist for that specialist's 
 
 ### Specialist handoff
 
-A specialist completes a bounded task, adds a Kanban `[handoff]` comment, and writes durable artifacts to `/workspace/outbox` or `/workspace/artifacts` for private work. Use `/shared/project/artifacts` for deliberate cross-agent handoff artifacts that downstream specialists must read.
+A specialist completes a bounded task, adds a Kanban `[handoff]` comment, and writes durable artifacts to `/workspace/outbox` or `/workspace/artifacts` for private work. Use `/shared/project/artifacts/<conversation_id>/...` for every artifact that downstream specialists, Atlas synthesis, or reviewers must read.
 
-A cross-agent handoff is complete only when the Kanban comment points at the durable artifact path. Do not rely on Discord text, raw transcripts, or private workspace files as the handoff record.
+A cross-agent handoff is complete only when the Kanban comment points at the durable shared artifact path. Do not rely on Discord text, raw transcripts, private workspace files, or prose-only task completion as the handoff record.
+
+Artifact visibility contract:
+
+- Producer tasks must create the expected files in `/shared/project/artifacts/<conversation_id>/` before marking the task done when any downstream task depends on those files.
+- Producer tasks must add a compact `[handoff]` comment with producer, consumer, source task id, artifact path, summary, and next reviewer/consumer.
+- Consumer tasks must inspect parent task bodies/results/comments and `/shared/project/artifacts/<conversation_id>/` before blocking on missing files.
+- If an artifact is missing, the blocker must name the upstream producer task id, expected path, and exact artifact type needed; Atlas should route a focused repair task to the producer rather than asking the consumer to guess or recreate hidden work.
 
 ### Review gate
 
