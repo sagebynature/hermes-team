@@ -19,7 +19,7 @@ ifneq ($(strip $(SERVER)),)
 endif
 
 .PHONY: help build up down restart ps logs shell doctor doctor-all compose-config workspace-init \
-	generate check-generated validate preflight profile-validate registry-list registry-validate registry-next-ports validate-plugins dashboards-up dashboards-restart \
+	generate check-generated validate preflight profile-validate profile-render-dry-run profile-render-docker-dry-run registry-list registry-validate registry-next-ports validate-plugins dashboards-up dashboards-restart \
 	agent-add agent-disable agent-archive \
 	kanban-init kanban-list kanban-stats kanban-watch kanban-create kanban-link kanban-dispatch \
 	kanban-dispatcher-once kanban-dispatcher-daemon kanban-dispatcher-stop kanban-dispatcher-logs \
@@ -102,6 +102,12 @@ validate: ## Validate registry, generated files, configs, compose, nginx, plugin
 
 profile-validate: ## Validate profile-driven Team Nexus spec and manifests
 	python3 scripts/validate-profile-spec.py
+
+profile-render-dry-run: ## Preview host profile files rendered from profile specs
+	python3 scripts/render-profile-spec.py --mode host
+
+profile-render-docker-dry-run: ## Preview Docker profile files rendered from profile specs
+	python3 scripts/render-profile-spec.py --mode docker
 
 preflight: ## Run generation, validation, compose config, and drift check
 	./scripts/preflight.sh

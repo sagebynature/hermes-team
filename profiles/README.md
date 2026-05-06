@@ -11,6 +11,7 @@ Related files:
 
 - `shared/config/profile-spec-schema.md` — lightweight schema contract.
 - `scripts/validate-profile-spec.py` — structural validator used by `make profile-validate`.
+- `scripts/render-profile-spec.py` — dry-run/staging renderer for SOUL.md, AGENTS.md, and config.yaml.
 - `shared/skills/manifests/` — shared base and role-specific skill manifests.
 
 Ownership rules:

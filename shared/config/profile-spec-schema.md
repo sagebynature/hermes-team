@@ -65,3 +65,25 @@ or directly:
 ```bash
 python3 scripts/validate-profile-spec.py profiles/team-nexus.profiles.yaml
 ```
+
+## Render dry-run command
+
+Preview generated host profile files without writing profile homes:
+
+```bash
+make profile-render-dry-run
+```
+
+Preview Docker-mode path substitutions:
+
+```bash
+make profile-render-docker-dry-run
+```
+
+Materializing files requires an explicit staging directory:
+
+```bash
+python3 scripts/render-profile-spec.py --mode host --write --output-dir /tmp/team-nexus-profile-render
+```
+
+The renderer intentionally refuses to write directly into runtime-owned Hermes homes.
