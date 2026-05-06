@@ -8,6 +8,7 @@ credential_pool_strategies: {}
 toolsets:
   - hermes-cli
   - kanban
+  - spotify
 agent:
   max_turns: 90
   gateway_timeout: 1800
@@ -377,9 +378,9 @@ plugins:
   enabled:
     - spotify
   disabled: []
-platform_toolsets:
-  cli:
-    - spotify
+# CLI tool exposure is governed by root `toolsets` so Atlas can use
+# hermes-cli self-learning tools (memory, skills, and session_search).
+# Plugin enablement remains configured under `plugins.enabled` above.
 
 # ── Fallback Model ────────────────────────────────────────────────────
 # Automatic provider failover when primary is unavailable.
