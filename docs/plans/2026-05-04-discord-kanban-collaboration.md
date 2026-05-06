@@ -1,5 +1,7 @@
 # Discord + Kanban Agent Collaboration Implementation Plan
 
+> Historical/superseded by ADR-0014 where it references one Compose service per agent, `shared/team-agents.yaml`, or custom Compose-aware dispatch scripts. Current operations use the profile-driven runtime and Atlas-hosted native Kanban dispatch.
+
 > For Hermes: Use subagent-driven-development skill to implement this plan task-by-task.
 
 Goal: Make Team Nexus feel collaborative in Discord while keeping Kanban as the source of truth for delegation, status, dependencies, and handoffs.

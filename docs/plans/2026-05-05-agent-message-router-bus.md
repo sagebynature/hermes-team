@@ -1,5 +1,7 @@
 # Team Nexus Agent Message Router / Bus Implementation Plan
 
+> Historical/superseded by ADR-0014 where it references `shared/team-agents.yaml`, per-agent Compose services, or a custom Compose dispatcher. Current Team Nexus routing should use Atlas plus native/profile-driven Kanban evidence in `profiles/team-nexus.profiles.yaml` and `docker-compose.profiles.yml`.
+
 > **For Hermes:** Use subagent-driven-development skill to implement this plan task-by-task.
 
 **Goal:** Add a bounded, inspectable message router/bus for Team Nexus agent-to-agent coordination without letting Discord bot chatter become the coordination substrate.

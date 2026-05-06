@@ -1,5 +1,7 @@
 # Atlas Deep Interview + Mission Routing Implementation Plan
 
+> Historical/superseded by ADR-0014 where it references deleted dispatcher/setup scripts or per-agent Compose runtime paths. Current mission routing should use the profile-driven Team Nexus runtime.
+
 > **For Hermes:** Use subagent-driven-development skill to implement this plan task-by-task.
 
 **Goal:** Improve Atlas so ambiguous Discord missions start with a short clarification interview, then become a dependency-aware mission route that uses the full Team Nexus roster intentionally.

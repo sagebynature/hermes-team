@@ -1,5 +1,7 @@
 # Registry-Driven Team Nexus Operations Implementation Plan
 
+> Historical/superseded by ADR-0014: current operations use `profiles/team-nexus.profiles.yaml`, `profiles/<profile>/`, `shared/profile/AGENTS.base.md`, and `docker-compose.profiles.yml`. Commands and files in this plan that reference registry-generated per-agent Compose, nginx fan-out, or lifecycle Make targets are retained only as implementation history.
+
 > **For Hermes:** Use subagent-driven-development skill to implement this plan task-by-task.
 
 **Goal:** Make Team Nexus easier to run, safer to modify, and resistant to roster/config drift by making `shared/team-agents.yaml` the source of truth for agent services, dashboards, documentation, validation, and agent lifecycle commands.

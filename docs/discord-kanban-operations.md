@@ -91,29 +91,23 @@ Preview one native dispatch pass without worker launch:
 make kanban-dispatcher-once DRY_RUN=1
 ```
 
-Run one dispatch pass:
+Real dispatch is hosted by `atlas-gateway`; start or stop it with the normal runtime commands:
 
 ```bash
-make kanban-dispatcher-once
+make up
+make down
 ```
 
-Start/stop the gateway-hosted dispatcher runtime:
+Follow dispatcher activity in gateway logs:
 
 ```bash
-make kanban-dispatcher-daemon
-make kanban-dispatcher-stop
+make logs SERVICE=atlas-gateway
 ```
 
-Follow logs:
+`MAX_TASKS` controls the dry-run preview cap:
 
 ```bash
-make kanban-dispatcher-logs
-```
-
-`KANBAN_DISPATCH_MAX_TASKS` controls the one-shot cap:
-
-```bash
-MAX_TASKS=3 make kanban-dispatcher-once
+MAX_TASKS=3 make kanban-dispatcher-once DRY_RUN=1
 ```
 
 ## Mission task contract

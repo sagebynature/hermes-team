@@ -1,6 +1,6 @@
 # ADR-0014: Big-bang refactor to Hermes-native profile-driven Team Nexus
 
-Status: Proposed
+Status: Accepted
 Date: 2026-05-06
 Supersedes: ADR-0011, ADR-0012, and per-agent-runtime portions of ADR-0001/0006 where they conflict with this decision.
 

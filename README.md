@@ -94,7 +94,8 @@ Canonical input:
 
 ```text
 profiles/team-nexus.profiles.yaml
-profiles/templates/
+profiles/<profile>/{SOUL.md,AGENTS.md,config.yaml}
+shared/profile/AGENTS.base.md
 shared/skills/manifests/
 ```
 

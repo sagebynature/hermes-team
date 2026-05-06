@@ -1,6 +1,6 @@
 # ADR-0011: Treat dedicated agent runtimes as Team Nexus mode, not the default lightweight pattern
 
-Status: Accepted
+Status: Superseded by ADR-0014
 
 Date: 2026-05-05
 

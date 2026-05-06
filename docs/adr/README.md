@@ -4,19 +4,19 @@ Team Nexus decisions are recorded here as ADRs.
 
 ## Index
 
-- [ADR-0001: Run one Docker Compose service per Hermes agent](0001-one-compose-service-per-agent.md)
+- [ADR-0001: Run one Docker Compose service per Hermes agent](0001-one-compose-service-per-agent.md) (superseded by ADR-0014)
 - [ADR-0002: Keep shared project context read-only and agent workspaces isolated](0002-isolated-workspaces-shared-readonly-context.md)
 - [ADR-0003: Use Atlas as the default coordinator and synthesizer](0003-atlas-default-coordinator.md)
 - [ADR-0004: Use Discord as the human mission room, not the source of truth](0004-discord-human-mission-room.md)
 - [ADR-0005: Use Hermes Kanban as the durable collaboration source of truth](0005-kanban-source-of-truth.md)
-- [ADR-0006: Use a Compose-aware Kanban dispatcher instead of embedded Hermes profile dispatch](0006-compose-aware-kanban-dispatcher.md)
-- [ADR-0007: Keep automatic dispatch explicit and run it as a Compose service](0007-explicit-dispatcher-startup.md)
+- [ADR-0006: Use a Compose-aware Kanban dispatcher instead of embedded Hermes profile dispatch](0006-compose-aware-kanban-dispatcher.md) (superseded by ADR-0014)
+- [ADR-0007: Keep automatic dispatch explicit and run it as a Compose service](0007-explicit-dispatcher-startup.md) (superseded by ADR-0014)
 - [ADR-0008: Load shared secrets from the repo-root .env](0008-shared-repo-root-env.md)
 - [ADR-0009: Use shared read-only skills and MCP registries with agent-local extensions](0009-shared-readonly-skills-and-mcp.md)
 - [ADR-0010: Mirror only compact status and handoffs to Discord](0010-compact-discord-status-and-handoffs.md)
-- [ADR-0011: Treat dedicated agent runtimes as Team Nexus mode, not the default lightweight pattern](0011-dedicated-agent-runtimes-vs-profiles.md)
-- [ADR-0012: Use registry-driven agent roster and generated runtime artifacts](0012-registry-driven-agent-roster-and-generated-runtime-artifacts.md)
-- [ADR-0014: Big-bang refactor to Hermes-native profile-driven Team Nexus](0014-profile-driven-team-nexus.md)
+- [ADR-0011: Treat dedicated agent runtimes as Team Nexus mode, not the default lightweight pattern](0011-dedicated-agent-runtimes-vs-profiles.md) (superseded by ADR-0014)
+- [ADR-0012: Use registry-driven agent roster and generated runtime artifacts](0012-registry-driven-agent-roster-and-generated-runtime-artifacts.md) (superseded by ADR-0014)
+- [ADR-0014: Big-bang refactor to Hermes-native profile-driven Team Nexus](0014-profile-driven-team-nexus.md) (accepted)
 
 ## ADR format
 

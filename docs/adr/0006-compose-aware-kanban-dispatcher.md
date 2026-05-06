@@ -1,6 +1,6 @@
 # ADR-0006: Use a Compose-aware Kanban dispatcher instead of embedded Hermes profile dispatch
 
-Status: Accepted
+Status: Superseded by ADR-0014
 
 Date: 2026-05-04
 

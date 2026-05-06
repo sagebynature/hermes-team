@@ -1,10 +1,12 @@
 # ADR-0007: Keep automatic dispatch explicit and run it as a Compose service
 
-Status: Accepted
+Status: Superseded by ADR-0014
 
 Date: 2026-05-04
 
-Updated: 2026-05-04
+Updated: 2026-05-06
+
+Supersession note: Team Nexus no longer runs a separate Compose-aware dispatcher service for real work. The current profile-driven runtime hosts native dispatch in `atlas-gateway`; `kanban-dispatcher` is only an optional dry-run/preview function service.
 
 ## Context
 

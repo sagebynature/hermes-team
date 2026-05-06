@@ -30,7 +30,7 @@ make kanban-init
 Notes:
 
 - `profiles/team-nexus.profiles.yaml` is the source of truth for the active profile roster.
-- `profiles/templates/` renders `SOUL.md`, `AGENTS.md`, and `config.yaml` into `runtime/hermes/profiles/<profile>/` for Docker mode.
+- `profiles/<profile>/` contains the source `SOUL.md`, `AGENTS.md`, and `config.yaml`; the renderer copies `SOUL.md`/`config.yaml` and composes generated `AGENTS.md` from `shared/profile/AGENTS.base.md` plus the profile fragment.
 - `runtime/` is ignored because it may contain `.env`, auth, sessions, memory, logs, checkpoints, and Kanban state.
 - On Linux, prefer Makefile targets so `TEAM_NEXUS_UID=$(id -u)` and `TEAM_NEXUS_GID=$(id -g)` are exported automatically.
 
@@ -111,15 +111,15 @@ Dispatcher checks:
 
 ```bash
 make kanban-dispatcher-once DRY_RUN=1
-make kanban-dispatcher-once
-make kanban-dispatcher-logs
+MAX_TASKS=3 make kanban-dispatcher-once DRY_RUN=1
+make logs SERVICE=atlas-gateway
 ```
 
-The daemon helper starts the normal Atlas gateway runtime:
+Real dispatch is hosted by `atlas-gateway`; start/stop it with the normal runtime commands:
 
 ```bash
-make kanban-dispatcher-daemon
-make kanban-dispatcher-stop
+make up
+make down
 ```
 
 ## 6. MCP operations
@@ -146,7 +146,8 @@ Profile identity, role instructions, gateway settings, skills, checkpoints, and 
 
 ```text
 profiles/team-nexus.profiles.yaml
-profiles/templates/
+profiles/<profile>/{SOUL.md,AGENTS.md,config.yaml}
+shared/profile/AGENTS.base.md
 shared/skills/manifests/
 ```
 
@@ -197,7 +198,7 @@ make logs SERVICE=dashboard
 Dispatcher logs:
 
 ```bash
-make kanban-dispatcher-logs
+make logs SERVICE=atlas-gateway
 ```
 
 Doctor checks:
@@ -230,6 +231,6 @@ The old registry-driven runtime has been superseded by ADR-0014. The following a
 - `generated/team-agents.mk`
 - `docker-compose.yml` plus generated per-agent Compose fragments
 - Nginx dashboard fan-out through `nginx/dashboards.conf`
-- `make agent-add`, `make agent-disable`, and `make agent-archive`
+- Removed agent lifecycle targets (`agent-add`, `agent-disable`, `agent-archive`)
 
 Historical plans/ADRs may still mention these for context, but current operations should use the profile-driven commands above.

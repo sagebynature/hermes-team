@@ -20,8 +20,8 @@ endif
 
 .PHONY: help build up down restart ps logs shell doctor doctor-all compose-config validate preflight \
 	profile-validate profile-render-dry-run profile-render-docker-dry-run profile-runtime-stage profile-compose-config \
-	workspace-init kanban-init kanban-list kanban-stats kanban-watch kanban-create kanban-link kanban-dispatch \
-	kanban-dispatcher-once kanban-dispatcher-daemon kanban-dispatcher-stop kanban-dispatcher-logs \
+	workspace-init kanban-init kanban-list kanban-stats kanban-watch kanban-create kanban-link \
+	kanban-dispatcher-once \
 	kanban-mission-contract-install kanban-mission-contract-uninstall kanban-mission-contract-check kanban-mission-payload-sample \
 	kanban-notifier-once kanban-notifier-deliver kanban-notifier-dry-run discord-status-dry-run \
 	mcp-list mcp-list-all mcp-test mcp-remove mcp-add-command mcp-add-url \
@@ -42,11 +42,9 @@ build: ## Build the custom Hermes team image once; all profiles share team-nexus
 
 up: profile-runtime-stage ## Start Atlas gateway and dashboard on the profile-driven runtime
 	$(COMPOSE) up -d
-# 	$(COMPOSE) --profile dashboard up -d atlas-gateway dashboard
 
 down: ## Stop profile-driven runtime services
 	$(COMPOSE) down
-# 	$(COMPOSE) --profile dashboard --profile admin --profile dispatcher-once down
 
 restart: profile-runtime-stage ## Restart Atlas gateway and dashboard on the profile-driven runtime
 	$(COMPOSE) up -d --force-recreate
@@ -147,9 +145,6 @@ kanban-mission-contract-check: ## Audit existing Kanban tasks for missing missio
 kanban-mission-payload-sample: ## Print a valid deterministic Kanban mission task payload
 	python3 scripts/kanban-mission-contract.py sample-payload
 
-kanban-dispatch: ## Native dispatcher is embedded in atlas-gateway; start/restart the gateway instead
-	$(MAKE) up
-
 kanban-dispatcher-once: profile-runtime-stage ## Preview dispatcher only; MAX_TASKS controls cap; set DRY_RUN=1
 	@if [ "$(DRY_RUN)" = "1" ]; then \
 		$(COMPOSE) --profile dispatcher-once run --rm kanban-dispatcher kanban dispatch --dry-run --max $${MAX_TASKS:-1}; \
@@ -157,15 +152,6 @@ kanban-dispatcher-once: profile-runtime-stage ## Preview dispatcher only; MAX_TA
 		echo "Refusing real one-shot dispatch: Atlas gateway hosts the durable dispatcher. Use 'make up' or DRY_RUN=1 for preview." >&2; \
 		exit 2; \
 	fi
-
-kanban-dispatcher-daemon: ## Native dispatcher is embedded in atlas-gateway; start the gateway instead
-	$(MAKE) up
-
-kanban-dispatcher-stop: ## Stop the Atlas gateway that hosts native dispatch
-	$(COMPOSE) stop atlas-gateway
-
-kanban-dispatcher-logs: ## Follow Atlas gateway logs for native dispatcher activity
-	$(COMPOSE) logs -f atlas-gateway
 
 kanban-notifier-once: ## Process new Kanban mission events into notification outbox rows
 	python3 scripts/kanban-mission-notifier.py --limit $${LIMIT:-100}
