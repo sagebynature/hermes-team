@@ -39,6 +39,8 @@ SAMPLE_PAYLOAD = """[mission:mission_readiness_20260506] Readiness Check: Vega
 conversation_id: mission_readiness_20260506
 # Optional for Discord thread/forum-post routing when conversation_id is not the thread ID:
 discord_thread_id: 1501451632569880636
+reply_mode: atlas_internal
+reply_expected: false
 from: atlas
 to: vega
 assignee: vega

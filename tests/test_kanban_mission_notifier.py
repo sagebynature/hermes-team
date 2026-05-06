@@ -184,6 +184,8 @@ class KanbanMissionNotifierTests(unittest.TestCase):
             self.assertIn("[mission:mission_demo_20260506]", synth_tasks[0][3])
             self.assertIn("Read completed worker outputs", synth_tasks[0][4])
             self.assertIn("Worker task summaries available at synthesis time", synth_tasks[0][4])
+            self.assertIn("reply_mode: kanban_only", synth_tasks[0][4])
+            self.assertIn("reply_expected: false", synth_tasks[0][4])
             self.assertIn("t_forge (forge, done): Forge artifact ready", synth_tasks[0][4])
             self.assertEqual(synth_tasks[0][5], "mission:mission_demo_20260506:atlas-synthesis")
             self.assertEqual([row[0] for row in outbox], ["human_update", "mission_ready_for_synthesis"])
@@ -210,6 +212,27 @@ class KanbanMissionNotifierTests(unittest.TestCase):
                 outbox_kinds = conn.execute("SELECT kind, target, status FROM mission_notification_outbox ORDER BY id").fetchall()
             self.assertEqual(atlas_count, 0)
             self.assertEqual(outbox_kinds, [("human_update", "atlas:mission", "queued")])
+
+    def test_atlas_synthesis_task_preserves_discord_direct_reply_target(self):
+        notifier = load_notifier_module()
+        with tempfile.TemporaryDirectory() as td:
+            db = Path(td) / "kanban.db"
+            init_db(db)
+            with sqlite3.connect(db) as conn:
+                body = "conversation_id: mission_demo_20260506\ndiscord_thread_id: 1501459474530041937\nobjective: do useful work"
+                insert_task(conn, "t_worker", assignee="forge", status="done", body=body, result="Forge artifact ready")
+                append_event(conn, "t_worker", "completed", '{"summary":"Forge artifact ready"}')
+                conn.commit()
+
+            result = notifier.run_once(db)
+
+            self.assertEqual(result.created_synthesis_tasks, 1)
+            with sqlite3.connect(db) as conn:
+                body = conn.execute("SELECT body FROM tasks WHERE assignee = 'atlas'").fetchone()[0]
+            self.assertIn("discord_thread_id: 1501459474530041937", body)
+            self.assertIn("reply_mode: direct_discord", body)
+            self.assertIn("reply_target: discord:1501459474530041937", body)
+            self.assertIn("reply_expected: true", body)
 
     def test_completed_atlas_synthesis_creates_threaded_structured_final_response_notification(self):
         notifier = load_notifier_module()
@@ -241,14 +264,15 @@ class KanbanMissionNotifierTests(unittest.TestCase):
                     "SELECT conversation_id, task_id, kind, target, message, payload_json FROM mission_notification_outbox"
                 ).fetchall()
             self.assertEqual(rows[0][0:4], ("1501451632569880636", "t_synth", "final_response_ready", "discord:status:1501451632569880636"))
-            self.assertIn("Actual final answer for the user", rows[0][4])
-            self.assertNotIn("Synthesis completed", rows[0][4])
+            self.assertIn("Atlas completed synthesis", rows[0][4])
+            self.assertIn("Synthesis completed", rows[0][4])
+            self.assertNotIn("Actual final answer for the user", rows[0][4])
             self.assertIsNotNone(rows[0][5])
             payload = __import__("json").loads(rows[0][5])
             self.assertEqual(payload["allowed_mentions"], {"parse": []})
-            self.assertEqual(payload["embeds"][0]["title"], "Atlas final response")
-            self.assertIn("Actual final answer for the user", payload["embeds"][0]["description"])
-            self.assertNotIn("Synthesis completed", payload["embeds"][0]["description"])
+            self.assertEqual(payload["embeds"][0]["title"], "Atlas completed")
+            self.assertIn("Synthesis completed", payload["embeds"][0]["description"])
+            self.assertNotIn("Actual final answer for the user", payload["embeds"][0]["description"])
 
 
 if __name__ == "__main__":

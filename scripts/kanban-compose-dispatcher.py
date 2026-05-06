@@ -15,6 +15,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import os
 from pathlib import Path
+import re
 import sqlite3
 import subprocess
 import sys
@@ -29,6 +30,8 @@ DEFAULT_LOG = REPO_ROOT / "shared" / "kanban" / "dispatcher.log"
 DEFAULT_CLAIM_TTL_SECONDS = 15 * 60
 DEFAULT_WORKER_TIMEOUT_SECONDS = 15 * 60
 DISPATCH_TIMEOUT_EXIT_CODE = 124
+DIRECT_REPLY_MODE_RE = re.compile(r"^\s*reply_mode\s*[:=]\s*direct_discord\s*$", re.IGNORECASE | re.MULTILINE)
+REPLY_TARGET_RE = re.compile(r"^\s*reply_target\s*[:=]\s*(discord:[^\s]+)\s*$", re.IGNORECASE | re.MULTILINE)
 
 
 def parse_args() -> argparse.Namespace:
@@ -76,6 +79,36 @@ def load_agents(registry: Path) -> Dict[str, str]:
 
 def table_columns(conn: sqlite3.Connection, table: str) -> set[str]:
     return {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+
+
+def task_body(conn: sqlite3.Connection, task_id: str) -> str:
+    cols = table_columns(conn, "tasks")
+    if "body" not in cols:
+        return ""
+    row = conn.execute("SELECT body FROM tasks WHERE id = ?", (task_id,)).fetchone()
+    if not row or row[0] is None:
+        return ""
+    return str(row[0])
+
+
+def direct_reply_target(body: str) -> Optional[str]:
+    match = REPLY_TARGET_RE.search(body or "")
+    return match.group(1).strip() if match else None
+
+
+def task_requires_direct_discord_reply(conn: sqlite3.Connection, task_id: str) -> bool:
+    """Return True only for tasks explicitly allowed to send public Discord replies.
+
+    This keeps `messaging` out of ordinary worker fan-out runs. Atlas synthesis
+    tasks and deliberate direct-specialist tasks receive the messaging tool only
+    when their task body carries both the reply mode and an explicit Discord
+    target, e.g. `reply_mode: direct_discord` and
+    `reply_target: discord:<channel-or-thread>`.
+    """
+    body = task_body(conn, task_id)
+    if not body:
+        return False
+    return bool(DIRECT_REPLY_MODE_RE.search(body) and direct_reply_target(body))
 
 
 def append_event(conn: sqlite3.Connection, task_id: str, kind: str, payload: dict, *, run_id: Optional[int] = None) -> None:
@@ -351,20 +384,115 @@ def cleanup_timed_out_container(task_id: str, assignee: str, log_path: Path) -> 
         log(log_path, f"timeout cleanup failed container={name} error={exc}")
 
 
-def dispatch(task_id: str, assignee: str, dry_run: bool, log_path: Path, worker_timeout: int) -> int:
+def dispatch(task_id: str, assignee: str, dry_run: bool, log_path: Path, worker_timeout: int, direct_reply: bool = False) -> int:
     if dry_run:
-        log(log_path, f"dry-run dispatch assignee={assignee} task={task_id}")
+        suffix = " direct_reply=true" if direct_reply else ""
+        log(log_path, f"dry-run dispatch assignee={assignee} task={task_id}{suffix}")
         return 0
-    log(log_path, f"dispatch start assignee={assignee} task={task_id}")
+    suffix = " direct_reply=true" if direct_reply else ""
+    log(log_path, f"dispatch start assignee={assignee} task={task_id}{suffix}")
     timeout = worker_timeout if worker_timeout and worker_timeout > 0 else None
+    cmd = [str(DISPATCH_SCRIPT), assignee, task_id]
+    if direct_reply:
+        cmd.append("--direct-reply")
     try:
-        proc = subprocess.run([str(DISPATCH_SCRIPT), assignee, task_id], cwd=str(REPO_ROOT), timeout=timeout)
+        proc = subprocess.run(cmd, cwd=str(REPO_ROOT), timeout=timeout)
     except subprocess.TimeoutExpired:
         log(log_path, f"dispatch timed out assignee={assignee} task={task_id} timeout_seconds={worker_timeout}")
         cleanup_timed_out_container(task_id, assignee, log_path)
         return DISPATCH_TIMEOUT_EXIT_CODE
     log(log_path, f"dispatch end assignee={assignee} task={task_id} exit_code={proc.returncode}")
     return proc.returncode
+
+
+def _latest_run_metadata(conn: sqlite3.Connection, run_id: int) -> dict:
+    row = conn.execute("SELECT metadata FROM task_runs WHERE id = ?", (run_id,)).fetchone()
+    if not row or not row[0]:
+        return {}
+    try:
+        parsed = json.loads(row[0])
+    except json.JSONDecodeError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _direct_reply_has_verified_message(metadata: dict) -> bool:
+    return bool(metadata.get("discord_message_id") or metadata.get("message_id"))
+
+
+def _discord_thread_from_reply_target(target: str) -> Optional[str]:
+    if not target.startswith("discord:"):
+        return None
+    parts = target.split(":")
+    if len(parts) == 2:
+        return parts[1]
+    if len(parts) >= 3:
+        return parts[-1]
+    return None
+
+
+def _deliver_direct_reply_fallback(conn: sqlite3.Connection, task_id: str, run_id: int, log_path: Path) -> bool:
+    """Post task.result into the reply thread when the agent claimed but did not prove delivery.
+
+    This is a deterministic safety net for direct-reply tasks. The preferred path
+    is still an agent `send_message` call with returned message_id in run
+    metadata. If the model records `discord_reply_sent` without a message_id, use
+    the existing Discord webhook sender to deliver the already-computed result to
+    the explicit task reply_target, then record durable evidence.
+    """
+    task_cols = table_columns(conn, "tasks")
+    select_cols = ["body"]
+    if "result" in task_cols:
+        select_cols.append("result")
+    row = conn.execute(f"SELECT {', '.join(select_cols)} FROM tasks WHERE id = ?", (task_id,)).fetchone()
+    if not row:
+        return False
+    values = dict(zip(select_cols, row))
+    target = direct_reply_target(str(values.get("body") or ""))
+    thread_id = _discord_thread_from_reply_target(target or "")
+    result = str(values.get("result") or "").strip()
+    if not thread_id or not result:
+        append_event(
+            conn,
+            task_id,
+            "direct_reply_unverified",
+            {"fallback_sent": False, "reason": "missing_thread_or_result", "reply_target": target},
+            run_id=run_id,
+        )
+        conn.commit()
+        return False
+    proc = subprocess.run(
+        [sys.executable, str(REPO_ROOT / "scripts" / "discord-post-status.py"), "--thread-id", thread_id, "--message", result],
+        cwd=str(REPO_ROOT),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        timeout=30,
+    )
+    if proc.returncode == 0:
+        metadata = _latest_run_metadata(conn, run_id)
+        metadata.update(
+            {
+                "discord_reply_sent": True,
+                "reply_target": target,
+                "direct_reply_fallback": "discord_webhook",
+            }
+        )
+        conn.execute("UPDATE task_runs SET metadata = ? WHERE id = ?", (json.dumps(metadata), run_id))
+        append_event(conn, task_id, "direct_reply_fallback_sent", {"reply_target": target}, run_id=run_id)
+        conn.commit()
+        log(log_path, f"direct reply fallback sent task={task_id} target={target}")
+        return True
+    append_event(
+        conn,
+        task_id,
+        "direct_reply_unverified",
+        {"fallback_sent": False, "reply_target": target, "exit_code": proc.returncode, "stderr": proc.stderr[-500:]},
+        run_id=run_id,
+    )
+    conn.commit()
+    log(log_path, f"direct reply unverified task={task_id}; fallback failed exit_code={proc.returncode}")
+    return False
 
 
 def finalize_dispatch_result(
@@ -375,6 +503,7 @@ def finalize_dispatch_result(
     code: int,
     log_path: Path,
     worker_timeout: int,
+    direct_reply: bool = False,
 ) -> int:
     """Reconcile task/run state after a worker container exits."""
     with sqlite3.connect(db) as conn:
@@ -402,6 +531,10 @@ def finalize_dispatch_result(
         elif status == "ready":
             log(log_path, f"dispatch failed to advance task={task_id}; status is still ready")
             code = code or 1
+        if direct_reply and code == 0 and status == "done":
+            metadata = _latest_run_metadata(conn, claim[1])
+            if not _direct_reply_has_verified_message(metadata):
+                _deliver_direct_reply_fallback(conn, task_id, claim[1], log_path)
     return code
 
 
@@ -423,7 +556,7 @@ def run_pass(args: argparse.Namespace, agents: Dict[str, str], log_path: Path) -
         log(log_path, "no ready Compose-dispatchable tasks")
         return 0
     exit_code = 0
-    dispatch_jobs: List[Tuple[str, str, Tuple[str, int]]] = []
+    dispatch_jobs: List[Tuple[str, str, Tuple[str, int], bool]] = []
     for task_id, assignee, title in tasks:
         log(log_path, f"selected task={task_id} assignee={assignee} title={title!r}")
         if args.dry_run:
@@ -432,6 +565,7 @@ def run_pass(args: argparse.Namespace, agents: Dict[str, str], log_path: Path) -
 
         with sqlite3.connect(db) as conn:
             claim = claim_for_dispatch(conn, task_id, assignee)
+            direct_reply = task_requires_direct_discord_reply(conn, task_id) if claim is not None else False
         if claim is None:
             code = 1
             log(log_path, f"dispatch skipped task={task_id}; task could not be claimed")
@@ -441,7 +575,9 @@ def run_pass(args: argparse.Namespace, agents: Dict[str, str], log_path: Path) -
             continue
 
         log(log_path, f"claimed task={task_id} assignee={assignee} run_id={claim[1]}")
-        dispatch_jobs.append((task_id, assignee, claim))
+        if direct_reply:
+            log(log_path, f"direct Discord reply enabled task={task_id} assignee={assignee}")
+        dispatch_jobs.append((task_id, assignee, claim, direct_reply))
 
     if args.dry_run or not dispatch_jobs:
         return exit_code
@@ -450,17 +586,22 @@ def run_pass(args: argparse.Namespace, agents: Dict[str, str], log_path: Path) -
     log(log_path, f"dispatching {len(dispatch_jobs)} claimed task(s) with max_workers={max_workers}")
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
-            executor.submit(dispatch, task_id, assignee, args.dry_run, log_path, args.worker_timeout): (task_id, assignee, claim)
-            for task_id, assignee, claim in dispatch_jobs
+            executor.submit(dispatch, task_id, assignee, args.dry_run, log_path, args.worker_timeout, direct_reply): (
+                task_id,
+                assignee,
+                claim,
+                direct_reply,
+            )
+            for task_id, assignee, claim, direct_reply in dispatch_jobs
         }
         for future in as_completed(futures):
-            task_id, assignee, claim = futures[future]
+            task_id, assignee, claim, direct_reply = futures[future]
             try:
                 code = future.result()
             except Exception as exc:  # pragma: no cover - defensive; dispatch normally returns codes
                 log(log_path, f"dispatch crashed assignee={assignee} task={task_id} error={exc!r}")
                 code = 1
-            code = finalize_dispatch_result(db, task_id, assignee, claim, code, log_path, args.worker_timeout)
+            code = finalize_dispatch_result(db, task_id, assignee, claim, code, log_path, args.worker_timeout, direct_reply)
             if code != 0:
                 exit_code = code
     return exit_code

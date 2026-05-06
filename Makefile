@@ -155,14 +155,18 @@ kanban-stats: ## Show shared Kanban task counts
 kanban-watch: ## Watch shared Kanban board events
 	$(COMPOSE) run --rm atlas kanban watch
 
-kanban-create: ## Create a mission-scoped Kanban task: make kanban-create TITLE='...' ASSIGNEE=vega CONVERSATION_ID=mission_slug [DISCORD_THREAD_ID=123] BODY='...'
+kanban-create: ## Create a mission-scoped Kanban task: make kanban-create TITLE='...' ASSIGNEE=vega CONVERSATION_ID=mission_slug [DISCORD_THREAD_ID=123 REPLY_MODE=direct_discord] BODY='...'
 	@if [ -z "$(TITLE)" ]; then echo "TITLE is required" >&2; exit 2; fi
 	@if [ -z "$(ASSIGNEE)" ]; then echo "ASSIGNEE is required, e.g. atlas" >&2; exit 2; fi
 	@if [ -z "$(CONVERSATION_ID)" ]; then echo "CONVERSATION_ID is required, e.g. mission_readiness_20260506" >&2; exit 2; fi
 	@if [ -z "$(BODY)" ]; then echo "BODY is required and must include bounded task instructions" >&2; exit 2; fi
-	@thread_line=""; \
+	@thread_line=""; reply_line="reply_mode: kanban_only\nreply_expected: false\n"; \
 		if [ -n "$(DISCORD_THREAD_ID)" ]; then thread_line="$$(printf 'discord_thread_id: %s\n' "$(DISCORD_THREAD_ID)")"; fi; \
-		body="$$(printf 'conversation_id: %s\n%sfrom: atlas\nto: %s\nassignee: %s\n%s\n' "$(CONVERSATION_ID)" "$$thread_line" "$(ASSIGNEE)" "$(ASSIGNEE)" "$(BODY)")"; \
+		if [ "$(REPLY_MODE)" = "direct_discord" ]; then \
+			if [ -z "$(DISCORD_THREAD_ID)" ]; then echo "DISCORD_THREAD_ID is required when REPLY_MODE=direct_discord" >&2; exit 2; fi; \
+			reply_line="$$(printf 'reply_mode: direct_discord\nreply_target: discord:%s\nreply_expected: true\n' "$(DISCORD_THREAD_ID)")"; \
+		fi; \
+		body="$$(printf 'conversation_id: %s\n%s%sfrom: atlas\nto: %s\nassignee: %s\n%s\n' "$(CONVERSATION_ID)" "$$thread_line" "$$reply_line" "$(ASSIGNEE)" "$(ASSIGNEE)" "$(BODY)")"; \
 		$(COMPOSE) run --rm atlas kanban create "[mission:$(CONVERSATION_ID)] $(TITLE)" --assignee "$(ASSIGNEE)" --body "$$body" --json
 
 kanban-mission-contract-install: ## Install DB triggers rejecting Kanban tasks without mission markers
@@ -184,7 +188,11 @@ kanban-link: ## Link parent->child dependency: make kanban-link PARENT=K... CHIL
 
 kanban-dispatch: guard-agent ## Run one Kanban task in the assigned agent container: make kanban-dispatch AGENT=forge TASK=K...
 	@if [ -z "$(TASK)" ]; then echo "TASK is required" >&2; exit 2; fi
-	COMPOSE='$(COMPOSE)' ./scripts/kanban-dispatch-compose.sh $(AGENT) $(TASK)
+	@if [ "$(DIRECT_REPLY)" = "1" ]; then \
+		COMPOSE='$(COMPOSE)' ./scripts/kanban-dispatch-compose.sh $(AGENT) $(TASK) --direct-reply; \
+	else \
+		COMPOSE='$(COMPOSE)' ./scripts/kanban-dispatch-compose.sh $(AGENT) $(TASK); \
+	fi
 
 kanban-dispatcher-once: ## Run one Dockerized Compose-aware dispatcher pass; add DRY_RUN=1 to avoid spawning
 	@if [ "$(DRY_RUN)" = "1" ]; then \

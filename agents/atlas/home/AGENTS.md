@@ -52,16 +52,19 @@ Kanban mission / notifier contract:
 
 - Every Kanban task MUST be mission-scoped: title includes `[mission:<conversation_id>]` and body includes `conversation_id: <conversation_id>`. This is not optional; the DB mission-contract trigger rejects unscoped tasks so notifier fan-in remains deterministic.
 - When the mission originates in a Discord thread/forum post and `conversation_id` is not already that Discord thread ID, include `discord_thread_id: <thread-id>` in task bodies so the notifier can route the final Atlas response back into the correct thread.
+- Use explicit reply metadata in task bodies: `reply_mode: atlas_internal` for worker handoffs, `reply_mode: kanban_only` for private/non-public tasks, and `reply_mode: direct_discord` plus `reply_target: discord:<thread-id>` only when the assignee should post the actual answer directly into Discord.
 - Worker task bodies should include objective, constraints, expected output, dependency context, and artifact path. Keep deliverables concise and synthesis-ready.
 - Worker completion notifications are internal Atlas handoffs, not final public Discord answers. The notifier queues them as Atlas/internal outbox rows and creates a ready Atlas synthesis task once all non-Atlas workers are terminal.
 - Do not poll or periodically scan the whole Kanban board to keep the user updated. A deterministic notifier tails Kanban events and handles blocker/progress/final-ready status updates.
 - If you receive an Atlas synthesis Kanban task, synthesize from completed worker task results, comments, and artifacts. Do not invent missing specialist conclusions.
 - Complete the Atlas synthesis task with the actual final user-facing answer in `kanban_complete(result=...)`; use `summary` only for a one-sentence delivery summary/status. The notifier posts the final answer from `result`, not from the completion summary.
+- If the Atlas synthesis task says `reply_mode: direct_discord`, send the final answer to `reply_target` with `send_message` before completing the Kanban task. Record reply evidence in completion metadata (`discord_reply_sent`, `reply_target`, `discord_message_id` when available). The webhook notifier should remain a brief structured completion receipt, not the main answer body.
 
 Specialist-direct request contract:
 
 - For requests like "ask Forge about his role" or "get Lumen's personal statement", do not post `@Forge ...` or write a first-person answer on the specialist's behalf.
 - Create one durable worker task assigned to the registered specialist, with the user's requested prompt, expected output, and a concise artifact/comment requirement.
+- If the user expects the specialist to answer in the originating Discord thread, include `reply_mode: direct_discord`, `reply_target: discord:<thread-id>`, and `reply_expected: true` in that specialist task. Otherwise use `reply_mode: kanban_only` and summarize the completed result yourself.
 - Report the created Kanban task ID or router message ID back to the user. If task creation/routing is unavailable, say that plainly and do not imply the specialist was contacted.
 - When the specialist completes the task, quote or synthesize only the completed task result, comment, or artifact path.
 
@@ -110,3 +113,6 @@ Communication rules:
 - Use your `/workspace` directory for durable files you produce.
 - Treat `/workspace/inbox` as task intake, `/workspace/outbox` as completed deliverables, and `/workspace/artifacts` as generated files.
 - Follow `/shared/project/team-collaboration-protocol.md`; Discord is for human-visible updates, while Kanban is the durable source of truth.
+- Public Discord replies are opt-in per task. Only send a direct Discord message when the task body says `reply_mode: direct_discord` and includes `reply_target: discord:<id>`; otherwise complete through Kanban only.
+- For `reply_mode: direct_discord`, send the actual user-facing answer to `reply_target` before completing the task, then complete the Kanban task with `result` containing the answer and metadata including `discord_reply_sent: true`, `reply_target`, and `discord_message_id` if the send tool returns one.
+- Worker fan-out tasks normally use `reply_mode: atlas_internal` or `kanban_only`; do not post those specialist handoffs publicly unless the task explicitly authorizes direct Discord reply.

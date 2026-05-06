@@ -233,7 +233,7 @@ def discord_embed_payload(*, title: str, description: str, conversation_id: str,
 
 def final_response_payload(conversation_id: str, task_id: str, summary: str) -> str:
     return discord_embed_payload(
-        title="Atlas final response",
+        title="Atlas completed",
         description=summary,
         conversation_id=conversation_id,
         task_id=task_id,
@@ -412,8 +412,13 @@ def create_atlas_synthesis_task(conn: sqlite3.Connection, conversation_id: str) 
     worker_summaries = mission_worker_summary_block(conn, conversation_id)
     thread_id = mission_discord_thread_id(conn, conversation_id)
     discord_thread_line = f"discord_thread_id: {thread_id}\n" if thread_id else ""
+    direct_reply_lines = (
+        f"reply_mode: direct_discord\nreply_target: discord:{thread_id}\nreply_expected: true\n"
+        if thread_id
+        else "reply_mode: kanban_only\nreply_expected: false\n"
+    )
     body = f"""conversation_id: {conversation_id}
-{discord_thread_line}assignee: atlas
+{discord_thread_line}{direct_reply_lines}assignee: atlas
 objective: Synthesize the final user-facing answer for this mission.
 
 The notifier created this task because all non-Atlas worker tasks for the mission are terminal.
@@ -428,7 +433,8 @@ Rules:
 - Do not claim missing work was completed.
 - If any required artifact or answer is missing, block this task and ask for operator intervention.
 - Produce the actual final user-facing answer, not just a completion/status note.
-- When completing this Kanban task, put the full final answer in `kanban_complete(result=...)` and a one-sentence delivery summary in `summary`.
+- If `reply_mode: direct_discord`, send the final answer to `reply_target` with `send_message` before completing this task. Use the full final answer as the Discord message.
+- When completing this Kanban task, put the full final answer in `kanban_complete(result=...)`, use `summary` only for a one-sentence delivery/status note, and include reply evidence in metadata when available (`discord_reply_sent`, `reply_target`, `discord_message_id`).
 - Include material task IDs and artifact paths when useful.
 """
     columns = table_columns(conn, "tasks")
@@ -465,8 +471,7 @@ def handle_completed_event(conn: sqlite3.Connection, event: sqlite3.Row, task: s
     summary = event_summary(task, payload)
     if is_atlas_synthesis_task(task, conversation_id):
         thread_id = extract_discord_thread_id(task, payload, conversation_id)
-        answer = final_answer_text(conn, task, payload)
-        message = f"Atlas final answer for {conversation_id}: {answer}"
+        message = f"Atlas completed synthesis for {conversation_id}: {summary}"
         if enqueue_outbox(
             conn,
             conversation_id=conversation_id,
@@ -475,7 +480,7 @@ def handle_completed_event(conn: sqlite3.Connection, event: sqlite3.Row, task: s
             message=message,
             idempotency_key=f"final:{conversation_id}:{event['task_id']}:{event['id']}",
             target=discord_target("status", thread_id),
-            payload_json=final_response_payload(conversation_id, event["task_id"], answer),
+            payload_json=final_response_payload(conversation_id, event["task_id"], summary),
         ):
             result.outbox_rows += 1
             result.final_responses_ready += 1

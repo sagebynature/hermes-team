@@ -204,7 +204,7 @@ shared/kanban/dispatcher.log
 
 ## Mission notifier and Atlas fan-in
 
-Do not make Atlas periodically scan the whole board. Team Nexus uses Kanban events as the progress signal. `scripts/kanban-mission-notifier.py` tails new `task_events` rows by cursor, writes idempotent rows to `mission_notification_outbox`, and creates one Atlas synthesis task when all worker tasks in a mission are terminal. Worker-completion rows are now Atlas/internal handoff records (`target='atlas:mission'` or `target='atlas:kanban'`, `status='queued'`); only human blockers and completed Atlas final responses are Discord-webhook deliverable by default.
+Do not make Atlas periodically scan the whole board. Team Nexus uses Kanban events as the progress signal. `scripts/kanban-mission-notifier.py` tails new `task_events` rows by cursor, writes idempotent rows to `mission_notification_outbox`, and creates one Atlas synthesis task when all worker tasks in a mission are terminal. Worker-completion rows are Atlas/internal handoff records (`target='atlas:mission'` or `target='atlas:kanban'`, `status='queued'`). Discord webhooks are now the compact status/receipt lane; the actual final answer is posted directly by Atlas or by the directly tasked specialist when the task explicitly opts into direct Discord reply.
 
 A mission task must include a conversation ID in both its title and body. This is a hard Team Nexus contract, not a style preference: the optional DB enforcement trigger rejects new Kanban tasks that cannot be associated with a notifier mission.
 
@@ -220,6 +220,13 @@ Required body shape / sample payload:
 conversation_id: mission_<slug>_<yyyymmdd>
 # Optional, but required for thread-specific Discord delivery when conversation_id is not already the Discord thread snowflake:
 discord_thread_id: <discord-thread-or-forum-post-id>
+# Default for worker fan-out is internal/private. Use direct_discord only when this assignee should publicly answer in the Discord thread.
+reply_mode: atlas_internal
+reply_expected: false
+# For direct replies, use:
+# reply_mode: direct_discord
+# reply_target: discord:<discord-thread-or-forum-post-id>
+# reply_expected: true
 from: atlas
 to: <registered-agent-slug>
 assignee: <registered-agent-slug>
@@ -302,7 +309,12 @@ make kanban-notifier-dry-run
 
 Deliver pending Discord-targeted outbox rows through `scripts/discord-post-status.py` and `DISCORD_STATUS_WEBHOOK_URL`. Internal Atlas handoff rows are not posted to Discord; they remain queued/auditable in `mission_notification_outbox`, while the actual Atlas notification is the ready synthesis task assigned to Atlas.
 
-Final Atlas responses are delivered as structured Discord webhook payloads (`embeds` plus `allowed_mentions: {parse: []}`), not raw free-form content. If the mission metadata includes `discord_thread_id: <snowflake>`, or the `conversation_id` itself is a Discord thread/forum-post snowflake, the notifier stores the outbox target as `discord:status:<thread_id>` and delivery calls Discord's webhook `thread_id` parameter so the final answer lands in the original thread. Atlas synthesis tasks must complete with the full user-facing answer in `kanban_complete(result=...)`; `summary` is only a compact delivery/status line. The notifier prefers `task.result` for final Discord payloads so it does not post a mere "synthesis completed" summary as the answer.
+Final answer delivery uses two lanes:
+
+1. Direct agent reply: Atlas synthesis tasks and deliberate direct-specialist tasks include `reply_mode: direct_discord` and `reply_target: discord:<thread-id>`. The Compose dispatcher detects that metadata and launches the one-off agent run with `-t hermes-cli,kanban,messaging`, allowing that agent to call `send_message` directly into the originating thread. Ordinary worker fan-out does not receive the messaging tool.
+2. Webhook receipt: after the agent completes the Kanban task, the notifier sends a brief structured webhook receipt into the thread (`Atlas completed`, task id, conversation id, compact summary). The webhook is intentionally not the final-answer body.
+
+Agents should complete direct-reply tasks with the final answer in `kanban_complete(result=...)`, a one-sentence `summary`, and metadata such as `discord_reply_sent: true`, `reply_target`, and `discord_message_id` when available. If the reply metadata is missing, treat the task as completed work but not proven delivered to Discord.
 
 ```bash
 make kanban-notifier-deliver

@@ -50,6 +50,7 @@ def init_db(path: Path) -> None:
                 id TEXT PRIMARY KEY,
                 title TEXT NOT NULL,
                 assignee TEXT,
+                body TEXT DEFAULT '',
                 status TEXT NOT NULL,
                 priority INTEGER DEFAULT 0,
                 created_at INTEGER NOT NULL,
@@ -104,7 +105,7 @@ class KanbanComposeDispatcherTests(unittest.TestCase):
             log_path = tmp / "dispatcher.log"
             observed_during_spawn = []
 
-            def fake_dispatch(task_id: str, assignee: str, dry_run: bool, log_path: Path, worker_timeout: int) -> int:
+            def fake_dispatch(task_id: str, assignee: str, dry_run: bool, log_path: Path, worker_timeout: int, direct_reply: bool = False) -> int:
                 self.assertEqual(worker_timeout, 900)
                 with sqlite3.connect(db) as conn:
                     task = conn.execute(
@@ -171,7 +172,7 @@ class KanbanComposeDispatcherTests(unittest.TestCase):
             all_started = threading.Event()
             observed_starts = []
 
-            def fake_dispatch(task_id: str, assignee: str, dry_run: bool, log_path: Path, worker_timeout: int) -> int:
+            def fake_dispatch(task_id: str, assignee: str, dry_run: bool, log_path: Path, worker_timeout: int, direct_reply: bool = False) -> int:
                 with lock:
                     observed_starts.append((task_id, assignee))
                     if len(observed_starts) == 3:
@@ -222,7 +223,7 @@ class KanbanComposeDispatcherTests(unittest.TestCase):
             log_path = tmp / "dispatcher.log"
             observed = []
 
-            def fake_dispatch(task_id: str, assignee: str, dry_run: bool, log_path: Path, worker_timeout: int) -> int:
+            def fake_dispatch(task_id: str, assignee: str, dry_run: bool, log_path: Path, worker_timeout: int, direct_reply: bool = False) -> int:
                 observed.append((task_id, assignee))
                 with sqlite3.connect(db) as conn:
                     run_id = conn.execute("SELECT current_run_id FROM tasks WHERE id = ?", (task_id,)).fetchone()[0]
@@ -245,6 +246,57 @@ class KanbanComposeDispatcherTests(unittest.TestCase):
             self.assertEqual({task_id for task_id, _ in observed}, {"t_ready", "t_synth"})
             self.assertIn(("t_synth", "atlas"), observed)
 
+    def test_direct_discord_reply_task_runs_with_messaging_enabled(self):
+        dispatcher = load_dispatcher_module()
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            db = tmp / "kanban.db"
+            init_db(db)
+            with sqlite3.connect(db) as conn:
+                conn.execute(
+                    """
+                    UPDATE tasks
+                       SET body = ?
+                     WHERE id = 't_ready'
+                    """,
+                    (
+                        "conversation_id: 1501459474530041937\n"
+                        "discord_thread_id: 1501459474530041937\n"
+                        "reply_mode: direct_discord\n"
+                        "reply_target: discord:1501459474530041937\n"
+                        "reply_expected: true\n",
+                    ),
+                )
+                conn.commit()
+            log_path = tmp / "dispatcher.log"
+            observed = []
+
+            def fake_dispatch(
+                task_id: str,
+                assignee: str,
+                dry_run: bool,
+                log_path: Path,
+                worker_timeout: int,
+                direct_reply: bool = False,
+            ) -> int:
+                observed.append((task_id, assignee, direct_reply))
+                with sqlite3.connect(db) as conn:
+                    run_id = conn.execute("SELECT current_run_id FROM tasks WHERE id = ?", (task_id,)).fetchone()[0]
+                    conn.execute(
+                        "UPDATE tasks SET status = 'done', completed_at = 2000, claim_lock = NULL, claim_expires = NULL, current_run_id = NULL WHERE id = ?",
+                        (task_id,),
+                    )
+                    conn.execute("UPDATE task_runs SET status = 'done', outcome = 'completed', ended_at = 2000 WHERE id = ?", (run_id,))
+                    conn.commit()
+                return 0
+
+            with mock.patch.object(dispatcher, "dispatch", fake_dispatch):
+                code = dispatcher.run_pass(make_args(db), {"scout": "scout"}, log_path)
+
+            self.assertEqual(code, 0)
+            self.assertEqual(observed, [("t_ready", "scout", True)])
+            self.assertIn("direct Discord reply enabled task=t_ready assignee=scout", log_path.read_text(encoding="utf-8"))
+
     def test_failed_worker_spawn_requeues_task_but_preserves_failed_run(self):
         dispatcher = load_dispatcher_module()
         with tempfile.TemporaryDirectory() as td:
@@ -253,7 +305,7 @@ class KanbanComposeDispatcherTests(unittest.TestCase):
             init_db(db)
             log_path = tmp / "dispatcher.log"
 
-            def failing_dispatch(task_id: str, assignee: str, dry_run: bool, log_path: Path, worker_timeout: int) -> int:
+            def failing_dispatch(task_id: str, assignee: str, dry_run: bool, log_path: Path, worker_timeout: int, direct_reply: bool = False) -> int:
                 return 17
 
             with mock.patch.object(dispatcher, "dispatch", failing_dispatch):
@@ -280,7 +332,7 @@ class KanbanComposeDispatcherTests(unittest.TestCase):
             init_db(db)
             log_path = tmp / "dispatcher.log"
 
-            def incomplete_dispatch(task_id: str, assignee: str, dry_run: bool, log_path: Path, worker_timeout: int) -> int:
+            def incomplete_dispatch(task_id: str, assignee: str, dry_run: bool, log_path: Path, worker_timeout: int, direct_reply: bool = False) -> int:
                 return 0
 
             with mock.patch.object(dispatcher, "dispatch", incomplete_dispatch):
@@ -308,7 +360,7 @@ class KanbanComposeDispatcherTests(unittest.TestCase):
             init_db(db)
             log_path = tmp / "dispatcher.log"
 
-            def timed_out_dispatch(task_id: str, assignee: str, dry_run: bool, log_path: Path, worker_timeout: int) -> int:
+            def timed_out_dispatch(task_id: str, assignee: str, dry_run: bool, log_path: Path, worker_timeout: int, direct_reply: bool = False) -> int:
                 self.assertEqual(worker_timeout, 30)
                 return dispatcher.DISPATCH_TIMEOUT_EXIT_CODE
 

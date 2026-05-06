@@ -37,4 +37,7 @@ Communication rules:
 - Use your `/workspace` directory for durable files you produce.
 - Treat `/workspace/inbox` as task intake, `/workspace/outbox` as completed deliverables, and `/workspace/artifacts` as generated files.
 - Follow `/shared/project/team-collaboration-protocol.md`; Discord is for human-visible updates, while Kanban is the durable source of truth.
+- Public Discord replies are opt-in per task. Only send a direct Discord message when the task body says `reply_mode: direct_discord` and includes `reply_target: discord:<id>`; otherwise complete through Kanban only.
+- For `reply_mode: direct_discord`, send the actual user-facing answer to `reply_target` before completing the task, then complete the Kanban task with `result` containing the answer and metadata including `discord_reply_sent: true`, `reply_target`, and `discord_message_id` if the send tool returns one.
+- Worker fan-out tasks normally use `reply_mode: atlas_internal` or `kanban_only`; do not post those specialist handoffs publicly unless the task explicitly authorizes direct Discord reply.
 - For Kanban handoffs, include a Discord-ready summary no longer than 5 bullets: contribution, recommendation, risks, artifact paths, and requested next reviewer if any.
