@@ -11,6 +11,7 @@ import sqlite3
 import string
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -325,6 +326,8 @@ def send_messages(
     body = build_body(goal, deliverable)
     reject_sensitive_text(summary, goal, deliverable)
     recipients, actual_ttl = validate_and_expand(sender, recipient, summary, body, ttl, trace, allow_wide_fanout)
+    if conversation_id is None and len(recipients) > 1:
+        conversation_id = new_message_id()
     init_db(db)
     ids: list[str] = []
     created = now_iso()
@@ -454,6 +457,67 @@ def build_kanban_body(envelope: dict[str, Any], artifact_path: Path) -> str:
     ])
 
 
+def _new_kanban_task_id(conn: sqlite3.Connection) -> str:
+    for _ in range(5):
+        task_id = "t_" + "".join(random.choice("0123456789abcdef") for _ in range(8))
+        if conn.execute("SELECT 1 FROM tasks WHERE id=?", (task_id,)).fetchone() is None:
+            return task_id
+    raise RouterError("could not allocate unique Kanban task id")
+
+
+def create_kanban_task_direct(
+    *,
+    title: str,
+    assignee: str,
+    body: str,
+    idempotency_key: str,
+    created_by: str = "router",
+    kanban_db: str | os.PathLike[str] | None = None,
+) -> str:
+    """Create a Kanban task directly in SQLite.
+
+    Router dispatch should not shell through Atlas' Hermes CLI: Atlas has a
+    runtime guard that blocks direct Kanban creation, and Compose `run atlas`
+    also contends with the live Atlas home bind mount. The router is the
+    trusted control plane, so it writes the Kanban row itself and records the
+    same minimal creation event the Hermes CLI emits.
+    """
+    kanban_path = Path(kanban_db) if kanban_db else DEFAULT_KANBAN_DB_PATH
+    if not kanban_path.exists():
+        raise RouterError(f"kanban db not found: {kanban_path}")
+    now = int(time.time())
+    with sqlite3.connect(kanban_path) as conn:
+        conn.row_factory = sqlite3.Row
+        existing = conn.execute(
+            "SELECT id FROM tasks WHERE idempotency_key=? AND status!='archived' ORDER BY created_at DESC LIMIT 1",
+            (idempotency_key,),
+        ).fetchone()
+        if existing:
+            return str(existing["id"])
+        task_id = _new_kanban_task_id(conn)
+        conn.execute(
+            """
+            INSERT INTO tasks (
+                id, title, body, assignee, status, priority, created_by,
+                created_at, workspace_kind, idempotency_key
+            ) VALUES (?, ?, ?, ?, 'ready', 0, ?, ?, 'scratch', ?)
+            """,
+            (task_id, title.strip(), body, assignee, created_by, now, idempotency_key),
+        )
+        conn.execute(
+            """
+            INSERT INTO task_events (task_id, run_id, kind, payload, created_at)
+            VALUES (?, NULL, 'created', ?, ?)
+            """,
+            (
+                task_id,
+                json.dumps({"assignee": assignee, "status": "ready", "parents": [], "tenant": None, "skills": None}),
+                now,
+            ),
+        )
+        return task_id
+
+
 def dispatch_pending(
     db: str | os.PathLike[str] | None = None,
     max_messages: int = 1,
@@ -464,6 +528,7 @@ def dispatch_pending(
         raise RouterError("max_messages must be >= 1")
     init_db(db)
     ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+    use_command = run_cmd is not None
     run_cmd = run_cmd or subprocess.run
     dispatched: list[str] = []
     with connect_db(db) as conn:
@@ -492,28 +557,38 @@ def dispatch_pending(
 
             title = f"[router:{row['id']}] {row['summary']}"
             body = build_kanban_body(envelope, artifact_path)
-            cmd = COMPOSE_CMD + [
-                "run", "--rm", "atlas", "kanban", "create", title,
-                "--assignee", row["recipient"],
-                "--body", body,
-                "--idempotency-key", f"router:{row['id']}",
-                "--json",
-            ]
-            event_payload["command"] = cmd
+            idempotency_key = f"router:{row['id']}"
             try:
-                completed = run_cmd(cmd, cwd=str(REPO_ROOT), text=True, capture_output=True, check=False)
-                output = (completed.stdout or "") + (completed.stderr or "")
-                event_payload["returncode"] = completed.returncode
-                event_payload["output"] = output
-                task_id = parse_kanban_task_id(output)
-                if completed.returncode != 0:
-                    error = output.strip() or f"kanban command exited {completed.returncode}"
-                    conn.execute(
-                        "UPDATE messages SET status='pending', error=? WHERE id=?",
-                        (error, row["id"]),
+                if use_command:
+                    cmd = COMPOSE_CMD + [
+                        "run", "--rm", "-e", "TEAM_NEXUS_ROUTER_DISPATCH=1", "atlas", "kanban", "create", title,
+                        "--assignee", row["recipient"],
+                        "--body", body,
+                        "--idempotency-key", idempotency_key,
+                        "--json",
+                    ]
+                    event_payload["command"] = cmd
+                    completed = run_cmd(cmd, cwd=str(REPO_ROOT), text=True, capture_output=True, check=False)
+                    output = (completed.stdout or "") + (completed.stderr or "")
+                    event_payload["returncode"] = completed.returncode
+                    event_payload["output"] = output
+                    task_id = parse_kanban_task_id(output)
+                    if completed.returncode != 0:
+                        error = output.strip() or f"kanban command exited {completed.returncode}"
+                        conn.execute(
+                            "UPDATE messages SET status='pending', error=? WHERE id=?",
+                            (error, row["id"]),
+                        )
+                        _insert_event(conn, row["id"], "kanban_failed", event_payload)
+                        continue
+                else:
+                    task_id = create_kanban_task_direct(
+                        title=title,
+                        assignee=row["recipient"],
+                        body=body,
+                        idempotency_key=idempotency_key,
                     )
-                    _insert_event(conn, row["id"], "kanban_failed", event_payload)
-                    continue
+                    event_payload["direct_sql"] = True
             except Exception as exc:  # pragma: no cover - defensive
                 error = str(exc)
                 event_payload["error"] = error
@@ -884,6 +959,7 @@ def create_report_tasks(
         raise RouterError("max_conversations must be >= 1")
     init_db(db)
     ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+    use_command = run_cmd is not None
     run_cmd = run_cmd or subprocess.run
     created: list[str] = []
     with connect_db(db) as conn:
@@ -903,25 +979,36 @@ def create_report_tasks(
             artifact_path.write_text(json.dumps(conversation, indent=2, sort_keys=True) + "\n")
             title = f"[router-conversation:{conv_id}] Synthesize Team Nexus results"
             body = build_report_body(conversation, artifact_path)
-            cmd = COMPOSE_CMD + [
-                "run", "--rm", "atlas", "kanban", "create", title,
-                "--assignee", "atlas",
-                "--body", body,
-                "--idempotency-key", f"router-conversation:{conv_id}:report",
-                "--json",
-            ]
-            payload: dict[str, Any] = {"command": cmd, "artifact_path": str(artifact_path)}
+            idempotency_key = f"router-conversation:{conv_id}:report"
+            payload: dict[str, Any] = {"artifact_path": str(artifact_path)}
             try:
-                completed = run_cmd(cmd, cwd=str(REPO_ROOT), text=True, capture_output=True, check=False)
-                output = (completed.stdout or "") + (completed.stderr or "")
-                payload["returncode"] = completed.returncode
-                payload["output"] = output
-                task_id = parse_kanban_task_id(output)
-                if completed.returncode != 0 or not task_id:
-                    error = output.strip() or f"kanban command exited {completed.returncode}"
-                    conn.execute("UPDATE conversations SET report_error=?, updated_at=? WHERE id=?", (error, now_iso(), conv_id))
-                    _insert_event(conn, _conversation_event_id(conv_id), "report_task_failed", payload)
-                    continue
+                if use_command:
+                    cmd = COMPOSE_CMD + [
+                        "run", "--rm", "-e", "TEAM_NEXUS_ROUTER_DISPATCH=1", "atlas", "kanban", "create", title,
+                        "--assignee", "atlas",
+                        "--body", body,
+                        "--idempotency-key", idempotency_key,
+                        "--json",
+                    ]
+                    payload["command"] = cmd
+                    completed = run_cmd(cmd, cwd=str(REPO_ROOT), text=True, capture_output=True, check=False)
+                    output = (completed.stdout or "") + (completed.stderr or "")
+                    payload["returncode"] = completed.returncode
+                    payload["output"] = output
+                    task_id = parse_kanban_task_id(output)
+                    if completed.returncode != 0 or not task_id:
+                        error = output.strip() or f"kanban command exited {completed.returncode}"
+                        conn.execute("UPDATE conversations SET report_error=?, updated_at=? WHERE id=?", (error, now_iso(), conv_id))
+                        _insert_event(conn, _conversation_event_id(conv_id), "report_task_failed", payload)
+                        continue
+                else:
+                    task_id = create_kanban_task_direct(
+                        title=title,
+                        assignee="atlas",
+                        body=body,
+                        idempotency_key=idempotency_key,
+                    )
+                    payload["direct_sql"] = True
             except Exception as exc:  # pragma: no cover - defensive
                 payload["error"] = str(exc)
                 conn.execute("UPDATE conversations SET report_error=?, updated_at=? WHERE id=?", (str(exc), now_iso(), conv_id))

@@ -807,8 +807,19 @@ def validate_configs(agents) -> None:
             if got != value:
                 errors.append(f"{path.relative_to(ROOT)}: {dotted} expected {value!r}, got {got!r}")
         toolsets = cfg.get("toolsets") if isinstance(cfg, dict) else None
-        if not isinstance(toolsets, list) or "hermes-cli" not in toolsets or "kanban" not in toolsets:
-            errors.append(f"{path.relative_to(ROOT)}: toolsets must include hermes-cli and kanban")
+        required_toolsets = {"hermes-cli"} if slug == "atlas" else {"hermes-cli", "kanban"}
+        if not isinstance(toolsets, list) or not required_toolsets.issubset(set(toolsets)):
+            errors.append(f"{path.relative_to(ROOT)}: toolsets must include {', '.join(sorted(required_toolsets))}")
+        if slug == "atlas" and isinstance(toolsets, list) and "kanban" in toolsets:
+            errors.append(f"{path.relative_to(ROOT)}: atlas gateway must not expose kanban toolset; use router CLI for fanout")
+        disabled_toolsets = get_path(cfg, "agent.disabled_toolsets")
+        if slug == "atlas":
+            required_disabled = {"code_execution", "delegation", "messaging", "skills"}
+            if not isinstance(disabled_toolsets, list) or not required_disabled.issubset(set(disabled_toolsets)):
+                errors.append(
+                    f"{path.relative_to(ROOT)}: atlas gateway must disable code_execution, delegation, messaging, and skills; "
+                    "fanout must use the mounted router CLI directly"
+                )
     if errors:
         raise RegistryError("config validation failed:\n" + "\n".join(f"- {e}" for e in errors))
 

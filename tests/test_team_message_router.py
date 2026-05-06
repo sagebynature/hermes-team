@@ -80,6 +80,10 @@ def test_all_workers_requires_allow_wide_fanout(db):
         router.send_messages(db, "atlas", "all-workers", "task.request", "summary", "goal", "deliverable")
     ids = router.send_messages(db, "atlas", "all-workers", "task.request", "summary", "goal", "deliverable", allow_wide_fanout=True)
     assert len(ids) == 7
+    convs = rows(db, "SELECT DISTINCT conversation_id FROM messages WHERE id IN (%s)" % ",".join("?" * len(ids)), tuple(ids))
+    assert len(convs) == 1
+    conv = rows(db, "SELECT expected_count FROM conversations WHERE id=?", (convs[0]["conversation_id"],))[0]
+    assert conv["expected_count"] == 7
 
 
 def test_ttl_over_max_trace_loop_oversized_summary_and_body_rejected(db):
@@ -170,6 +174,8 @@ def test_dispatch_pending_success_creates_kanban_task_with_body_and_idempotency(
     assert msg["kanban_task_id"] == "t_123abc"
     assert msg["error"] is None
     cmd = calls[0]
+    assert "-e" in cmd
+    assert "TEAM_NEXUS_ROUTER_DISPATCH=1" in cmd
     assert "--body" in cmd
     body = cmd[cmd.index("--body") + 1]
     assert "Router artifact:" in body
@@ -178,6 +184,31 @@ def test_dispatch_pending_success_creates_kanban_task_with_body_and_idempotency(
     assert "deliverable" in body
     assert "--idempotency-key" in cmd
     assert f"router:{ids[0]}" in cmd
+
+
+def test_dispatch_pending_default_writes_kanban_sql_without_compose_run(db, tmp_path, monkeypatch):
+    monkeypatch.setattr(router, "ARTIFACT_DIR", tmp_path / "artifacts")
+    kanban_db = tmp_path / "kanban.db"
+    create_kanban_db(kanban_db)
+    monkeypatch.setattr(router, "DEFAULT_KANBAN_DB_PATH", kanban_db)
+
+    ids = router.send_messages(db, "atlas", "forge", "task.request", "dispatch me", "goal", "deliverable")
+    dispatched = router.dispatch_pending(db, max_messages=1)
+
+    assert dispatched == ids
+    msg = rows(db, "SELECT status, kanban_task_id, error FROM messages WHERE id=?", (ids[0],))[0]
+    assert msg["status"] == "dispatched"
+    assert msg["kanban_task_id"].startswith("t_")
+    assert msg["error"] is None
+    tasks = rows(kanban_db, "SELECT title, assignee, status, idempotency_key, created_by FROM tasks WHERE id=?", (msg["kanban_task_id"],))
+    assert tasks[0]["title"] == f"[router:{ids[0]}] dispatch me"
+    assert tasks[0]["assignee"] == "forge"
+    assert tasks[0]["status"] == "ready"
+    assert tasks[0]["idempotency_key"] == f"router:{ids[0]}"
+    assert tasks[0]["created_by"] == "router"
+    events = rows(db, "SELECT kind, payload_json FROM route_events WHERE message_id=? ORDER BY id", (ids[0],))
+    assert [e["kind"] for e in events] == ["created", "kanban_created"]
+    assert json.loads(events[-1]["payload_json"])["direct_sql"] is True
 
 
 def test_dispatch_pending_failure_keeps_message_pending_and_records_failure(db, tmp_path, monkeypatch):
@@ -212,7 +243,20 @@ def create_kanban_db(path, *, task_id="t_done", task_status="done", run_status="
             title TEXT NOT NULL,
             body TEXT,
             assignee TEXT,
-            status TEXT NOT NULL
+            status TEXT NOT NULL,
+            priority INTEGER DEFAULT 0,
+            created_by TEXT,
+            created_at INTEGER DEFAULT 0,
+            workspace_kind TEXT NOT NULL DEFAULT 'scratch',
+            idempotency_key TEXT
+        );
+        CREATE TABLE task_events(
+            id INTEGER PRIMARY KEY,
+            task_id TEXT,
+            run_id INTEGER,
+            kind TEXT,
+            payload TEXT,
+            created_at INTEGER
         );
         CREATE TABLE task_runs(
             id INTEGER PRIMARY KEY,
@@ -490,6 +534,7 @@ def test_create_report_tasks_creates_single_atlas_kanban_task_for_terminal_conve
     conv = rows(db, "SELECT report_task_id FROM conversations WHERE id=?", ("conv-report",))[0]
     assert conv["report_task_id"] == "t_report"
     cmd = calls[0]
+    assert "TEAM_NEXUS_ROUTER_DISPATCH=1" in cmd
     assert "atlas" in cmd
     assert "--assignee" in cmd
     assert cmd[cmd.index("--assignee") + 1] == "atlas"
