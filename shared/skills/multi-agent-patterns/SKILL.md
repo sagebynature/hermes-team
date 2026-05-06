@@ -148,6 +148,8 @@ File system memory: For complex tasks requiring shared state, agents read and wr
 
 Shared artifact contract: When downstream agents, reviewers, or a synthesizer depend on an output, private workspaces are not enough. The producer must write the artifact to the team's shared artifact location, include the exact artifact path in the task body/result or handoff comment, and verify the file exists before marking the task done. Consumers must inspect the referenced shared path and parent handoff comments before blocking. A downstream "missing artifact" blocker should identify the producer task id, expected shared path, and exact artifact type needed so the coordinator can route a focused repair task.
 
+Code-work contract: Code-writing agents keep implementation state isolated in their own workspace. For GitHub-backed work, each agent clones the repo under `/workspace/repos`, creates a task branch worktree under `/workspace/worktrees`, commits with Conventional Commits, pushes the branch before completion, and records what/how/why/where in `/shared/project/artifacts/<conversation_id>/worker-log.md`. Downstream pickup, review, or repair agents read the upstream worker log before touching code so they know the branch, worktree, commits, checks, and unresolved risks.
+
 **Isolation Trade-offs**
 Full context delegation provides maximum capability but defeats the purpose of sub-agents. Instruction passing maintains isolation but limits sub-agent flexibility. File system memory enables shared state without context passing but introduces latency and consistency challenges.
 

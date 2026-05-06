@@ -387,6 +387,8 @@ Coordination paths:
 
 Operational rule: chat is the radio; Kanban and workspace files are the record. If a specialist produces something worth keeping, it goes in `outbox/` or `artifacts/`. Cross-agent handoffs go in `/shared/project/artifacts` and must be referenced by a compact `[handoff]` Kanban comment. Durable decisions should use `[decision]` comments and point to a decision memo/synthesis artifact when the rationale is longer than one sentence.
 
+For code-writing tasks, agents must work from their own `/workspace`, clone GitHub repositories under `/workspace/repos`, create task branch worktrees under `/workspace/worktrees`, commit using Conventional Commits, push the branch before completion, and update `/shared/project/artifacts/<conversation_id>/worker-log.md` before handing off. Any downstream pickup/review task must read the upstream worker log before changing files.
+
 See `shared/project/team-collaboration-protocol.md` for the full collaboration protocol.
 
 For the operational startup/runbook, see `docs/discord-kanban-operations.md`.

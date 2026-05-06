@@ -607,6 +607,8 @@ Rules:
 - Parent tasks should produce a `[handoff]` comment and artifact path before child work starts.
 - Durable decisions should be recorded as `[decision]` comments.
 - Cross-agent deliverables should be written under `shared/project/artifacts`.
+- Code-writing tasks should use agent-owned clones/worktrees, Conventional Commits, pushed branches, and a mission `worker-log.md` under `shared/project/artifacts/<conversation_id>/`.
+- Pickup/review tasks should read the upstream worker log before changing code.
 
 ---
 
