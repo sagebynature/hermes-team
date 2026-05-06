@@ -8,21 +8,28 @@ Team Nexus uses Hermes Agent profiles, Kanban, checkpoints, skills, and a functi
 
 ```bash
 cp .env.example .env
-# edit .env; Atlas Discord token is required for gateway use
-make profile-runtime-stage
-make validate
+# edit .env; add a model provider key and Atlas Discord settings for gateway use
+make preflight
 make build
 make up
+```
+
+Open the dashboard after startup:
+
+```text
+http://127.0.0.1:${TEAM_NEXUS_DASHBOARD_PORT}
 ```
 
 Useful commands:
 
 ```bash
+make validate
 make compose-config
 make profile-render-dry-run
 make profile-render-docker-dry-run
 make shell PROFILE=forge
 make doctor PROFILE=atlas
+make doctor-all
 make logs SERVICE=atlas-gateway
 make kanban-dispatcher-once DRY_RUN=1
 ```
@@ -35,6 +42,9 @@ User -> Atlas Discord gateway -> Kanban -> specialist profiles -> Atlas -> User
 
 ## Key documents
 
+- First-time setup: `GETTING_STARTED.md`
+- Operations runbook: `docs/team-nexus-operations.md`
+- Discord/Kanban runbook: `docs/discord-kanban-operations.md`
 - Architecture plan: `docs/architecture/profile-driven-team-nexus.md`
 - ADR: `docs/adr/0014-profile-driven-team-nexus.md`
 - Migration inventory: `docs/migration/profile-driven-runtime-inventory.md`
@@ -106,7 +116,10 @@ Validate:
 ```bash
 make validate
 make compose-config
+make preflight
 ```
+
+`make preflight` runs profile validation, Python compile checks, host/Docker render dry-runs, Compose config validation, and Docker runtime staging.
 
 ## Knowledge and learning policy
 
@@ -128,7 +141,8 @@ make compose-config
 
 - Commit `.env.example`, never real secrets.
 - Docker mode loads repo-root `.env` through Compose.
-- Atlas Discord token is required for v1 gateway use.
+- Add at least one model provider key for live agent runs, usually `OPENROUTER_API_KEY`.
+- Atlas Discord settings are required for v1 gateway use: `DISCORD_BOT_TOKEN`, `DISCORD_ALLOWED_USERS`, and `DISCORD_HOME_CHANNEL`.
 - Worker Discord tokens are optional future fields and disabled by default.
 - Do not copy secrets broadly between profiles without explicit operator action.
 
@@ -137,6 +151,7 @@ make compose-config
 Core:
 
 ```bash
+make preflight
 make build
 make up
 make down
@@ -145,6 +160,7 @@ make ps
 make logs SERVICE=atlas-gateway
 make shell PROFILE=forge
 make doctor PROFILE=atlas
+make doctor-all
 ```
 
 Kanban:
@@ -153,8 +169,11 @@ Kanban:
 make kanban-init
 make kanban-list
 make kanban-stats
+make kanban-watch
 make kanban-create TITLE='...' ASSIGNEE=forge CONVERSATION_ID=mission_slug BODY='...'
 make kanban-dispatcher-once DRY_RUN=1
+make kanban-notifier-once
+make kanban-notifier-dry-run
 ```
 
 MCP:
@@ -167,4 +186,4 @@ make mcp-register-template-all SERVER=filesystem-workspace TARGET_AGENTS='atlas 
 
 ## Migration note
 
-The repo is intentionally moving away from the old per-agent Docker Compose runtime. Profiles are the identity boundary; Docker services are functional runtime processes. Old generated per-agent Compose files, registry generation, and nginx dashboard fan-out have been removed from the default architecture.
+The old generated per-agent Docker Compose runtime has been removed from the active repo path. Profiles are now the identity boundary; Docker services are functional runtime processes. `shared/team-agents.yaml`, `scripts/team_registry.py`, generated per-agent Compose files, nginx dashboard fan-out, and the Compose-aware Kanban dispatcher are superseded by `profiles/team-nexus.profiles.yaml`, `docker-compose.profiles.yml`, and native/profile-driven Kanban dispatch.
