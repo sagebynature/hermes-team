@@ -1,5 +1,5 @@
 # Global mise configuration baked into the team-nexus image.
-# Per-agent overrides can live in agents/<agent>/workspace/.mise.toml.
+# Profile/workspace-specific overrides can live in the active workspace .mise.toml.
 
 [settings]
 yes = true

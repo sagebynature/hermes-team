@@ -1,17 +1,15 @@
 """Backend routes for the Agent Identity dashboard plugin.
 
-Exposes a small public identity payload, an optional per-agent profile image, and a
-runtime-discovered list of Team Nexus dashboards for the top-banner agent navbar.
-In Team Nexus dashboard containers, $HERMES_HOME is /opt/data, so the host file
-agents/<agent>/home/profile.jpg is available as /opt/data/profile.jpg.
+Exposes a small public identity payload, an optional profile image, and the
+profile-driven Team Nexus roster for the top-banner profile navbar.
+In Team Nexus dashboard containers, $HERMES_HOME points at the active rendered
+profile under /opt/data/profiles/<profile>; profile.jpg is optional.
 """
 
 from __future__ import annotations
 
 import os
 import re
-import socket
-import urllib.request
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -25,9 +23,10 @@ from fastapi.responses import FileResponse
 
 router = APIRouter()
 
-ROSTER_PATH = Path("/shared/project/generated/team-roster.md")
-DEFAULT_DASHBOARD_PORT = int(os.environ.get("TEAM_NEXUS_DASHBOARD_CONTAINER_PORT", "9119"))
-AGENT_SERVICE_RE = re.compile(r"^[-\s]*([a-z0-9][a-z0-9-]*):\s*([^—\n]+?)(?:\s*—\s*(.*))?$")
+_DEFAULT_PROFILE_SPEC = Path("/workspace/profiles/team-nexus.profiles.yaml")
+if not _DEFAULT_PROFILE_SPEC.is_file():
+    _DEFAULT_PROFILE_SPEC = Path.cwd() / "profiles" / "team-nexus.profiles.yaml"
+PROFILE_SPEC_PATH = Path(os.environ.get("TEAM_NEXUS_PROFILE_SPEC", str(_DEFAULT_PROFILE_SPEC)))
 
 
 def _hermes_home() -> Path:
@@ -139,54 +138,79 @@ def _current_slug() -> str:
     return _slugify(os.environ.get("AGENT_NAME") or "agent")
 
 
-def _parse_roster() -> List[Dict[str, str]]:
+def _fallback_parse_profile_spec(text: str) -> List[Dict[str, str]]:
+    """Small no-dependency parser for the simple profile spec shape."""
     agents: List[Dict[str, str]] = []
-    if ROSTER_PATH.is_file():
-        for line in ROSTER_PATH.read_text(encoding="utf-8").splitlines():
-            match = AGENT_SERVICE_RE.match(line.strip())
-            if not match:
-                continue
-            slug, name, role = match.groups()
-            agents.append(
-                {
-                    "slug": slug.strip(),
-                    "name": name.strip(),
-                    "role": (role or "").strip(),
-                }
-            )
+    in_profiles = False
+    current_slug: Optional[str] = None
+    current: Dict[str, str] = {}
+    for raw in text.splitlines():
+        if raw.startswith("profiles:"):
+            in_profiles = True
+            continue
+        if in_profiles and raw and not raw.startswith(" "):
+            break
+        if not in_profiles:
+            continue
+        profile_match = re.match(r"^  ([a-z0-9_-]+):\s*$", raw)
+        if profile_match:
+            if current_slug and current.get("status") == "active_v1":
+                agents.append(
+                    {
+                        "slug": current_slug,
+                        "name": current.get("display_name", current_slug.title()),
+                        "role": current.get("one_job", ""),
+                    }
+                )
+            current_slug = profile_match.group(1)
+            current = {}
+            continue
+        field_match = re.match(r"^    (status|display_name|one_job):\s*(.+?)\s*$", raw)
+        if field_match and current_slug:
+            current[field_match.group(1)] = field_match.group(2).strip().strip("'\"")
+    if current_slug and current.get("status") == "active_v1":
+        agents.append(
+            {
+                "slug": current_slug,
+                "name": current.get("display_name", current_slug.title()),
+                "role": current.get("one_job", ""),
+            }
+        )
+    return agents
+
+
+def _parse_profile_roster() -> List[Dict[str, str]]:
+    agents: List[Dict[str, str]] = []
+    if PROFILE_SPEC_PATH.is_file():
+        text = PROFILE_SPEC_PATH.read_text(encoding="utf-8")
+        if yaml is not None:
+            try:
+                data = yaml.safe_load(text) or {}
+                profiles = data.get("profiles") if isinstance(data.get("profiles"), dict) else {}
+                for slug, spec in profiles.items():
+                    if not isinstance(spec, dict) or spec.get("status") != "active_v1":
+                        continue
+                    agents.append(
+                        {
+                            "slug": str(slug),
+                            "name": str(spec.get("display_name") or str(slug).title()),
+                            "role": str(spec.get("one_job") or spec.get("summary") or ""),
+                        }
+                    )
+            except Exception:
+                agents = []
+        if not agents:
+            agents = _fallback_parse_profile_spec(text)
     if not agents:
         identity = _agent_identity_from_env()
         agents.append({"slug": _current_slug(), "name": identity["name"], "role": identity["role"]})
     return agents
 
 
-def _dashboard_service_url(slug: str) -> str:
-    return f"http://{slug}-dashboard:{DEFAULT_DASHBOARD_PORT}"
-
-
-def _dashboard_is_running(slug: str) -> bool:
-    try:
-        with urllib.request.urlopen(f"{_dashboard_service_url(slug)}/api/config", timeout=0.35) as response:
-            return 200 <= response.status < 500
-    except urllib.error.HTTPError as exc:
-        # Hermes may protect /api/config with auth and return 401. Any HTTP
-        # response from the peer dashboard still proves the service is running.
-        return 200 <= exc.code < 500
-    except (urllib.error.URLError, TimeoutError, socket.timeout, OSError):
-        return False
-
-
 def _browser_href(slug: str, request: Optional[Request]) -> str:
-    # If this request came through the Team Nexus nginx reverse proxy, sibling
-    # dashboards live under /<agent> on the same origin. This is the normal web
-    # dashboard path and keeps links portable across localhost ports/domains.
-    if request and request.headers.get("x-forwarded-prefix"):
-        return f"/{slug}/sessions"
-
-    # Direct dashboard ports cannot route /<other-agent>/... themselves, so fall
-    # back to the conventional Team Nexus reverse-proxy port when known.
-    nginx_port = os.environ.get("NGINX_PORT") or "9130"
-    return f"http://127.0.0.1:{nginx_port}/{slug}/sessions"
+    if slug == _current_slug():
+        return "/sessions"
+    return f"#profile-{slug}"
 
 
 @router.get("/identity")
@@ -208,19 +232,17 @@ async def identity() -> Dict[str, Any]:
 @router.get("/agents")
 async def agents(request: Request) -> Dict[str, Any]:
     current_slug = _current_slug()
-    running_agents = []
-    for agent in _parse_roster():
+    profile_agents = []
+    for agent in _parse_profile_roster():
         slug = agent["slug"]
-        if slug != current_slug and not _dashboard_is_running(slug):
-            continue
-        running_agents.append(
+        profile_agents.append(
             {
                 **agent,
                 "current": slug == current_slug,
                 "href": _browser_href(slug, request),
             }
         )
-    return {"ok": True, "current_slug": current_slug, "agents": running_agents}
+    return {"ok": True, "current_slug": current_slug, "agents": profile_agents}
 
 
 @router.get("/profile.jpg")

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-make generate
 make validate
+make profile-render-dry-run
+make profile-render-docker-dry-run
 make compose-config
-make check-generated
+make profile-runtime-stage

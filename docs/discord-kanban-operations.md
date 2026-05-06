@@ -1,6 +1,6 @@
-# Discord + Kanban Operations
+# Discord + Kanban operations
 
-This document explains how Team Nexus runs inter-agent collaboration through Discord and Hermes Kanban.
+This document describes the current profile-driven Team Nexus collaboration model.
 
 ## Operating model
 
@@ -8,653 +8,185 @@ Team Nexus uses three layers:
 
 1. Discord is the human-facing mission room.
 2. Kanban is the durable coordination/source-of-truth layer.
-3. Docker Compose is the execution substrate: one service per Hermes agent.
+3. Docker Compose provides functional runtime services for Hermes profiles.
 
-Atlas remains the default coordinator and synthesizer. Specialists receive bounded Kanban work, complete it, add handoff comments/artifacts, and let Atlas synthesize the result back to the user.
+Atlas is the only Discord-facing gateway in v1. Forge, Sentinel, Scribe, and Curator are specialist Hermes profiles dispatched through Kanban. Workers do not chat with each other in Discord by default.
 
-## What is already wired
-
-Every agent service in `docker-compose.yml` sets:
-
-```yaml
-HERMES_HOME: /opt/data
-HERMES_KANBAN_HOME: /shared/kanban
-```
-
-Every agent mounts:
+Flow:
 
 ```text
-./agents/<agent>/home      -> /opt/data
-./agents/<agent>/workspace -> /workspace
-./shared/project           -> /shared/project:ro
-./shared/project/artifacts -> /shared/project/artifacts:rw  # writable cross-agent handoffs
-./shared/kanban            -> /shared/kanban:rw
-./shared/skills            -> /shared/skills:ro
-./shared/mcp               -> /shared/mcp:ro
+User -> Atlas Discord gateway -> Kanban task graph -> worker profiles -> Kanban evidence -> Atlas synthesis -> User
 ```
 
-The Compose manifest uses shorthand bind mounts with explicit `:ro` or `:rw` suffixes for these shared paths. The only writable submount under `/shared/project` is `/shared/project/artifacts`; do not make the rest of `/shared/project`, `/shared/skills`, or `/shared/mcp` writable unless you are deliberately changing the team security boundary.
+## What is wired
 
-The shared Kanban database lives on the host at:
+The profile-driven Compose runtime is `docker-compose.profiles.yml`.
+
+Core service:
 
 ```text
-shared/kanban/kanban.db
+atlas-gateway  HERMES_HOME=/opt/data/profiles/atlas  command=gateway run
 ```
 
-Inside containers, that path is:
+Optional function services:
 
 ```text
-/shared/kanban/kanban.db
+dashboard           Atlas profile dashboard/control plane
+admin-shell         operator shell with a selected profile home
+kanban-dispatcher   one-shot native dispatcher nudge
 ```
 
-Every agent has the `kanban` toolset enabled. Every embedded Hermes gateway Kanban dispatcher is disabled:
+Runtime mounts:
 
-```yaml
-kanban:
-  dispatch_in_gateway: false
+```text
+runtime/hermes             -> /opt/data
+repo root                  -> /workspace
+shared/skills              -> /shared/skills:ro
+shared/mcp                 -> /shared/mcp:ro
+shared/plugins             -> /opt/data/plugins:ro
+shared/dashboard-themes    -> /opt/data/dashboard-themes:ro
 ```
 
-This is intentional. Team Nexus uses an explicit Compose-aware dispatcher instead.
+The shared Kanban database lives under the ignored runtime tree:
+
+```text
+runtime/hermes/kanban/kanban.db
+```
+
+Inside containers, that path is resolved through:
+
+```text
+HERMES_KANBAN_HOME=/opt/data/kanban
+```
 
 ## Does Kanban autostart?
 
 Kanban itself is not a long-running server. It is a shared SQLite-backed board plus Hermes CLI/tooling.
 
-Initialize it once from the repo root:
+Initialize it once:
 
 ```bash
 make kanban-init
 ```
 
-That runs:
+Inspect it:
 
 ```bash
-docker compose run --rm atlas kanban init
+make kanban-stats
+make kanban-list
+make kanban-watch
 ```
 
-After initialization, the board exists as `shared/kanban/kanban.db`. If that file already exists, Kanban is already initialized.
-
-The Kanban background services are separate. They do not run with a plain `docker compose up -d`; start them explicitly through the Docker Compose `kanban` profile. The `kanban-dispatcher` launches worker tasks, while the `kanban-notifier` tails mission events and queues or posts progress updates.
-
-## Starting Team Nexus
-
-From the repo root:
-
-```bash
-cd ./team-nexus
-```
-
-First-time or clean setup:
-
-```bash
-cp .env.example .env
-# edit .env with real values
-make workspace-init
-make build
-make compose-config
-make kanban-init
-```
-
-Start the Hermes gateways:
+The Atlas gateway is the long-running process. Start it with:
 
 ```bash
 make up
 ```
 
-or directly:
-
-```bash
-docker compose up -d
-```
-
-Atlas and the specialists run `hermes gateway run` inside their containers. Atlas is the primary Discord-facing coordinator.
-
-Check Kanban:
-
-```bash
-make kanban-stats
-make kanban-list
-```
-
-Start automatic worker dispatch as the Dockerized dispatcher daemon:
-
-```bash
-make kanban-dispatcher-daemon
-```
-
-This starts the `kanban-dispatcher` service through the Compose `kanban` profile:
-
-```bash
-docker compose --profile kanban up -d kanban-dispatcher
-```
-
-Stop it with:
-
-```bash
-make kanban-dispatcher-stop
-```
-
-Follow logs with:
-
-```bash
-make kanban-dispatcher-logs
-```
-
 ## Dispatcher modes
 
-Safe dry-run, no worker launch and no mutation:
+Preview one native dispatch pass without worker launch:
 
 ```bash
 make kanban-dispatcher-once DRY_RUN=1
 ```
 
-One real dispatcher pass:
+Run one dispatch pass:
 
 ```bash
 make kanban-dispatcher-once
 ```
 
-Continuous dispatcher loop:
+Start/stop the gateway-hosted dispatcher runtime:
 
 ```bash
 make kanban-dispatcher-daemon
+make kanban-dispatcher-stop
 ```
 
-With explicit interval, concurrency limit, worker timeout, and Atlas synthesis dispatch control:
+Follow logs:
 
 ```bash
-KANBAN_DISPATCH_INTERVAL=60 KANBAN_DISPATCH_MAX_TASKS=1 KANBAN_DISPATCH_WORKER_TIMEOUT=900 KANBAN_DISPATCH_INCLUDE_ATLAS=1 make kanban-dispatcher-daemon
+make kanban-dispatcher-logs
 ```
 
-`KANBAN_DISPATCH_INCLUDE_ATLAS` defaults to `1` for the Compose `kanban-dispatcher` service so ready Atlas synthesis tasks are picked up. Set it to `0` only when deliberately pausing Atlas fan-in execution.
-
-Manual dispatch of one task:
+`KANBAN_DISPATCH_MAX_TASKS` controls the one-shot cap:
 
 ```bash
-make kanban-dispatch AGENT=forge TASK=<task-id>
+MAX_TASKS=3 make kanban-dispatcher-once
 ```
 
-The Compose-aware dispatcher reads `shared/team-agents.yaml` to map a Kanban assignee like `forge` to the Docker Compose service named `forge`.
+## Mission task contract
 
-For automatic dispatch, the dispatcher first claims the selected ready task in the shared Kanban database. That makes the lifecycle visible as:
-
-```text
-todo -> ready -> running -> done
-```
-
-The claim writes a `claimed` event, sets `tasks.started_at`, creates a running `task_runs` row, and moves the task to `running` / IN PROGRESS before the worker container starts. Then the dispatcher runs:
-
-```bash
-docker compose run --rm forge chat -q "work kanban task <task-id>"
-```
-
-If the worker command exits non-zero while the dispatcher-created claim is still active, the dispatcher records a `dispatch_failed` event, closes the failed run as `spawn_failed`, and requeues the task back to `ready` for a later retry.
-
-If a worker exits with code 0 but leaves the task in `running` (for example, the agent described an error instead of calling `kanban_complete` or `kanban_block`), the dispatcher records `dispatch_incomplete`, closes the run as `incomplete`, and moves the task to `blocked` for operator review. This prevents silent stuck `running` tasks from disappearing from future dispatcher passes.
-
-If a worker exceeds `KANBAN_DISPATCH_WORKER_TIMEOUT` / `--worker-timeout` (default 900 seconds), the dispatcher kills the named one-off worker container, records a `dispatch_timed_out` event, closes the run as `timed_out`, and moves the task to `blocked` instead of requeueing it. This prevents an agent/model/tool loop from being relaunched forever; an operator should inspect, split, or unblock the task deliberately.
-
-The `kanban-dispatcher` container uses Docker-outside-of-Docker: it mounts the host Docker socket and the repo at `./team-nexus`, then runs nested `docker compose run --rm <agent> ...` commands against the host Docker daemon.
-
-Dispatcher logs go to:
-
-```text
-shared/kanban/dispatcher.log
-```
-
-## Mission notifier and Atlas fan-in
-
-Do not make Atlas periodically scan the whole board. Team Nexus uses Kanban events as the progress signal. `scripts/kanban-mission-notifier.py` tails new `task_events` rows by cursor, writes idempotent rows to `mission_notification_outbox`, and creates one Atlas synthesis task when all worker tasks in a mission are terminal. Worker-completion rows are Atlas/internal handoff records (`target='atlas:mission'` or `target='atlas:kanban'`, `status='queued'`). Discord webhooks are now the compact status/receipt lane; the actual final answer is posted directly by Atlas or by the directly tasked specialist when the task explicitly opts into direct Discord reply.
-
-A mission task must include a conversation ID in both its title and body. This is a hard Team Nexus contract, not a style preference: the optional DB enforcement trigger rejects new Kanban tasks that cannot be associated with a notifier mission.
+Team Nexus treats the mission contract as required evidence, not prompt style. Use `make kanban-create` so title/body include the required identifiers.
 
 Required title shape:
 
 ```text
-[mission:mission_<slug>_<yyyymmdd>] <short objective>
+[mission:<conversation_id>] <short objective>
 ```
 
-Required body shape / sample payload:
+Required body fields:
 
 ```text
-conversation_id: mission_<slug>_<yyyymmdd>
-# Optional, but required for thread-specific Discord delivery when conversation_id is not already the Discord thread snowflake:
-discord_thread_id: <discord-thread-or-forum-post-id>
-# Default for worker fan-out is internal/private. Use direct_discord only when this assignee should publicly answer in the Discord thread.
-reply_mode: atlas_internal
+conversation_id: <conversation_id>
+reply_mode: kanban_only
 reply_expected: false
-# For direct replies, use:
-# reply_mode: direct_discord
-# reply_target: discord:<discord-thread-or-forum-post-id>
-# reply_expected: true
 from: atlas
-to: <registered-agent-slug>
-assignee: <registered-agent-slug>
-objective: <bounded worker objective>
-constraints:
-- <constraint 1>
-- <constraint 2>
-expected_output: <concise, synthesis-ready deliverable>
-artifact_path: /shared/project/artifacts/missions/mission_<slug>_<yyyymmdd>/<agent>.md
-reply_to: atlas
-ttl: 1
+to: <profile>
+assignee: <profile>
+<objective and constraints>
 ```
-
-A concrete readiness-check example:
-
-```text
-Title:
-[mission:mission_readiness_20260506] Readiness Check: Vega
-
-Body:
-conversation_id: mission_readiness_20260506
-from: atlas
-to: vega
-assignee: vega
-objective: Perform a one-paragraph readiness check for Sage.
-constraints:
-- Keep the response concise.
-- Do not invent completed work or hidden context.
-expected_output: One paragraph covering responsibilities, one risk being watched, and one way Vega can help Sage this week.
-artifact_path: /shared/project/artifacts/missions/mission_readiness_20260506/vega.md
-reply_to: atlas
-ttl: 1
-```
-
-Print this sample from the repo with:
-
-```bash
-make kanban-mission-payload-sample
-```
-
-Install deterministic DB enforcement with:
-
-```bash
-make kanban-mission-contract-install
-```
-
-Audit existing rows with:
-
-```bash
-make kanban-mission-contract-check
-```
-
-Use the guarded Make target for operator-created tasks:
-
-```bash
-make kanban-create \
-  CONVERSATION_ID=mission_readiness_20260506 \
-  ASSIGNEE=vega \
-  TITLE='Readiness Check: Vega' \
-  BODY='objective: Perform a one-paragraph readiness check for Sage.
-constraints:
-- Keep it concise.
-expected_output: responsibilities, one risk, one way to help this week
-artifact_path: /shared/project/artifacts/missions/mission_readiness_20260506/vega.md
-reply_to: atlas
-ttl: 1'
-```
-
-Process newly appended events once:
-
-```bash
-make kanban-notifier-once
-```
-
-Preview pending Discord status deliveries without posting:
-
-```bash
-make kanban-notifier-dry-run
-```
-
-Deliver pending Discord-targeted outbox rows through `scripts/discord-post-status.py` and `DISCORD_STATUS_WEBHOOK_URL`. Internal Atlas handoff rows are not posted to Discord; they remain queued/auditable in `mission_notification_outbox`, while the actual Atlas notification is the ready synthesis task assigned to Atlas.
-
-Final answer delivery uses two lanes:
-
-1. Direct agent reply: Atlas synthesis tasks and deliberate direct-specialist tasks include `reply_mode: direct_discord` and `reply_target: discord:<thread-id>`. The Compose dispatcher detects that metadata and launches the one-off agent run with `-t hermes-cli,kanban,messaging`, allowing that agent to call `send_message` directly into the originating thread. Ordinary worker fan-out does not receive the messaging tool.
-2. Webhook receipt: after the agent completes the Kanban task, the notifier sends a brief structured webhook receipt into the thread (`Atlas completed`, task id, conversation id, compact summary). The webhook is intentionally not the final-answer body.
-
-Agents should complete direct-reply tasks with the final answer in `kanban_complete(result=...)`, a one-sentence `summary`, and metadata such as `discord_reply_sent: true`, `reply_target`, and `discord_message_id` when available. If the reply metadata is missing, treat the task as completed work but not proven delivered to Discord.
-
-```bash
-make kanban-notifier-deliver
-```
-
-Run the notifier as a lightweight Dockerized daemon:
-
-```bash
-make kanban-notifier-daemon
-```
-
-That starts the `kanban-notifier` service through the Compose `kanban` profile:
-
-```bash
-docker compose --profile kanban up -d kanban-notifier
-```
-
-The daemon is intentionally separate from the worker dispatcher. The dispatcher launches workers; the notifier tails mission events, queues status updates, and optionally delivers those updates. The notifier service does not mount the Docker socket and cannot spawn workers.
-
-### Notifier setup checklist
-
-1. Initialize the shared board if needed:
-
-   ```bash
-   make kanban-init
-   test -f shared/kanban/kanban.db
-   ```
-
-2. Decide whether the daemon should only queue outbox rows or also post Discord status updates.
-
-   Queue-only mode is the safest default. It requires no webhook secret and is what the Compose service does unless configured otherwise:
-
-   ```bash
-   make kanban-notifier-daemon
-   make kanban-notifier-dry-run
-   make kanban-notifier-deliver
-   ```
-
-   Auto-delivery mode requires `DISCORD_STATUS_WEBHOOK_URL` in repo-root `.env` and `KANBAN_NOTIFIER_DELIVER=1` for the daemon environment. Do not print the webhook value.
-
-   ```bash
-   # .env
-   DISCORD_STATUS_WEBHOOK_URL=<redacted Discord webhook URL>
-   KANBAN_NOTIFIER_DELIVER=1
-   KANBAN_NOTIFIER_INTERVAL=10
-   KANBAN_NOTIFIER_LIMIT=100
-   ```
-
-3. Start or restart the daemon after changing `.env`:
-
-   ```bash
-   make kanban-notifier-daemon
-   # or, after env changes:
-   docker compose --profile kanban up -d --force-recreate kanban-notifier
-   ```
-
-4. Verify the service and log file:
-
-   ```bash
-   docker compose --profile kanban ps kanban-notifier
-   make kanban-notifier-logs
-   tail -f shared/kanban/mission-notifier.log
-   ```
-
-5. Stop it when needed:
-
-   ```bash
-   make kanban-notifier-stop
-   ```
-
-The default daemon interval is 10 seconds. Override with `KANBAN_NOTIFIER_INTERVAL=<seconds>` in `.env`. The default per-pass event limit is 100. Override with `KANBAN_NOTIFIER_LIMIT=<count>` in `.env`.
-
-The notifier reacts to:
-
-- `blocked` / `dispatch_timed_out`: queue a human blocker update.
-- `completed` / `done` on worker tasks: queue a compact completion update.
-- all non-Atlas worker tasks for a `conversation_id` reaching `done` or `archived`: create exactly one ready Atlas task with idempotency key `mission:<conversation_id>:atlas-synthesis`.
-- `completed` / `done` on the Atlas synthesis task: queue a final-response-ready update.
-
-The notifier is deterministic infrastructure. It does not invent specialist conclusions; Atlas still owns final synthesis from Kanban task results/comments and artifacts.
-
-The operational skill for this workflow is tracked in the repo at `shared/skills/team-nexus-kanban-ops/SKILL.md`. It is an operator/developer runbook, not an Atlas runtime skill: Atlas runs inside Docker and should not be expected to run host `make` or `docker compose` commands. Atlas-facing behavior belongs in `agents/atlas/home/AGENTS.md` and in the Kanban task bodies it receives.
-
-Notifier state and outbox rows live in the shared Kanban DB:
-
-```text
-mission_notifier_state
-mission_notification_outbox
-```
-
-Notifier logs go to:
-
-```text
-shared/kanban/mission-notifier.log
-```
-
-## Creating and watching tasks
 
 Create a task:
 
 ```bash
-make kanban-create TITLE="Draft public dashboard scope" ASSIGNEE=vega
+make kanban-create TITLE='Implement login guard' ASSIGNEE=forge CONVERSATION_ID=mission_login_guard BODY='Implement the bounded change, run tests, and report branch/PR evidence.'
 ```
 
-Link an existing parent task to a child task dependency:
+Optional direct Discord reply mode is reserved for explicit cases:
 
 ```bash
-make kanban-link PARENT=<parent-task-id> CHILD=<child-task-id>
+make kanban-create TITLE='Answer docs question' ASSIGNEE=scribe CONVERSATION_ID=mission_docs_q DISCORD_THREAD_ID=<thread-id> REPLY_MODE=direct_discord BODY='Draft a concise user-facing answer and cite files changed.'
 ```
 
-Atlas should use task dependencies for mission routes rather than only describing order in Discord. Parent work should produce a compact `[handoff]` comment and artifact path before child work starts.
+## Worker evidence rules
 
-List tasks:
+Workers should leave synthesis-ready evidence in durable places:
+
+- Kanban task status and comments.
+- Artifact files under `shared/project/artifacts/` when needed.
+- Branch names, commit SHAs, PR URLs, and test commands for code work.
+- Sentinel verdict comments for review-gated work.
+
+Atlas should not claim a worker replied or completed work unless Kanban, PR, artifact, or logs provide observable evidence.
+
+## Mission notifier and fan-in
+
+`scripts/kanban-mission-notifier.py` remains the lightweight fan-in bridge. It tails Kanban task events, maintains a cursor/outbox in the shared board, and can create one Atlas synthesis task when worker tasks for a mission reach terminal states.
+
+Useful commands:
 
 ```bash
-make kanban-list
+make kanban-notifier-once
+make kanban-notifier-dry-run
+make kanban-notifier-deliver
 ```
 
-Watch Kanban events:
+Status webhook dry-run:
 
 ```bash
-make kanban-watch
+make discord-status-dry-run MESSAGE='Team Nexus status check'
 ```
 
-Show summary counts:
+## Safety boundaries
 
-```bash
-make kanban-stats
-```
+- Discord is for human mission intake and final response, not worker-to-worker chat.
+- Worker handoffs should be Kanban-only by default.
+- `runtime/` may contain auth, sessions, memory, logs, checkpoints, and Kanban data; do not commit it.
+- Profile files are rendered from `profiles/team-nexus.profiles.yaml`; use renderer dry-runs before staging.
+- Checkpoints are enabled for editing profiles but do not replace Git for repo changes.
 
-## Atlas deep interview and mission routes
+## Legacy runtime note
 
-Atlas should classify each meaningful new Discord mission before acting:
-
-- `direct-answer`: answer directly; no Kanban fan-out.
-- `clarify-first`: ask a bounded set of numbered questions before routing.
-- `route-ready`: draft a mission route and ask for approval, or proceed if user already authorized execution.
-- `user-decision-required`: ask user to choose between meaningful tradeoffs.
-
-For ambiguous missions, Atlas asks 3-7 numbered questions in one pass, labels each as required or optional, and proposes defaults for low-stakes choices. Atlas should stop interviewing once it can safely route the work, then record any remaining assumptions in the route.
-
-For multi-agent work, Atlas should post a compact mission route before creating tasks. The route should include:
-
-- `conversation_id`, usually `mission_<slug>_<yyyymmdd>`.
-- Objective, success criteria, assumptions, and excluded scope.
-- Task graph with assignee, objective, dependency, expected output, artifact path, and review gate.
-- Specialist rationale: why each selected agent is involved.
-- Final synthesis plan owned by Atlas.
-
-Template:
-
-```text
-Mission route proposed: <mission>
-conversation_id: <id>
-Tasks:
-- Vega: <objective> (depends: none, artifact: /shared/project/artifacts/<mission>/vega-*.md)
-- Scout: <objective> (depends: Vega, artifact: /shared/project/artifacts/<mission>/scout-*.md)
-- Forge: <objective> (depends: Vega, artifact: /shared/project/artifacts/<mission>/forge-*.md)
-- Sentinel: <review objective> (depends: Forge, artifact: /shared/project/artifacts/<mission>/sentinel-*.md)
-Final: Atlas synthesis after required handoffs land.
-```
-
-Shared route template for durable artifacts:
-
-```text
-shared/project/atlas-mission-route-template.md
-```
-
-When executing a route, Atlas can create child tasks with parents directly:
-
-```bash
-docker compose run --rm atlas kanban create "Define scope" --assignee vega --body "..." --json
-docker compose run --rm atlas kanban create "Design implementation" --assignee forge --parent <vega-task-id> --body "..." --json
-```
-
-Or link tasks after creation:
-
-```bash
-make kanban-link PARENT=<parent-task-id> CHILD=<child-task-id>
-```
-
-Remember: the board exists after `make kanban-init`, but automatic worker dispatch only runs when the kanban profile is started with `make kanban-dispatcher-daemon` or an equivalent `docker compose --profile kanban ...` command.
-
-## Discord setup
-
-In the Discord Developer Portal:
-
-1. Create or select the Team Nexus bot.
-2. Copy the bot token into `.env` as `DISCORD_BOT_TOKEN`.
-3. Enable Message Content Intent.
-4. Invite the bot to the Team Nexus server.
-5. Get your Discord user ID and set `DISCORD_ALLOWED_USERS`.
-6. Get the `#nexus-command` channel ID and set `DISCORD_HOME_CHANNEL`.
-
-Recommended channels:
-
-```text
-#nexus-command   user talks to Atlas
-#nexus-status    compact status updates
-#nexus-handoffs  optional specialist handoffs/escalations
-#nexus-lab       optional bounded roundtables/brainstorming
-```
-
-Status and handoff webhooks are optional. They mirror important events to Discord, but Kanban remains the source of truth.
-
-## Kanban comment prefixes
-
-Use these prefixes consistently so Atlas can reconstruct a mission from the board and quote compact updates back into Discord:
-
-```text
-[handoff] producer=<agent> consumer=<agent|atlas> artifact=/shared/project/artifacts/<file> summary=<one sentence> next=<optional task/reviewer>
-[decision] owner=<atlas|user> decision=<one sentence> rationale=<why> artifact=/shared/project/artifacts/<optional memo>
-```
-
-Rules:
-
-- Use `[handoff]` whenever one agent creates something another agent should consume.
-- Cross-agent handoff artifacts must live under `/shared/project/artifacts`; private `/workspace` files are not sufficient for downstream agents.
-- Use `[decision]` for Atlas/user decisions, especially final syntheses or scope calls.
-- If the rationale is longer than one sentence, write a memo or synthesis artifact and point the `[decision]` comment at it.
-- Keep Discord posts short; link the Kanban task and artifact path instead of dumping long content.
-
-## Environment variables
-
-Values live in the repo-root `.env`, loaded by every Compose service via `env_file: ./.env`.
-
-Do not commit real secret values.
-
-### Minimum practical set
-
-```bash
-OPENROUTER_API_KEY=
-DISCORD_BOT_TOKEN=
-DISCORD_ALLOWED_USERS=
-DISCORD_HOME_CHANNEL=
-```
-
-`OPENROUTER_API_KEY` is required because the current agent configs use OpenRouter as the model provider.
-
-`DISCORD_BOT_TOKEN` lets the Hermes Discord gateway log in as the bot.
-
-`DISCORD_ALLOWED_USERS` restricts who can command the bot.
-
-`DISCORD_HOME_CHANNEL` sets the default Discord command channel.
-
-### Optional provider/model keys
-
-```bash
-ANTHROPIC_API_KEY=
-OPENAI_API_KEY=
-GOOGLE_API_KEY=
-```
-
-Use these if agent configs switch providers or auxiliary tooling needs them.
-
-### Optional Discord webhook keys
-
-```bash
-DISCORD_STATUS_WEBHOOK_URL=
-DISCORD_HANDOFFS_WEBHOOK_URL=
-```
-
-These are used by `scripts/discord-post-status.py` for compact status/handoff posts. They are not required for the bot itself.
-
-Test webhook payload formatting without sending:
-
-```bash
-make discord-status-dry-run MESSAGE='hello from Team Nexus'
-```
-
-### Optional dispatcher tuning keys
-
-```bash
-KANBAN_DISPATCH_INTERVAL=60
-KANBAN_DISPATCH_MAX_TASKS=1
-KANBAN_DISPATCH_WORKER_TIMEOUT=900
-```
-
-These tune the Dockerized `kanban-dispatcher` service. They are optional; defaults are 60 seconds, 1 concurrent task per pass, and a 900-second worker timeout.
-
-### Optional tool/integration keys
-
-```bash
-GITHUB_TOKEN=
-GATEWAY_API_KEY=
-EXA_API_KEY=
-PARALLEL_API_KEY=
-TAVILY_API_KEY=
-FIRECRAWL_API_KEY=
-FIRECRAWL_API_URL=
-TINKER_API_KEY=
-WANDB_API_KEY=
-```
-
-Set only what the team needs.
-
-`GITHUB_TOKEN` is needed for GitHub API/repo operations.
-
-`GATEWAY_API_KEY` protects or authenticates gateway API access if configured.
-
-The search/extraction/ML keys are optional integrations.
-
-## First live test
-
-1. Start gateways:
-
-   ```bash
-   make up
-   ```
-
-2. Confirm board health:
-
-   ```bash
-   make kanban-stats
-   ```
-
-3. Start dispatcher:
-
-   ```bash
-   make kanban-dispatcher-daemon
-   ```
-
-4. In Discord `#nexus-command`, ask Atlas for a bounded test mission:
-
-   ```text
-   Atlas, run a bounded Team Nexus roundtable: Should we prioritize a public dashboard for Team Nexus next? Ask Vega, Forge, Lumen, Blitz, Ledger, and Sentinel for 5-bullet input, then synthesize a recommendation. Keep this as a dry-run planning mission; no code changes.
-   ```
-
-5. Watch progress:
-
-   ```bash
-   make kanban-list
-   make kanban-watch
-   ```
-
-## Important guardrails
-
-- Discord is the radio, not the database.
-- Kanban and workspace files are the record.
-- Atlas owns user-facing synthesis by default.
-- Specialists should produce bounded handoffs, not endless peer debate.
-- Do not enable Hermes embedded Kanban gateway dispatch while the Compose-aware dispatcher is active.
-- Do not expose tokens, webhook URLs, auth files, or private logs in Discord or committed docs.
+Older docs and ADRs may describe one Docker Compose service per agent, `shared/team-agents.yaml`, and the custom Compose-aware dispatcher scripts. Those paths are superseded by the profile-driven runtime and should not be used for current operations.
