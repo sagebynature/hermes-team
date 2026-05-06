@@ -95,6 +95,10 @@ agents/*/workspace/.env.*
 agents/*/workspace/*.pem
 agents/*/workspace/*.key
 
+# Profile-driven runtime staging/output. May contain profile-local env, auth,
+# sessions, memory, logs, and user/customer data.
+runtime/
+
 # -----------------------------------------------------------------------------
 # Local-only overrides
 # -----------------------------------------------------------------------------

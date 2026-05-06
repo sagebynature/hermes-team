@@ -49,7 +49,8 @@ Replace the old one-service-per-agent model with one image and function services
 
 - Atlas gateway / Discord bot.
 - Dashboard.
-- Kanban dispatcher.
+- Gateway-embedded native Kanban dispatcher by default.
+- Optional one-shot dispatcher nudge service.
 - Optional admin/shell.
 
 All function services share the generated Hermes profile set and workspace mounts. Workers are spawned as Hermes profiles by the dispatcher, not as separate Compose services.

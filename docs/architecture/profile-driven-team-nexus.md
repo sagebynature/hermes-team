@@ -212,7 +212,8 @@ V1 target:
 - Compose services by function:
   - Atlas gateway / Discord bot,
   - dashboard,
-  - Kanban dispatcher,
+  - gateway-embedded native Kanban dispatcher by default,
+  - optional one-shot dispatcher nudge service,
   - optional admin/shell,
 - shared mounted HERMES_HOME,
 - shared mounted workspace/project root,
@@ -300,7 +301,8 @@ A small Team Nexus repo change should prove:
 
 ### Phase 3: Docker runtime reshape
 
-- Replace per-agent services with function services: gateway, dashboard, dispatcher, admin/shell.
+- Add profile-driven function-service Compose file: `docker-compose.profiles.yml`.
+- Replace per-agent services with function services: gateway, dashboard, gateway-embedded dispatcher, one-shot dispatcher nudge, admin/shell.
 - Keep one image.
 - Mount one durable HERMES_HOME/profile set and workspace root.
 - Make `docker run`/Compose admin path the operator CLI fallback.

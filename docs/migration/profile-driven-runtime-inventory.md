@@ -11,7 +11,7 @@ This inventory starts Phase 0 of the big-bang profile-driven refactor. It identi
 | Surface | Current path(s) | Migration disposition |
 |---|---|---|
 | Agent roster registry | `shared/team-agents.yaml`, `scripts/team_registry.py`, `generated/team-agents.mk` | Superseded by `profiles/team-nexus.profiles.yaml` and future profile renderer. Keep only until the new renderer owns Docker/host outputs. |
-| Per-agent Compose services | `docker-compose.agents.generated.yml` | Remove after functional services replace agent services. Profiles become identity; services become gateway/dashboard/dispatcher/admin. |
+| Per-agent Compose services | `docker-compose.agents.generated.yml` | Being replaced by `docker-compose.profiles.yml` function services. Remove after defaults switch and vertical slice passes. Profiles become identity; services become gateway/dashboard/admin plus dispatcher nudge. |
 | Per-agent dashboard services | `docker-compose.dashboards.generated.yml`, `nginx/dashboards.conf` | Migrate to functional/light dashboard model. Preserve useful dashboard theme/plugin assets. |
 | Per-agent homes | `agents/*/home/` | Runtime-owned state. Do not delete blindly. Bootstrap must not overwrite `.env`, auth, sessions, memory, logs, gateway state, or live DBs. |
 | Shared skills | `shared/skills/` | Preserve. Introduce manifests that select shared base and role-specific skills for each profile. |

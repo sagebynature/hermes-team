@@ -80,6 +80,18 @@ Preview Docker-mode path substitutions:
 make profile-render-docker-dry-run
 ```
 
+Stage Docker profile files into the ignored runtime directory:
+
+```bash
+make profile-runtime-stage
+```
+
+Validate the profile-driven Compose function services:
+
+```bash
+make profile-compose-config
+```
+
 Materializing files requires an explicit staging directory:
 
 ```bash
