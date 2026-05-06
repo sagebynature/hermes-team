@@ -4,6 +4,7 @@ import argparse
 import importlib.util
 import sqlite3
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -22,12 +23,12 @@ def load_dispatcher_module():
     return module
 
 
-def make_args(db: Path, *, dry_run: bool = False, worker_timeout: int = 900) -> argparse.Namespace:
+def make_args(db: Path, *, dry_run: bool = False, worker_timeout: int = 900, max_tasks: int = 1) -> argparse.Namespace:
     return argparse.Namespace(
         db=str(db),
         dry_run=dry_run,
         include_atlas=False,
-        max_tasks=1,
+        max_tasks=max_tasks,
         daemon=False,
         worker_timeout=worker_timeout,
     )
@@ -142,6 +143,62 @@ class KanbanComposeDispatcherTests(unittest.TestCase):
             self.assertEqual(final_task, ("done", None, None, None))
             self.assertEqual([kind for kind, _ in events], ["claimed", "completed"])
             self.assertEqual(runs, [("t_ready", "scout", "done", "completed", 2000)])
+
+    def test_max_tasks_dispatches_claimed_tasks_concurrently(self):
+        dispatcher = load_dispatcher_module()
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            db = tmp / "kanban.db"
+            init_db(db)
+            with sqlite3.connect(db) as conn:
+                conn.executemany(
+                    "INSERT INTO tasks (id, title, assignee, status, priority, created_at) VALUES (?, ?, ?, 'ready', 0, ?)",
+                    [
+                        ("t_ready_2", "Ready smoke task 2", "vega", 1001),
+                        ("t_ready_3", "Ready smoke task 3", "forge", 1002),
+                    ],
+                )
+                conn.commit()
+            log_path = tmp / "dispatcher.log"
+            lock = threading.Lock()
+            all_started = threading.Event()
+            observed_starts = []
+
+            def fake_dispatch(task_id: str, assignee: str, dry_run: bool, log_path: Path, worker_timeout: int) -> int:
+                with lock:
+                    observed_starts.append((task_id, assignee))
+                    if len(observed_starts) == 3:
+                        all_started.set()
+                if not all_started.wait(2):
+                    raise AssertionError("dispatcher did not start max_tasks workers concurrently")
+                with sqlite3.connect(db) as conn:
+                    task = conn.execute(
+                        "SELECT status, current_run_id FROM tasks WHERE id = ?",
+                        (task_id,),
+                    ).fetchone()
+                    self.assertEqual(task[0], "running")
+                    self.assertIsNotNone(task[1])
+                    run_id = task[1]
+                    conn.execute(
+                        "UPDATE tasks SET status = 'done', completed_at = 2000, claim_lock = NULL, claim_expires = NULL, current_run_id = NULL WHERE id = ?",
+                        (task_id,),
+                    )
+                    conn.execute(
+                        "UPDATE task_runs SET status = 'done', outcome = 'completed', ended_at = 2000 WHERE id = ?",
+                        (run_id,),
+                    )
+                    conn.commit()
+                return 0
+
+            with mock.patch.object(dispatcher, "dispatch", fake_dispatch):
+                code = dispatcher.run_pass(make_args(db, max_tasks=3), {"scout": "scout", "vega": "vega", "forge": "forge"}, log_path)
+
+            self.assertEqual(code, 0)
+            self.assertEqual({task_id for task_id, _ in observed_starts}, {"t_ready", "t_ready_2", "t_ready_3"})
+            with sqlite3.connect(db) as conn:
+                statuses = dict(conn.execute("SELECT id, status FROM tasks ORDER BY id").fetchall())
+            self.assertEqual(statuses, {"t_ready": "done", "t_ready_2": "done", "t_ready_3": "done"})
+            self.assertIn("dispatching 3 claimed task(s) with max_workers=3", log_path.read_text(encoding="utf-8"))
 
     def test_failed_worker_spawn_requeues_task_but_preserves_failed_run(self):
         dispatcher = load_dispatcher_module()

@@ -54,6 +54,10 @@ Use relevant specialists, not all specialists blindly. Display generic role labe
 
 Atlas asks multiple specialists to work independently in parallel, then creates or performs a synthesis step after the parent tasks complete. This is the default pattern for research, roundtables, cross-functional planning, and tradeoff analysis.
 
+### Direct specialist request
+
+When user asks Atlas to ask a named registered specialist for that specialist's own answer, statement, role summary, or opinion, treat it as explicit approval for one bounded durable task to that specialist. Atlas must not answer in the specialist's voice and must not rely on `@Specialist` Discord prose as delegation. Atlas should create the Kanban/router work item, report the task/message ID, then wait for the specialist's completed result/comment/artifact before presenting it as the specialist's statement. If routing or task creation fails, Atlas should say it failed and provide no fake specialist response.
+
 ### Specialist handoff
 
 A specialist completes a bounded task, adds a Kanban `[handoff]` comment, and writes durable artifacts to `/workspace/outbox` or `/workspace/artifacts` for private work. Use `/shared/project/artifacts` for deliberate cross-agent handoff artifacts that downstream specialists must read.

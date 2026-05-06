@@ -504,7 +504,7 @@ KANBAN_DISPATCH_MAX_TASKS=1
 KANBAN_DISPATCH_WORKER_TIMEOUT=900
 ```
 
-These tune the Dockerized `kanban-dispatcher` service. They are optional; defaults are 60 seconds, 1 task per pass, and a 900-second worker timeout.
+These tune the Dockerized `kanban-dispatcher` service. They are optional; defaults are 60 seconds, 1 concurrent task per pass, and a 900-second worker timeout.
 
 ### Optional tool/integration keys
 

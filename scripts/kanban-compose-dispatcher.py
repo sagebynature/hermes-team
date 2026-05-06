@@ -11,6 +11,7 @@ one HERMES_HOME per agent, not one shared Hermes profile tree.
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import os
 from pathlib import Path
@@ -35,7 +36,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--db", default=str(KANBAN_DB), help="Path to kanban.db")
     parser.add_argument("--registry", default=str(REGISTRY), help="Path to shared/team-agents.yaml")
     parser.add_argument("--log", default=str(DEFAULT_LOG), help="Dispatcher log path")
-    parser.add_argument("--max-tasks", type=int, default=1, help="Maximum tasks to dispatch per pass")
+    parser.add_argument("--max-tasks", type=int, default=1, help="Maximum tasks to claim and dispatch concurrently per pass")
     parser.add_argument("--interval", type=int, default=60, help="Seconds between daemon passes")
     parser.add_argument(
         "--worker-timeout",
@@ -323,6 +324,37 @@ def dispatch(task_id: str, assignee: str, dry_run: bool, log_path: Path, worker_
     return proc.returncode
 
 
+def finalize_dispatch_result(
+    db: Path,
+    task_id: str,
+    assignee: str,
+    claim: Tuple[str, int],
+    code: int,
+    log_path: Path,
+    worker_timeout: int,
+) -> int:
+    """Reconcile task/run state after a worker container exits."""
+    with sqlite3.connect(db) as conn:
+        row = conn.execute("SELECT status FROM tasks WHERE id = ?", (task_id,)).fetchone()
+        status = row[0] if row else "missing"
+        if code == DISPATCH_TIMEOUT_EXIT_CODE and status == "running":
+            if block_timed_out_dispatch(conn, task_id, claim[0], claim[1], worker_timeout):
+                status = "blocked"
+                log(log_path, f"dispatch timed out for task={task_id}; blocked for operator review")
+            else:
+                log(log_path, f"dispatch timed out for task={task_id}; claim already changed, status={status}")
+        elif code != 0 and status == "running":
+            if requeue_failed_spawn(conn, task_id, claim[0], claim[1], code):
+                status = "ready"
+                log(log_path, f"dispatch failed for task={task_id}; requeued from running to ready")
+            else:
+                log(log_path, f"dispatch failed for task={task_id}; claim already changed, status={status}")
+        elif status == "ready":
+            log(log_path, f"dispatch failed to advance task={task_id}; status is still ready")
+            code = code or 1
+    return code
+
+
 def run_pass(args: argparse.Namespace, agents: Dict[str, str], log_path: Path) -> int:
     db = Path(args.db)
     if not db.exists():
@@ -341,6 +373,7 @@ def run_pass(args: argparse.Namespace, agents: Dict[str, str], log_path: Path) -
         log(log_path, "no ready Compose-dispatchable tasks")
         return 0
     exit_code = 0
+    dispatch_jobs: List[Tuple[str, str, Tuple[str, int]]] = []
     for task_id, assignee, title in tasks:
         log(log_path, f"selected task={task_id} assignee={assignee} title={title!r}")
         if args.dry_run:
@@ -358,29 +391,28 @@ def run_pass(args: argparse.Namespace, agents: Dict[str, str], log_path: Path) -
             continue
 
         log(log_path, f"claimed task={task_id} assignee={assignee} run_id={claim[1]}")
-        code = dispatch(task_id, assignee, args.dry_run, log_path, args.worker_timeout)
-        with sqlite3.connect(db) as conn:
-            row = conn.execute("SELECT status FROM tasks WHERE id = ?", (task_id,)).fetchone()
-            status = row[0] if row else "missing"
-            if code == DISPATCH_TIMEOUT_EXIT_CODE and status == "running":
-                if block_timed_out_dispatch(conn, task_id, claim[0], claim[1], args.worker_timeout):
-                    status = "blocked"
-                    log(log_path, f"dispatch timed out for task={task_id}; blocked for operator review")
-                else:
-                    log(log_path, f"dispatch timed out for task={task_id}; claim already changed, status={status}")
-            elif code != 0 and status == "running":
-                if requeue_failed_spawn(conn, task_id, claim[0], claim[1], code):
-                    status = "ready"
-                    log(log_path, f"dispatch failed for task={task_id}; requeued from running to ready")
-                else:
-                    log(log_path, f"dispatch failed for task={task_id}; claim already changed, status={status}")
-            elif status == "ready":
-                log(log_path, f"dispatch failed to advance task={task_id}; status is still ready")
-                code = code or 1
-        if code != 0:
-            exit_code = code
-            if not args.daemon:
-                break
+        dispatch_jobs.append((task_id, assignee, claim))
+
+    if args.dry_run or not dispatch_jobs:
+        return exit_code
+
+    max_workers = max(1, min(args.max_tasks, len(dispatch_jobs)))
+    log(log_path, f"dispatching {len(dispatch_jobs)} claimed task(s) with max_workers={max_workers}")
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(dispatch, task_id, assignee, args.dry_run, log_path, args.worker_timeout): (task_id, assignee, claim)
+            for task_id, assignee, claim in dispatch_jobs
+        }
+        for future in as_completed(futures):
+            task_id, assignee, claim = futures[future]
+            try:
+                code = future.result()
+            except Exception as exc:  # pragma: no cover - defensive; dispatch normally returns codes
+                log(log_path, f"dispatch crashed assignee={assignee} task={task_id} error={exc!r}")
+                code = 1
+            code = finalize_dispatch_result(db, task_id, assignee, claim, code, log_path, args.worker_timeout)
+            if code != 0:
+                exit_code = code
     return exit_code
 
 
