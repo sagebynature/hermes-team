@@ -22,7 +22,6 @@ endif
 	generate check-generated validate preflight registry-list registry-validate registry-next-ports validate-plugins dashboards-up dashboards-restart \
 	agent-add agent-disable agent-archive \
 	kanban-init kanban-list kanban-stats kanban-watch kanban-create kanban-link kanban-dispatch \
-	router-init router-send router-list router-inspect router-dispatch router-sync router-status router-doctor router-conversation \
 	kanban-dispatcher-once kanban-dispatcher-daemon kanban-dispatcher-stop kanban-dispatcher-logs discord-status-dry-run \
 	mcp-list mcp-list-all mcp-test mcp-remove mcp-add-command mcp-add-url \
 	mcp-register-template mcp-register-template-all mcp-templates mcp-show-template \
@@ -131,13 +130,12 @@ validate-plugins: ## Validate shared plugin layout
 
 dashboards-up: ## Start dashboard profile
 	$(COMPOSE) --profile dashboard up -d
-	$(COMPOSE) --profile dashboard restart dashboard-nginx
 
 dashboards-restart: ## Restart dashboard profile services
 	$(COMPOSE) --profile dashboard restart
 
 workspace-init: ## Initialize shared workspace directories and artifact handoff placeholder
-	@mkdir -p shared/project/artifacts shared/kanban shared/router
+	@mkdir -p shared/project/artifacts shared/kanban
 	@if [ ! -f shared/project/artifacts/.gitignore ]; then \
 		printf '*\n!.gitignore\n' > shared/project/artifacts/.gitignore; \
 	fi
@@ -170,65 +168,7 @@ kanban-dispatch: guard-agent ## Run one Kanban task in the assigned agent contai
 	@if [ -z "$(TASK)" ]; then echo "TASK is required" >&2; exit 2; fi
 	COMPOSE='$(COMPOSE)' ./scripts/kanban-dispatch-compose.sh $(AGENT) $(TASK)
 
-router-init: ## Initialize the Team Nexus message router database
-	python3 scripts/team-message-router.py init
-
-router-send: ## Send a router message: make router-send FROM=atlas TO=forge SUMMARY='...' GOAL='...' DELIVERABLE='...'
-	@if [ -z "$(FROM)" ]; then echo "FROM is required" >&2; exit 2; fi
-	@if [ -z "$(TO)" ]; then echo "TO is required" >&2; exit 2; fi
-	@if [ -z "$(SUMMARY)" ]; then echo "SUMMARY is required" >&2; exit 2; fi
-	@if [ -z "$(GOAL)" ]; then echo "GOAL is required" >&2; exit 2; fi
-	@if [ -z "$(DELIVERABLE)" ]; then echo "DELIVERABLE is required" >&2; exit 2; fi
-	python3 scripts/team-message-router.py send --from "$(FROM)" --to "$(TO)" --summary "$(SUMMARY)" --goal "$(GOAL)" --deliverable "$(DELIVERABLE)"
-
-router-list: ## List Team Nexus router messages; optional STATUS=pending
-	@if [ -n "$(STATUS)" ]; then \
-		python3 scripts/team-message-router.py list --status "$(STATUS)"; \
-	else \
-		python3 scripts/team-message-router.py list; \
-	fi
-
-router-inspect: ## Inspect a router message: make router-inspect MESSAGE=msg_...
-	@if [ -z "$(MESSAGE)" ]; then echo "MESSAGE is required" >&2; exit 2; fi
-	python3 scripts/team-message-router.py inspect "$(MESSAGE)"
-
-MAX_MESSAGES ?= 1
-router-dispatch: ## Dispatch pending router messages to Kanban; MAX_MESSAGES defaults to 1
-	python3 scripts/team-message-router.py dispatch-pending --max "$(MAX_MESSAGES)"
-
-router-sync: ## Sync completed/blocked/failed Kanban outcomes back into router messages
-	python3 scripts/team-message-router.py sync-completions
-
-router-report-tasks: ## Create Atlas synthesis tasks for terminal router conversations
-	python3 scripts/team-message-router.py create-report-tasks --max "$(MAX_MESSAGES)"
-
-router-supervisor-once: ## Dispatch pending router messages, sync completions, and optionally create Atlas report tasks (CREATE_REPORT_TASKS=1)
-	@if [ "$(CREATE_REPORT_TASKS)" = "1" ]; then \
-		python3 scripts/team-message-router.py supervise --once --max "$(MAX_MESSAGES)" --create-report-tasks; \
-	else \
-		python3 scripts/team-message-router.py supervise --once --max "$(MAX_MESSAGES)"; \
-	fi
-
-router-supervisor-daemon: ## Start Dockerized router supervisor; ROUTER_SUPERVISOR_CREATE_REPORT_TASKS=1 enables Atlas synthesis tasks
-	$(COMPOSE) --profile dispatcher up -d router-supervisor
-
-router-supervisor-stop: ## Stop Dockerized router supervisor
-	$(COMPOSE) --profile dispatcher stop router-supervisor
-
-router-supervisor-logs: ## Follow Dockerized router supervisor logs
-	$(COMPOSE) --profile dispatcher logs -f router-supervisor
-
-router-status: ## Show JSON router queue/status snapshot
-	python3 scripts/team-message-router.py status
-
-router-doctor: ## Show JSON router health checks
-	python3 scripts/team-message-router.py doctor
-
-router-conversation: ## Show JSON router conversation; set CONVERSATION=<conversation-id>
-	@test -n "$(CONVERSATION)" || { echo "CONVERSATION is required" >&2; exit 2; }
-	python3 scripts/team-message-router.py conversation "$(CONVERSATION)"
-
-kanban-dispatcher-once: ## Run compose-aware dispatcher once; DRY_RUN=1 for plan only
+kanban-dispatcher-once: ## Run one Dockerized Compose-aware dispatcher pass; add DRY_RUN=1 to avoid spawning
 	@if [ "$(DRY_RUN)" = "1" ]; then \
 		$(COMPOSE) --profile dispatcher run --rm kanban-dispatcher bash -lc 'python3 scripts/kanban-compose-dispatcher.py --dry-run --max-tasks $${MAX_TASKS:-1} --worker-timeout $${KANBAN_DISPATCH_WORKER_TIMEOUT:-900}'; \
 	else \

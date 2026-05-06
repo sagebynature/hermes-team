@@ -276,9 +276,6 @@ def agent_volumes(slug: str, comments: bool = False) -> list[str]:
         lines.append("      # Shared writable Kanban board root (SQLite DB, workspaces, worker logs).")
     lines += [
         "      - ./shared/kanban:/shared/kanban:rw",
-        "      - ./shared/router:/shared/router:rw",
-        "      - ./shared/team-agents.yaml:/shared/team-agents.yaml:ro",
-        "      - ./scripts:/shared/scripts:ro",
         "      - ./shared/skills:/shared/skills:ro",
         "      - ./shared/mcp:/shared/mcp:ro",
     ]
@@ -394,9 +391,8 @@ def emit_compose_dashboards(agents: OrderedDict[str, dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
-SUB_FILTER_PATHS = ["sessions", "analytics", "models", "logs", "cron", "skills", "plugins", "profiles", "config", "env", "docs", "chat", "kanban", "command-center", "team-router"]
-PLUGIN_PREFIXES = ["command-center", "achievements", "kanban", "team-router", "example"]
-DASHBOARD_SHORTCUT_PATHS = ["sessions", "kanban", "command-center", "team-router"]
+SUB_FILTER_PATHS = ["sessions", "analytics", "models", "logs", "cron", "skills", "plugins", "profiles", "config", "env", "docs", "chat", "kanban", "command-center"]
+PLUGIN_PREFIXES = ["command-center", "achievements", "kanban", "example"]
 
 
 def nginx_block(slug: str) -> str:
@@ -445,31 +441,13 @@ def nginx_block(slug: str) -> str:
     return "\n".join(lines)
 
 
-def nginx_shortcuts(default_slug: str) -> str:
-    lines: list[str] = []
-    for path in DASHBOARD_SHORTCUT_PATHS:
-        lines += [
-            f"  location = /{path} {{",
-            f"    return 302 /{default_slug}/{path};",
-            "  }",
-            "",
-            f"  location = /{path}/ {{",
-            f"    return 302 /{default_slug}/{path};",
-            "  }",
-            "",
-        ]
-    return "\n".join(lines).rstrip()
-
-
 def emit_nginx(agents: OrderedDict[str, dict[str, Any]]) -> str:
     default = default_route_slug(agents)
-    shortcuts = nginx_shortcuts(default)
     locations = "\n\n".join(nginx_block(slug) for slug in dashboard_agents(agents))
     if locations:
         locations += "\n"
     return render_template("dashboards.conf.tmpl", {
         "default_route": default,
-        "dashboard_shortcuts": shortcuts,
         "dashboard_locations": locations,
     })
 
@@ -807,19 +785,8 @@ def validate_configs(agents) -> None:
             if got != value:
                 errors.append(f"{path.relative_to(ROOT)}: {dotted} expected {value!r}, got {got!r}")
         toolsets = cfg.get("toolsets") if isinstance(cfg, dict) else None
-        required_toolsets = {"hermes-cli"} if slug == "atlas" else {"hermes-cli", "kanban"}
-        if not isinstance(toolsets, list) or not required_toolsets.issubset(set(toolsets)):
-            errors.append(f"{path.relative_to(ROOT)}: toolsets must include {', '.join(sorted(required_toolsets))}")
-        if slug == "atlas" and isinstance(toolsets, list) and "kanban" in toolsets:
-            errors.append(f"{path.relative_to(ROOT)}: atlas gateway must not expose kanban toolset; use router CLI for fanout")
-        disabled_toolsets = get_path(cfg, "agent.disabled_toolsets")
-        if slug == "atlas":
-            required_disabled = {"code_execution", "delegation", "messaging", "skills"}
-            if not isinstance(disabled_toolsets, list) or not required_disabled.issubset(set(disabled_toolsets)):
-                errors.append(
-                    f"{path.relative_to(ROOT)}: atlas gateway must disable code_execution, delegation, messaging, and skills; "
-                    "fanout must use the mounted router CLI directly"
-                )
+        if not isinstance(toolsets, list) or "hermes-cli" not in toolsets or "kanban" not in toolsets:
+            errors.append(f"{path.relative_to(ROOT)}: toolsets must include hermes-cli and kanban")
     if errors:
         raise RegistryError("config validation failed:\n" + "\n".join(f"- {e}" for e in errors))
 
@@ -945,44 +912,6 @@ def validate_nginx(agents) -> None:
         raise RegistryError("nginx validation failed:\n" + "\n".join(f"- {e}" for e in errors))
 
 
-def parse_env_file(path: Path) -> dict[str, str]:
-    values: dict[str, str] = {}
-    if not path.exists():
-        return values
-    for raw in path.read_text(errors="ignore").splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        values[key.strip()] = value.strip().strip('"').strip("'")
-    return values
-
-
-def validate_discord_bot_mode(agents) -> None:
-    """Prevent unsafe Discord bot-to-bot free-chat configuration.
-
-    Team Nexus uses the router/Kanban path for A2A coordination. Allowing all
-    bot-authored Discord messages can create loops and waste tokens, so fail
-    validation if an agent opts into DISCORD_ALLOW_BOTS=all. Mentions-only mode
-    is permitted for narrow smoke tests, but still warned against.
-    """
-    errors: list[str] = []
-    warnings: list[str] = []
-    paths = [(".env", ROOT / ".env")]
-    for slug in enabled_agents(agents):
-        paths.append((f"agents/{slug}/home/.env", ROOT / "agents" / slug / "home" / ".env"))
-    for label, path in paths:
-        mode = parse_env_file(path).get("DISCORD_ALLOW_BOTS", "").strip().lower()
-        if mode == "all":
-            errors.append(f"{label}: DISCORD_ALLOW_BOTS=all is not allowed; use the router/Kanban path for A2A coordination")
-        elif mode == "mentions":
-            warnings.append(f"{label}: DISCORD_ALLOW_BOTS=mentions is permitted only for narrow smoke tests; router/Kanban remains the A2A control plane")
-    for w in warnings:
-        print(f"warning: {w}", file=sys.stderr)
-    if errors:
-        raise RegistryError("discord bot-mode validation failed:\n" + "\n".join(f"- {e}" for e in errors))
-
-
 def validate_kanban_assignees(agents) -> None:
     db = ROOT / "shared" / "kanban" / "kanban.db"
     if not db.exists():
@@ -1058,7 +987,6 @@ def validate_all(agents) -> None:
     validate_configs(agents)
     validate_compose(agents)
     validate_nginx(agents)
-    validate_discord_bot_mode(agents)
     validate_kanban_assignees(agents)
     validate_plugins(agents)
     print("Team Nexus validation OK")
@@ -1078,7 +1006,7 @@ def main(argv: list[str] | None = None) -> int:
     simple_commands = [
         "list-slugs", "list-enabled-slugs", "list-dashboard-slugs", "validate-registry", "next-ports",
         "generate-make", "generate-compose-agents", "generate-compose-dashboards", "generate-nginx", "generate-roster", "validate-filesystem", "validate-configs",
-        "validate-compose", "validate-nginx", "validate-discord-bot-mode", "validate-kanban-assignees", "validate-plugins", "validate-all",
+        "validate-compose", "validate-nginx", "validate-kanban-assignees", "validate-plugins", "validate-all",
     ]
     for command in simple_commands:
         sub.add_parser(command)
@@ -1126,8 +1054,6 @@ def main(argv: list[str] | None = None) -> int:
             validate_registry_data(agents); validate_compose(agents); print("compose OK")
         elif args.command == "validate-nginx":
             validate_registry_data(agents); validate_nginx(agents); print("nginx OK")
-        elif args.command == "validate-discord-bot-mode":
-            validate_registry_data(agents); validate_discord_bot_mode(agents); print("discord bot mode OK")
         elif args.command == "validate-kanban-assignees":
             validate_registry_data(agents); validate_kanban_assignees(agents); print("kanban assignees OK")
         elif args.command == "validate-plugins":

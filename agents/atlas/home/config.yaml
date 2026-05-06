@@ -7,6 +7,7 @@ fallback_providers: []
 credential_pool_strategies: {}
 toolsets:
 - hermes-cli
+- kanban
 agent:
   max_turns: 90
   gateway_timeout: 1800
@@ -18,11 +19,7 @@ agent:
   gateway_notify_interval: 180
   gateway_auto_continue_freshness: 3600
   image_input_mode: auto
-  disabled_toolsets:
-  - code_execution
-  - delegation
-  - messaging
-  - skills
+  disabled_toolsets: []
 terminal:
   backend: local
   modal_mode: auto
@@ -181,7 +178,6 @@ display:
   inline_diffs: true
   show_cost: true
   skin: default
-  language: en
   tui_status_indicator: kaomoji
   user_message_preview:
     first_lines: 2
@@ -206,8 +202,8 @@ dashboard:
   agent_role: ${AGENT_ROLE}
   title: ${AGENT_NAME} Dashboard
   accent_colors:
-    primary: '#4F7FC5'
-    secondary: '#6FE6F2'
+    primary: "#4F7FC5"
+    secondary: "#6FE6F2"
 privacy:
   redact_pii: false
 tts:
@@ -286,9 +282,6 @@ skills:
   inline_shell: false
   inline_shell_timeout: 10
   guard_agent_created: false
-  disabled:
-  - kanban-orchestrator
-  - kanban-worker
 curator:
   enabled: true
   interval_hours: 168

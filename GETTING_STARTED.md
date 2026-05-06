@@ -9,7 +9,6 @@ Use this file when you want the practical step-by-step path. For deeper operatio
 - README.md
 - docs/team-nexus-operations.md
 - docs/discord-kanban-operations.md
-- docs/agent-message-router.md
 - docs/adr/README.md
 
 ---
@@ -23,7 +22,6 @@ Team Nexus runs these layers:
    - Starts one dashboard service per agent when the dashboard profile is enabled.
    - Starts an optional Nginx reverse proxy for all dashboards.
    - Starts an optional Compose-aware Kanban dispatcher.
-   - Starts an optional router supervisor that dispatches router messages, syncs Kanban outcomes, and can create Atlas synthesis tasks.
 
 2. Hermes Agent homes
    - Each agent has a durable home at `agents/<agent>/home`.
@@ -39,15 +37,11 @@ Team Nexus runs these layers:
    - `shared/project` is mounted read-only into all agents.
    - `shared/project/artifacts` is writable and is the preferred handoff area.
    - `shared/kanban` stores the shared Kanban database.
-   - `shared/router` stores the structured Team Nexus message router database.
    - `shared/skills`, `shared/mcp`, `shared/plugins`, and `shared/dashboard-themes` are shared team resources.
 
 5. Atlas as default coordinator
    - Atlas is the default mission coordinator.
-   - For multi-agent work, Atlas should create router conversations/messages first; the router materializes Kanban tasks and preserves audit evidence.
-   - Kanban remains the execution ledger; the router remains the coordination/audit ledger.
-   - Discord bot mentions are not guaranteed dispatch; the agent message router (`docs/agent-message-router.md`) and Kanban are the A2A work path.
-   - The router supervisor syncs completed/blocked/failed Kanban outcomes back into router conversations and can create Atlas synthesis tasks.
+   - Specialists should receive bounded work through Kanban or explicit operator instruction.
    - Atlas synthesizes specialist output for the user.
 
 ---
@@ -167,23 +161,13 @@ Optional dashboard reverse-proxy port:
 NGINX_PORT=9130
 ```
 
-Optional dispatcher and router-supervisor tuning:
+Optional dispatcher tuning:
 
 ```env
 KANBAN_DISPATCH_INTERVAL=60
 KANBAN_DISPATCH_MAX_TASKS=1
 KANBAN_DISPATCH_WORKER_TIMEOUT=900
-# Optional: let the Kanban dispatcher execute Atlas-assigned synthesis/report tasks.
-# Leave unset unless you also enable router report-task creation deliberately.
-KANBAN_DISPATCH_INCLUDE_ATLAS=1
-
-ROUTER_SUPERVISOR_INTERVAL=30
-ROUTER_SUPERVISOR_MAX_MESSAGES=5
-# Optional: create one Atlas synthesis task when a router conversation reaches completed/needs_attention.
-ROUTER_SUPERVISOR_CREATE_REPORT_TASKS=1
 ```
-
-For normal operations, keep `KANBAN_DISPATCH_MAX_TASKS` conservative, usually 1-3. Higher values such as 10 create bursty parallel API/model load and are better reserved for intentional independent-task tests.
 
 Optional Linux bind-mount ownership setup:
 
@@ -540,15 +524,6 @@ The shared `team-nexus` dashboard theme consumes those variables while preservin
 
 ## 12. Verify dashboard plugin API behavior
 
-The structured router is also exposed through the shared `team-router` dashboard plugin. After a dashboard restart or plugin rescan, open the Team Router tab or query the read-only plugin endpoints:
-
-```bash
-curl -sS http://127.0.0.1:9119/api/plugins/team-router/status
-curl -sS http://127.0.0.1:9119/api/plugins/team-router/doctor
-```
-
-If the endpoints return the dashboard HTML instead of JSON, restart dashboards and verify `shared/plugins/team-router/dashboard/manifest.json` is visible in the agent home plugin mount.
-
 After dashboards are running, verify one direct dashboard endpoint:
 
 ```bash
@@ -683,61 +658,6 @@ todo -> ready -> running -> done
 ```
 
 If a worker times out, the dispatcher blocks the task rather than relaunching it forever. Inspect, split, or unblock the task deliberately.
-
-If you also want Atlas-assigned synthesis/report tasks created by the router supervisor to execute automatically, opt the dispatcher into Atlas work deliberately:
-
-```bash
-KANBAN_DISPATCH_INCLUDE_ATLAS=1 make kanban-dispatcher-daemon
-```
-
-Leave this unset if you want Atlas report tasks to be created but manually reviewed before execution.
-
----
-
-## 14.5. Use the router supervisor
-
-For multi-agent work, the router is the coordination/audit ledger and Kanban is the execution ledger. Atlas should create router conversations/messages first; the router materializes Kanban tasks. The router supervisor connects the two ledgers.
-
-Run one supervisor pass:
-
-```bash
-make router-supervisor-once MAX_MESSAGES=5 CREATE_REPORT_TASKS=1
-```
-
-That pass:
-
-1. Dispatches pending router messages into Kanban tasks.
-2. Syncs completed/blocked/failed Kanban task outcomes back into router messages.
-3. Updates conversation state to `completed` or `needs_attention` when all required worker messages are terminal.
-4. When `CREATE_REPORT_TASKS=1`, creates one idempotent Atlas synthesis task for each terminal conversation.
-
-Start the supervisor daemon:
-
-```bash
-ROUTER_SUPERVISOR_CREATE_REPORT_TASKS=1 make router-supervisor-daemon
-```
-
-Follow supervisor logs:
-
-```bash
-make router-supervisor-logs
-```
-
-Stop the supervisor daemon:
-
-```bash
-make router-supervisor-stop
-```
-
-Inspect router health and a conversation:
-
-```bash
-make router-status
-make router-doctor
-make router-conversation CONVERSATION=<conversation-id>
-```
-
-`router-doctor` warns if it sees likely multi-agent Kanban tasks that bypassed the router envelope. Treat that as evidence that Atlas or an operator created worker tasks without router-level auditability.
 
 ---
 
@@ -1028,15 +948,12 @@ make restart
 make dashboards-restart
 ```
 
-### Check the board, router, and dispatchers
+### Check the board and dispatchers
 
 ```bash
 make kanban-stats
 make kanban-list
-make router-status
-make router-doctor
 make kanban-dispatcher-logs
-make router-supervisor-logs
 ```
 
 ### Give a specialist a task manually
@@ -1052,10 +969,10 @@ make kanban-dispatcher-once
 Use Atlas through your configured gateway channel or dashboard. The expected operating path is:
 
 ```text
-User -> Atlas -> router conversation/messages -> Kanban tasks -> specialists -> Kanban outcomes -> router supervisor -> Atlas synthesis -> User
+User -> Atlas -> specialists -> Atlas -> User
 ```
 
-Atlas should clarify ambiguous missions, decompose work, route multi-agent tasks through the router first, collect handoffs, and synthesize the final answer. For inspectability, Atlas should be able to cite the router conversation ID, worker message IDs, and Kanban task IDs.
+Atlas should clarify ambiguous missions, decompose work, route tasks, collect handoffs, and synthesize the final answer.
 
 ---
 
@@ -1150,35 +1067,6 @@ shared/project/generated/team-roster.md
 
 Reassign or close stale tasks deliberately. Do not hand-edit `shared/kanban/kanban.db` unless you have a backup and understand the schema.
 
-### Atlas claimed it asked the team, but router has no evidence
-
-Run:
-
-```bash
-make router-status
-make router-doctor
-```
-
-If `router-doctor` reports `direct_kanban_without_router`, Atlas or an operator likely created worker Kanban tasks directly without a router envelope. Treat those tasks as executable, but not as proof of router-supervised fanout. For future multi-agent requests, create router messages first and inspect them with:
-
-```bash
-make router-conversation CONVERSATION=<conversation-id>
-```
-
-### Router conversation is terminal but Atlas did not synthesize
-
-If the conversation is `completed` or `needs_attention`, create/report tasks manually or run the supervisor with report creation enabled:
-
-```bash
-make router-supervisor-once MAX_MESSAGES=5 CREATE_REPORT_TASKS=1
-```
-
-If an Atlas synthesis task exists but does not execute, either dispatch it manually or opt the dispatcher into Atlas-assigned tasks:
-
-```bash
-KANBAN_DISPATCH_INCLUDE_ATLAS=1 make kanban-dispatcher-daemon
-```
-
 ### A worker keeps timing out
 
 Check dispatcher logs:
@@ -1233,15 +1121,12 @@ shared/project                                   Shared read-only mission contex
 shared/project/artifacts                         Writable cross-agent handoff artifacts
 shared/project/generated/team-roster.md          Generated active roster
 shared/kanban                                    Shared Kanban database and dispatcher logs
-shared/router                                    Shared router database and router docs
-shared/project/artifacts/router                  Router message/conversation handoff artifacts
 shared/skills                                    Shared team skills
 shared/mcp                                       Shared MCP registry/templates/docs
 shared/plugins                                   Shared Hermes/dashboard plugins
 shared/dashboard-themes/team-nexus.yaml          Active dashboard theme
 templates/agent-config.yaml.tmpl                 Agent config template
 scripts/team_registry.py                         Registry generation and validation
-scripts/team-message-router.py                   Team Nexus router, supervisor, and conversation sync CLI
 scripts/kanban-compose-dispatcher.py             Compose-aware Kanban dispatcher
 agents/<agent>/home/config.yaml                  Agent Hermes config
 agents/<agent>/home/SOUL.md                      Agent persona/voice
@@ -1261,7 +1146,6 @@ agents/<agent>/workspace                         Agent private working directory
 - Use lifecycle targets for roster changes instead of manually copying agent directories.
 - Treat `agents/<agent>/home` as sensitive durable state: it can contain auth, logs, memory, sessions, and config.
 - Prefer Atlas for multi-agent coordination and final synthesis.
-- Multi-agent fanout should be router-first; do not treat Discord mentions or direct worker Kanban tasks as proof that Atlas reached the team.
 - Prefer Kanban and handoff artifacts for durable cross-agent work.
 
 ---
@@ -1290,13 +1174,11 @@ Then open:
 http://127.0.0.1:9130/atlas/
 ```
 
-Verify Kanban and router:
+Verify Kanban:
 
 ```bash
 make kanban-stats
 make kanban-list
-make router-status
-make router-doctor
 ```
 
 Verify Atlas dashboard identity:

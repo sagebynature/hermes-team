@@ -6,11 +6,6 @@ This is the operator path for registry-driven Team Nexus. Run commands from the 
 cd /Users/sage/team-nexus
 ```
 
-Notes:
-
-- Agent message router guide: `docs/agent-message-router.md`.
-- Discord bot mentions are not guaranteed dispatch; router/Kanban is the A2A work path.
-
 ## 1. Prerequisites
 
 - Docker Desktop or Docker Engine with Docker Compose v2.
@@ -104,7 +99,6 @@ Rules:
 - Use only enabled assignees in `shared/project/generated/team-roster.md`.
 - Do not assign work to disabled or archived agents.
 - Let Atlas route multi-agent missions unless the user directly instructs otherwise.
-- For structured A2A dispatch, follow the agent message router guide and keep worker execution in Kanban.
 
 ## 7. Add common/shared plugins
 

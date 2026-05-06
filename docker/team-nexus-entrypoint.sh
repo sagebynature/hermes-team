@@ -27,34 +27,6 @@ fi
 if [ -n "$HERMES_HOME" ]; then
   mkdir -p "$HERMES_HOME/.local/bin" "$HERMES_HOME/skills/.hub"
 
-  # Atlas is the human-facing coordinator. It may inspect status and create
-  # router messages, but it must not bypass the Team Nexus router by shelling
-  # out to `hermes kanban create`. Toolset filtering removes the direct
-  # kanban_create tool, but terminal can still call the Hermes CLI by absolute
-  # path. Install an Atlas-only runtime shim at that exact path so direct
-  # Kanban mutation fails deterministically while worker containers are
-  # unaffected.
-  if [ "${AGENT_NAME:-}" = "Atlas" ] && [ -x "$HERMES_VENV_BIN" ]; then
-    HERMES_REAL_BIN="${HERMES_VENV_BIN}.team-nexus-real"
-    if [ ! -e "$HERMES_REAL_BIN" ]; then
-      mv "$HERMES_VENV_BIN" "$HERMES_REAL_BIN"
-      cat > "$HERMES_VENV_BIN" <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-if [ "${1:-}" = "kanban" ] && [ "${2:-}" = "create" ] && [ "${TEAM_NEXUS_ROUTER_DISPATCH:-}" != "1" ]; then
-  cat >&2 <<'MSG'
-Team Nexus policy: Atlas may not create Kanban tasks directly.
-Use the router instead, for example:
-  python3 /shared/scripts/team-message-router.py send --from atlas --to all-workers --summary "..." --goal "..." --deliverable "..." --allow-wide-fanout
-MSG
-  exit 42
-fi
-exec /opt/hermes/.venv/bin/hermes.team-nexus-real "$@"
-EOF
-      chmod 0755 "$HERMES_VENV_BIN"
-    fi
-  fi
-
   if [ -x "$HERMES_VENV_BIN" ]; then
     ln -sfn "$HERMES_VENV_BIN" "$HERMES_HOME/.local/bin/hermes"
   fi

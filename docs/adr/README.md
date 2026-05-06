@@ -16,8 +16,6 @@ Team Nexus decisions are recorded here as ADRs.
 - [ADR-0010: Mirror only compact status and handoffs to Discord](0010-compact-discord-status-and-handoffs.md)
 - [ADR-0011: Treat dedicated agent runtimes as Team Nexus mode, not the default lightweight pattern](0011-dedicated-agent-runtimes-vs-profiles.md)
 - [ADR-0012: Use registry-driven agent roster and generated runtime artifacts](0012-registry-driven-agent-roster-and-generated-runtime-artifacts.md)
-- [ADR-0013: Structured Agent Message Router / Bus](0013-agent-message-router-bus.md)
-- [ADR-0014: Router Supervisor and Atlas Fan-In](0014-router-supervisor-and-atlas-fanin.md)
 
 ## ADR format
 

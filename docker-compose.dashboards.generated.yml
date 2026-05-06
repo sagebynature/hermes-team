@@ -24,9 +24,6 @@ services:
       - ./shared/project:/shared/project:ro
       - ./shared/project/artifacts:/shared/project/artifacts:rw
       - ./shared/kanban:/shared/kanban:rw
-      - ./shared/router:/shared/router:rw
-      - ./shared/team-agents.yaml:/shared/team-agents.yaml:ro
-      - ./scripts:/shared/scripts:ro
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
       - ./shared/plugins:/opt/data/plugins:ro
@@ -57,9 +54,6 @@ services:
       - ./shared/project:/shared/project:ro
       - ./shared/project/artifacts:/shared/project/artifacts:rw
       - ./shared/kanban:/shared/kanban:rw
-      - ./shared/router:/shared/router:rw
-      - ./shared/team-agents.yaml:/shared/team-agents.yaml:ro
-      - ./scripts:/shared/scripts:ro
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
       - ./shared/plugins:/opt/data/plugins:ro
@@ -90,9 +84,6 @@ services:
       - ./shared/project:/shared/project:ro
       - ./shared/project/artifacts:/shared/project/artifacts:rw
       - ./shared/kanban:/shared/kanban:rw
-      - ./shared/router:/shared/router:rw
-      - ./shared/team-agents.yaml:/shared/team-agents.yaml:ro
-      - ./scripts:/shared/scripts:ro
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
       - ./shared/plugins:/opt/data/plugins:ro
@@ -123,9 +114,6 @@ services:
       - ./shared/project:/shared/project:ro
       - ./shared/project/artifacts:/shared/project/artifacts:rw
       - ./shared/kanban:/shared/kanban:rw
-      - ./shared/router:/shared/router:rw
-      - ./shared/team-agents.yaml:/shared/team-agents.yaml:ro
-      - ./scripts:/shared/scripts:ro
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
       - ./shared/plugins:/opt/data/plugins:ro
@@ -156,9 +144,6 @@ services:
       - ./shared/project:/shared/project:ro
       - ./shared/project/artifacts:/shared/project/artifacts:rw
       - ./shared/kanban:/shared/kanban:rw
-      - ./shared/router:/shared/router:rw
-      - ./shared/team-agents.yaml:/shared/team-agents.yaml:ro
-      - ./scripts:/shared/scripts:ro
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
       - ./shared/plugins:/opt/data/plugins:ro
@@ -189,9 +174,6 @@ services:
       - ./shared/project:/shared/project:ro
       - ./shared/project/artifacts:/shared/project/artifacts:rw
       - ./shared/kanban:/shared/kanban:rw
-      - ./shared/router:/shared/router:rw
-      - ./shared/team-agents.yaml:/shared/team-agents.yaml:ro
-      - ./scripts:/shared/scripts:ro
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
       - ./shared/plugins:/opt/data/plugins:ro
@@ -222,9 +204,6 @@ services:
       - ./shared/project:/shared/project:ro
       - ./shared/project/artifacts:/shared/project/artifacts:rw
       - ./shared/kanban:/shared/kanban:rw
-      - ./shared/router:/shared/router:rw
-      - ./shared/team-agents.yaml:/shared/team-agents.yaml:ro
-      - ./scripts:/shared/scripts:ro
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
       - ./shared/plugins:/opt/data/plugins:ro
@@ -255,9 +234,6 @@ services:
       - ./shared/project:/shared/project:ro
       - ./shared/project/artifacts:/shared/project/artifacts:rw
       - ./shared/kanban:/shared/kanban:rw
-      - ./shared/router:/shared/router:rw
-      - ./shared/team-agents.yaml:/shared/team-agents.yaml:ro
-      - ./scripts:/shared/scripts:ro
       - ./shared/skills:/shared/skills:ro
       - ./shared/mcp:/shared/mcp:ro
       - ./shared/plugins:/opt/data/plugins:ro

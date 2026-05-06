@@ -4,8 +4,6 @@
 
 Kanban is the durable task and coordination layer. Discord is the human visibility layer. If a task, decision, blocker, handoff, or artifact matters, it must be represented on the shared Kanban board or in a workspace file; Discord may summarize it, but Discord is not the source of truth.
 
-For agent-to-agent work, prefer the structured message router plus Kanban over Discord bot summons. Discord bot mentions are not guaranteed dispatch; router/Kanban is the A2A work path.
-
 ## Roles
 
 - Atlas routes, coordinates, resolves disagreement, and synthesizes user-facing answers.
