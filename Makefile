@@ -10,6 +10,7 @@ AGENT ?= $(PROFILE)
 SERVICE ?= atlas-gateway
 TEAM_AGENTS ?= atlas forge sentinel scribe curator
 TARGET_AGENTS ?= $(TEAM_AGENTS)
+WORKSPACE ?= scratch
 export TEAM_NEXUS_UID TEAM_NEXUS_GID PROFILE AGENT SERVICE
 
 # When SERVER is set, optionally load a shared MCP registry definition.
@@ -115,7 +116,7 @@ kanban-stats: profile-runtime-stage ## Show shared Kanban task counts
 kanban-watch: profile-runtime-stage ## Watch shared Kanban board events
 	$(COMPOSE) run --rm atlas-gateway kanban watch
 
-kanban-create: profile-runtime-stage ## Create a mission-scoped Kanban task: make kanban-create TITLE='...' ASSIGNEE=forge CONVERSATION_ID=mission_slug BODY='...'
+kanban-create: profile-runtime-stage ## Create a mission-scoped Kanban task: make kanban-create TITLE='...' ASSIGNEE=forge CONVERSATION_ID=mission_slug WORKSPACE=dir:/workspace BODY='...'
 	@if [ -z "$(TITLE)" ]; then echo "TITLE is required" >&2; exit 2; fi
 	@if [ -z "$(ASSIGNEE)" ]; then echo "ASSIGNEE is required, e.g. forge" >&2; exit 2; fi
 	@if [ -z "$(CONVERSATION_ID)" ]; then echo "CONVERSATION_ID is required, e.g. mission_readiness_20260506" >&2; exit 2; fi
@@ -126,8 +127,8 @@ kanban-create: profile-runtime-stage ## Create a mission-scoped Kanban task: mak
 			if [ -z "$(DISCORD_THREAD_ID)" ]; then echo "DISCORD_THREAD_ID is required when REPLY_MODE=direct_discord" >&2; exit 2; fi; \
 			reply_line="$$(printf 'reply_mode: direct_discord\nreply_target: discord:%s\nreply_expected: true\n' "$(DISCORD_THREAD_ID)")"; \
 		fi; \
-		body="$$(printf 'conversation_id: %s\n%s%sfrom: atlas\nto: %s\nassignee: %s\n%s\n' "$(CONVERSATION_ID)" "$$thread_line" "$$reply_line" "$(ASSIGNEE)" "$(ASSIGNEE)" "$(BODY)")"; \
-		$(COMPOSE) run --rm atlas-gateway kanban create "[mission:$(CONVERSATION_ID)] $(TITLE)" --assignee "$(ASSIGNEE)" --body "$$body" --json
+		body="$$(printf 'conversation_id: %s\n%s%sfrom: atlas\nto: %s\nassignee: %s\nworkspace: %s\n%s\n' "$(CONVERSATION_ID)" "$$thread_line" "$$reply_line" "$(ASSIGNEE)" "$(ASSIGNEE)" "$(WORKSPACE)" "$(BODY)")"; \
+		$(COMPOSE) run --rm atlas-gateway kanban create "[mission:$(CONVERSATION_ID)] $(TITLE)" --assignee "$(ASSIGNEE)" --workspace "$(WORKSPACE)" --body "$$body" --json
 
 kanban-link: profile-runtime-stage ## Link parent->child dependency: make kanban-link PARENT=K... CHILD=K...
 	@if [ -z "$(PARENT)" ]; then echo "PARENT is required" >&2; exit 2; fi
