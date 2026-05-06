@@ -1,0 +1,253 @@
+version: 0.1.0
+status: draft
+source: docs/architecture/profile-driven-team-nexus.md
+adr: docs/adr/0014-profile-driven-team-nexus.md
+
+runtime:
+  canonical_model: hermes_profiles
+  modes:
+    host:
+      enabled: true
+      purpose: fast local/operator iteration
+    docker:
+      enabled: true
+      purpose: first-class runnable Team Nexus runtime
+      image: team-nexus-agent:latest
+      compose_services_by_function:
+        - atlas-gateway
+        - dashboard
+        - kanban-dispatcher
+        - admin-shell
+  isolation:
+    default: shared_profile_runtime
+    sandbox_escape_hatch: docker
+    sandbox_required_metadata_key: sandbox_required
+
+interfaces:
+  primary_user_surface: discord
+  inspection_surface: dashboard
+  admin_surface: docker_run_or_compose_shell
+  discord:
+    v1_gateway_profile: atlas
+    worker_gateways_default_enabled: false
+    future_worker_gateway_mode: notification_only
+    mission_threads:
+      create_for_tracked_missions: true
+      reuse_existing_suitable_thread: true
+    notifications_default:
+      - mission_created
+      - clarification_needed
+      - worker_blocked
+      - review_rejected
+      - pr_opened
+      - dispatcher_or_runtime_failure
+      - task_stuck_or_timeout
+      - final_ready
+    suppress_default:
+      - worker_heartbeat
+      - task_started
+      - routine_task_completed
+      - internal_worker_comment
+      - non_blocking_progress
+
+kanban:
+  source_of_truth: true
+  worker_communication: kanban_only
+  statuses_authoritative:
+    - triage
+    - todo
+    - ready
+    - running
+    - blocked
+    - done
+    - archived
+  board_policy:
+    coding: board_per_project_repo
+    general: default_or_general_board
+  tenant_policy:
+    coding_board: mission_or_conversation_id
+    general_board: domain_or_large_mission
+  required_metadata:
+    - mission_id
+    - conversation_id
+    - discord_thread_id
+    - project_or_repo
+    - runtime_target
+    - risk_level
+    - notification_level
+    - phase
+    - assignee_role
+  structured_comments:
+    - proposed_followup
+    - review_verdict
+    - blocker
+    - pr_opened
+    - learning_candidate
+    - final_synthesis
+
+workspace:
+  policy: kanban_workspace_type_driven
+  coding_default: git_worktree_per_task
+  branch_naming_candidates:
+    - nexus/<mission-id>/<short-task-slug>
+    - agent/<profile>/<task-id>-<slug>
+    - nexus/<board>/<mission-id>/<slug>
+  non_coding_default: scratch_unless_repo_context_required
+
+knowledge:
+  repo_visible_learning_importance: high
+  hierarchy:
+    - docs_and_adrs
+    - profile_specs_and_agents_md
+    - repo_visible_skills
+    - hermes_memory_compact_facts_only
+    - soul_md_identity_only
+    - kanban_mission_evidence_only
+  canonical_skills:
+    source: shared/skills
+    model: shared_base_plus_role_specific
+    local_profile_skills: allowed_but_not_canonical
+
+profiles:
+  atlas:
+    status: active_v1
+    display_name: Atlas
+    one_job: Mission Orchestrator
+    summary: Clarifies intent, creates Kanban-backed mission/task graphs, routes work to profiles, tracks evidence, and synthesizes final Discord answers.
+    gateway:
+      enabled: true
+      mode: user_command_router
+      discord_token_required: true
+    checkpoints:
+      enabled: false
+      note: Enable if Atlas edits files directly.
+    skills:
+      base: true
+      role_manifest: shared/skills/roles/atlas
+    owns:
+      - mission_intake
+      - risk_classification
+      - board_selection
+      - task_graph_creation
+      - discord_notifications
+      - final_synthesis
+
+  forge:
+    status: active_v1
+    display_name: Forge
+    one_job: Implementation Engineer
+    summary: Performs assigned code changes in task worktrees, runs verification, commits, and reports changed files/tests/branch/PR evidence.
+    gateway:
+      enabled: false
+      optional_future_mode: notification_only
+    checkpoints:
+      enabled: true
+    skills:
+      base: true
+      role_manifest: shared/skills/roles/forge
+    owns:
+      - implementation
+      - tests_and_checks
+      - task_branch_commits
+      - draft_pr_creation_when_pr_bound
+
+  sentinel:
+    status: active_v1
+    display_name: Sentinel
+    one_job: Quality Gate Reviewer
+    summary: Reviews implementation against acceptance criteria, tests, security, maintainability, and records approve/reject/block verdicts.
+    gateway:
+      enabled: false
+      optional_future_mode: notification_only
+    checkpoints:
+      enabled: true
+    skills:
+      base: true
+      role_manifest: shared/skills/roles/sentinel
+    owns:
+      - code_review
+      - security_quality_review
+      - review_verdict_comments
+      - required_fix_descriptions
+
+  scribe:
+    status: active_v1
+    display_name: Scribe
+    one_job: Documentation Specialist
+    summary: Produces repo-visible plans, ADRs, README/runbook/changelog/PR narrative updates from completed work.
+    gateway:
+      enabled: false
+      optional_future_mode: notification_only
+    checkpoints:
+      enabled: true
+    skills:
+      base: true
+      role_manifest: shared/skills/roles/scribe
+    owns:
+      - docs
+      - adrs
+      - runbooks
+      - changelogs
+      - pr_narrative
+
+  curator:
+    status: active_v1
+    display_name: Curator
+    one_job: Learning and Profile Steward
+    summary: Maintains profile specs, shared/team skills, role conventions, and promotes reusable learning into repo-visible artifacts or appropriate Hermes memory/skills.
+    gateway:
+      enabled: false
+      optional_future_mode: notification_only
+    checkpoints:
+      enabled: true
+    skills:
+      base: true
+      role_manifest: shared/skills/roles/curator
+    owns:
+      - learning_candidate_review
+      - canonical_skill_updates
+      - profile_spec_maintenance
+      - knowledge_placement_policy
+
+  scout:
+    status: planned_inactive
+    display_name: Scout
+    one_job: Research and Discovery Specialist
+    gateway:
+      enabled: false
+
+  ops:
+    status: planned_inactive
+    display_name: Ops
+    one_job: Infrastructure, diagnostics, and runtime operations specialist
+    gateway:
+      enabled: false
+    checkpoints:
+      enabled: true
+
+  relay:
+    status: planned_inactive
+    display_name: Relay
+    one_job: Notifications and communications surface specialist
+    gateway:
+      enabled: false
+
+secrets:
+  commit_real_secrets: false
+  examples_only: true
+  atlas_discord_token_required_v1: true
+  worker_discord_tokens_optional_disabled_by_default: true
+  bootstrap_may_validate_required_vars: true
+  bootstrap_must_not_commit_or_copy_secrets_broadly: true
+
+verification_required_before_done:
+  - profile_spec_schema_validation
+  - skill_manifest_validation
+  - generated_config_dry_run_diff
+  - docker_image_build
+  - docker_gateway_dashboard_dispatcher_start
+  - host_bootstrap_smoke_or_dry_run
+  - kanban_board_routing_smoke
+  - first_vertical_slice
+  - no_dead_old_per_agent_paths
+  - no_committed_secrets
