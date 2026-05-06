@@ -19,7 +19,7 @@ ifneq ($(strip $(SERVER)),)
 endif
 
 .PHONY: help build up down restart ps logs shell doctor doctor-all compose-config workspace-init \
-	generate check-generated validate preflight registry-list registry-validate registry-next-ports validate-plugins dashboards-up dashboards-restart \
+	generate check-generated validate preflight profile-validate registry-list registry-validate registry-next-ports validate-plugins dashboards-up dashboards-restart \
 	agent-add agent-disable agent-archive \
 	kanban-init kanban-list kanban-stats kanban-watch kanban-create kanban-link kanban-dispatch \
 	kanban-dispatcher-once kanban-dispatcher-daemon kanban-dispatcher-stop kanban-dispatcher-logs \
@@ -96,8 +96,12 @@ check-generated: ## Regenerate files in a temp dir and fail if generated outputs
 		cmp -s shared/project/generated/team-roster.md "$$tmp/team-roster.md" || { diff -u shared/project/generated/team-roster.md "$$tmp/team-roster.md"; exit 1; }; \
 		echo "generated files OK"
 
-validate: ## Validate registry, generated files, configs, compose, nginx, plugins, and kanban assignees
+validate: ## Validate registry, generated files, configs, compose, nginx, plugins, kanban assignees, and profile specs
 	$(TEAM_REGISTRY) validate-all
+	python3 scripts/validate-profile-spec.py
+
+profile-validate: ## Validate profile-driven Team Nexus spec and manifests
+	python3 scripts/validate-profile-spec.py
 
 preflight: ## Run generation, validation, compose config, and drift check
 	./scripts/preflight.sh

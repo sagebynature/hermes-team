@@ -1,0 +1,13 @@
+version: 0.1.0
+profile: forge
+status: draft
+skills:
+  - using-git-worktrees
+  - test-driven-development
+  - systematic-debugging
+  - verification-before-completion
+responsibilities:
+  - implementation
+  - tests and checks
+  - task branch commits
+  - draft PR creation when PR-bound

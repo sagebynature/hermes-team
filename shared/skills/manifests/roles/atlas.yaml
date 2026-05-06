@@ -1,0 +1,13 @@
+version: 0.1.0
+profile: atlas
+status: draft
+skills:
+  - multi-agent-patterns
+  - writing-plans
+  - executing-plans
+  - architecture-decision-records
+responsibilities:
+  - mission intake
+  - risk classification
+  - Kanban task graph creation
+  - Discord status and final synthesis

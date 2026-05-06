@@ -123,7 +123,7 @@ profiles:
       note: Enable if Atlas edits files directly.
     skills:
       base: true
-      role_manifest: shared/skills/roles/atlas
+      role_manifest: shared/skills/manifests/roles/atlas.yaml
     owns:
       - mission_intake
       - risk_classification
@@ -144,7 +144,7 @@ profiles:
       enabled: true
     skills:
       base: true
-      role_manifest: shared/skills/roles/forge
+      role_manifest: shared/skills/manifests/roles/forge.yaml
     owns:
       - implementation
       - tests_and_checks
@@ -163,7 +163,7 @@ profiles:
       enabled: true
     skills:
       base: true
-      role_manifest: shared/skills/roles/sentinel
+      role_manifest: shared/skills/manifests/roles/sentinel.yaml
     owns:
       - code_review
       - security_quality_review
@@ -182,7 +182,7 @@ profiles:
       enabled: true
     skills:
       base: true
-      role_manifest: shared/skills/roles/scribe
+      role_manifest: shared/skills/manifests/roles/scribe.yaml
     owns:
       - docs
       - adrs
@@ -202,7 +202,7 @@ profiles:
       enabled: true
     skills:
       base: true
-      role_manifest: shared/skills/roles/curator
+      role_manifest: shared/skills/manifests/roles/curator.yaml
     owns:
       - learning_candidate_review
       - canonical_skill_updates

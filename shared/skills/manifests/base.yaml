@@ -1,0 +1,12 @@
+version: 0.1.0
+status: draft
+purpose: Shared base skills for all active Team Nexus profiles.
+skills:
+  - using-git-worktrees
+  - verification-before-completion
+  - architecture-decision-records
+  - multi-agent-patterns
+  - systematic-debugging
+notes:
+  - Keep base skills compact and universally relevant.
+  - Role-specific procedures belong in shared/skills/manifests/roles/*.yaml.

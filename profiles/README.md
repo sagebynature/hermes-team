@@ -5,6 +5,13 @@ This directory contains the repo-visible source of truth for the planned Hermes-
 Current skeleton:
 
 - `team-nexus.profiles.yaml` — v1 profile roster, runtime modes, gateway policy, Kanban conventions, workspace policy, safety policy, and knowledge policy.
+- `templates/` — initial SOUL.md, AGENTS.md, and config.yaml templates for future bootstrap rendering.
+
+Related files:
+
+- `shared/config/profile-spec-schema.md` — lightweight schema contract.
+- `scripts/validate-profile-spec.py` — structural validator used by `make profile-validate`.
+- `shared/skills/manifests/` — shared base and role-specific skill manifests.
 
 Ownership rules:
 

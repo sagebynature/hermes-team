@@ -1,0 +1,13 @@
+version: 0.1.0
+profile: curator
+status: draft
+skills:
+  - writing-skills
+  - find-skills
+  - verification-before-completion
+  - architecture-decision-records
+responsibilities:
+  - learning_candidate triage
+  - canonical skill/doc updates
+  - profile spec maintenance
+  - knowledge placement policy

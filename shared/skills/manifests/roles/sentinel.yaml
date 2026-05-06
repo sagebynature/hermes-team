@@ -1,0 +1,12 @@
+version: 0.1.0
+profile: sentinel
+status: draft
+skills:
+  - requesting-code-review
+  - receiving-code-review
+  - systematic-debugging
+  - verification-before-completion
+responsibilities:
+  - quality gate review
+  - security/regression review
+  - structured review_verdict comments
