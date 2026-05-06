@@ -345,6 +345,37 @@ def latest_completion_summary(conn: sqlite3.Connection, task_id: str, fallback: 
     return fallback.strip() if fallback and fallback.strip() else "No summary recorded."
 
 
+def latest_run_handoff(conn: sqlite3.Connection, task_id: str) -> tuple[Optional[str], dict[str, Any]]:
+    row = conn.execute(
+        """
+        SELECT summary, metadata FROM task_runs
+         WHERE task_id = ?
+         ORDER BY id DESC LIMIT 1
+        """,
+        (task_id,),
+    ).fetchone()
+    if not row:
+        return None, {}
+    metadata = safe_json_loads(row[1]) if len(row) > 1 else {}
+    summary = row[0].strip() if isinstance(row[0], str) and row[0].strip() else None
+    return summary, metadata
+
+
+def final_answer_text(conn: sqlite3.Connection, task: sqlite3.Row, payload: dict[str, Any]) -> str:
+    result = task["result"] if "result" in task.keys() else None
+    if isinstance(result, str) and result.strip():
+        return result.strip()
+    run_summary, run_metadata = latest_run_handoff(conn, task["id"])
+    for source in (payload, run_metadata):
+        for key in ("final_answer", "answer", "response", "result"):
+            value = source.get(key) if isinstance(source, dict) else None
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+    if run_summary:
+        return run_summary
+    return event_summary(task, payload)
+
+
 def mission_worker_summary_block(conn: sqlite3.Connection, conversation_id: str) -> str:
     lines = []
     for task in worker_mission_tasks(conn, conversation_id):
@@ -396,7 +427,8 @@ Artifact directory convention: {artifact_hint}
 Rules:
 - Do not claim missing work was completed.
 - If any required artifact or answer is missing, block this task and ask for operator intervention.
-- Produce a concise final answer for the original user.
+- Produce the actual final user-facing answer, not just a completion/status note.
+- When completing this Kanban task, put the full final answer in `kanban_complete(result=...)` and a one-sentence delivery summary in `summary`.
 - Include material task IDs and artifact paths when useful.
 """
     columns = table_columns(conn, "tasks")
@@ -433,7 +465,8 @@ def handle_completed_event(conn: sqlite3.Connection, event: sqlite3.Row, task: s
     summary = event_summary(task, payload)
     if is_atlas_synthesis_task(task, conversation_id):
         thread_id = extract_discord_thread_id(task, payload, conversation_id)
-        message = f"Final answer ready for {conversation_id}: {summary}"
+        answer = final_answer_text(conn, task, payload)
+        message = f"Atlas final answer for {conversation_id}: {answer}"
         if enqueue_outbox(
             conn,
             conversation_id=conversation_id,
@@ -442,7 +475,7 @@ def handle_completed_event(conn: sqlite3.Connection, event: sqlite3.Row, task: s
             message=message,
             idempotency_key=f"final:{conversation_id}:{event['task_id']}:{event['id']}",
             target=discord_target("status", thread_id),
-            payload_json=final_response_payload(conversation_id, event["task_id"], summary),
+            payload_json=final_response_payload(conversation_id, event["task_id"], answer),
         ):
             result.outbox_rows += 1
             result.final_responses_ready += 1

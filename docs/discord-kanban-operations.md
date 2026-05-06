@@ -302,7 +302,7 @@ make kanban-notifier-dry-run
 
 Deliver pending Discord-targeted outbox rows through `scripts/discord-post-status.py` and `DISCORD_STATUS_WEBHOOK_URL`. Internal Atlas handoff rows are not posted to Discord; they remain queued/auditable in `mission_notification_outbox`, while the actual Atlas notification is the ready synthesis task assigned to Atlas.
 
-Final Atlas responses are delivered as structured Discord webhook payloads (`embeds` plus `allowed_mentions: {parse: []}`), not raw free-form content. If the mission metadata includes `discord_thread_id: <snowflake>`, or the `conversation_id` itself is a Discord thread/forum-post snowflake, the notifier stores the outbox target as `discord:status:<thread_id>` and delivery calls Discord's webhook `thread_id` parameter so the final answer lands in the original thread.
+Final Atlas responses are delivered as structured Discord webhook payloads (`embeds` plus `allowed_mentions: {parse: []}`), not raw free-form content. If the mission metadata includes `discord_thread_id: <snowflake>`, or the `conversation_id` itself is a Discord thread/forum-post snowflake, the notifier stores the outbox target as `discord:status:<thread_id>` and delivery calls Discord's webhook `thread_id` parameter so the final answer lands in the original thread. Atlas synthesis tasks must complete with the full user-facing answer in `kanban_complete(result=...)`; `summary` is only a compact delivery/status line. The notifier prefers `task.result` for final Discord payloads so it does not post a mere "synthesis completed" summary as the answer.
 
 ```bash
 make kanban-notifier-deliver

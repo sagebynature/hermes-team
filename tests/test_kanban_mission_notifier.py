@@ -225,10 +225,10 @@ class KanbanMissionNotifierTests(unittest.TestCase):
                     conversation_id="1501451632569880636",
                     title="[mission:1501451632569880636] synthesize final answer",
                     body="conversation_id: 1501451632569880636\ndiscord_thread_id: 1501451632569880636\nassignee: atlas",
-                    result="Final answer for the user.",
+                    result="Actual final answer for the user with the requested details.",
                     idempotency_key="mission:1501451632569880636:atlas-synthesis",
                 )
-                append_event(conn, "t_synth", "completed", '{"summary":"Final answer for the user."}')
+                append_event(conn, "t_synth", "completed", '{"summary":"Synthesis completed."}')
                 conn.commit()
 
             first = notifier.run_once(db)
@@ -241,12 +241,14 @@ class KanbanMissionNotifierTests(unittest.TestCase):
                     "SELECT conversation_id, task_id, kind, target, message, payload_json FROM mission_notification_outbox"
                 ).fetchall()
             self.assertEqual(rows[0][0:4], ("1501451632569880636", "t_synth", "final_response_ready", "discord:status:1501451632569880636"))
-            self.assertIn("Final answer for the user", rows[0][4])
+            self.assertIn("Actual final answer for the user", rows[0][4])
+            self.assertNotIn("Synthesis completed", rows[0][4])
             self.assertIsNotNone(rows[0][5])
             payload = __import__("json").loads(rows[0][5])
             self.assertEqual(payload["allowed_mentions"], {"parse": []})
             self.assertEqual(payload["embeds"][0]["title"], "Atlas final response")
-            self.assertIn("Final answer for the user", payload["embeds"][0]["description"])
+            self.assertIn("Actual final answer for the user", payload["embeds"][0]["description"])
+            self.assertNotIn("Synthesis completed", payload["embeds"][0]["description"])
 
 
 if __name__ == "__main__":
