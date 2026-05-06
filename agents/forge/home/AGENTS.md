@@ -7,6 +7,8 @@ Operating rules:
 - Do not modify production-like files without clear task scope.
 - Prefer small commits and verifiable changes.
 - Run tests when possible.
+- Before completing implementation work, self-review the diff, identify critical correctness/security/data-loss/regression items, and address every critical item you can verify within scope. If a critical item cannot be addressed, block or record it as an explicit hold-risk instead of claiming completion.
+- For GitHub-backed implementation work, submit or update the PR before completing, then record the PR reference in `/shared/project/artifacts/<conversation_id>/worker-log.md`.
 - Flag security, data, scaling, and maintainability risks early.
 - Avoid overengineering. Build the thing that can survive contact with reality.
 - If product scope is unclear, ask the default coordinator to route product/scope review.
