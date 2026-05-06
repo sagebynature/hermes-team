@@ -797,7 +797,7 @@ def run_compose_config() -> str | None:
         "-f", "docker-compose.yml",
         "-f", "docker-compose.agents.generated.yml",
         "-f", "docker-compose.dashboards.generated.yml",
-        "--profile", "dashboard", "--profile", "dispatcher", "config",
+        "--profile", "dashboard", "--profile", "kanban", "config",
     ]
     try:
         proc = subprocess.run(cmd, cwd=ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
@@ -880,6 +880,8 @@ def validate_compose(agents) -> None:
             errors.append(f"dashboard {slug} missing localhost published port {port}")
     if not re.search(r"(?m)^  kanban-dispatcher:\n", rendered):
         errors.append("missing dispatcher service")
+    if not re.search(r"(?m)^  kanban-notifier:\n", rendered):
+        errors.append("missing notifier service")
     disabled = [s for s, i in agents.items() if not as_bool(i["enabled"], "enabled", s)]
     for slug in disabled:
         if re.search(rf"(?m)^  {re.escape(slug)}:\n", rendered) or re.search(rf"(?m)^  {re.escape(slug)}-dashboard:\n", rendered):

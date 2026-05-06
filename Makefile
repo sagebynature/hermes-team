@@ -22,7 +22,8 @@ endif
 	generate check-generated validate preflight registry-list registry-validate registry-next-ports validate-plugins dashboards-up dashboards-restart \
 	agent-add agent-disable agent-archive \
 	kanban-init kanban-list kanban-stats kanban-watch kanban-create kanban-link kanban-dispatch \
-	kanban-dispatcher-once kanban-dispatcher-daemon kanban-dispatcher-stop kanban-dispatcher-logs discord-status-dry-run \
+	kanban-dispatcher-once kanban-dispatcher-daemon kanban-dispatcher-stop kanban-dispatcher-logs \
+	kanban-notifier-once kanban-notifier-daemon kanban-notifier-stop kanban-notifier-logs kanban-notifier-deliver kanban-notifier-dry-run discord-status-dry-run \
 	mcp-list mcp-list-all mcp-test mcp-remove mcp-add-command mcp-add-url \
 	mcp-register-template mcp-register-template-all mcp-templates mcp-show-template \
 	guard-agent guard-server guard-command guard-url
@@ -41,15 +42,15 @@ build: ## Build the custom Hermes team image once; all agents share team-nexus-a
 
 up: ## Start all Hermes gateways and dashboard reverse proxy
 	$(COMPOSE) --profile dashboard up -d
-	$(COMPOSE) --profile dispatcher up -d
+	$(COMPOSE) --profile kanban up -d
 
 down: ## Stop all Hermes gateways
 	$(COMPOSE) --profile dashboard down
-	$(COMPOSE) --profile dispatcher down
+	$(COMPOSE) --profile kanban down
 
 restart: ## Restart all Hermes gateways
 	$(COMPOSE) --profile dashboard restart
-	$(COMPOSE) --profile dispatcher restart
+	$(COMPOSE) --profile kanban restart
 
 ps: ## Show Compose service status
 	$(COMPOSE) ps
@@ -170,19 +171,37 @@ kanban-dispatch: guard-agent ## Run one Kanban task in the assigned agent contai
 
 kanban-dispatcher-once: ## Run one Dockerized Compose-aware dispatcher pass; add DRY_RUN=1 to avoid spawning
 	@if [ "$(DRY_RUN)" = "1" ]; then \
-		$(COMPOSE) --profile dispatcher run --rm kanban-dispatcher bash -lc 'python3 scripts/kanban-compose-dispatcher.py --dry-run --max-tasks $${MAX_TASKS:-1} --worker-timeout $${KANBAN_DISPATCH_WORKER_TIMEOUT:-900}'; \
+		$(COMPOSE) --profile kanban run --rm kanban-dispatcher bash -lc 'python3 scripts/kanban-compose-dispatcher.py --dry-run --max-tasks $${MAX_TASKS:-1} --worker-timeout $${KANBAN_DISPATCH_WORKER_TIMEOUT:-900}'; \
 	else \
-		$(COMPOSE) --profile dispatcher run --rm kanban-dispatcher bash -lc 'python3 scripts/kanban-compose-dispatcher.py --max-tasks $${MAX_TASKS:-1} --worker-timeout $${KANBAN_DISPATCH_WORKER_TIMEOUT:-900}'; \
+		$(COMPOSE) --profile kanban run --rm kanban-dispatcher bash -lc 'python3 scripts/kanban-compose-dispatcher.py --max-tasks $${MAX_TASKS:-1} --worker-timeout $${KANBAN_DISPATCH_WORKER_TIMEOUT:-900}'; \
 	fi
 
 kanban-dispatcher-daemon: ## Start the Dockerized Compose-aware Kanban dispatcher daemon; KANBAN_DISPATCH_INTERVAL=60 KANBAN_DISPATCH_MAX_TASKS=1 KANBAN_DISPATCH_WORKER_TIMEOUT=900
-	$(COMPOSE) --profile dispatcher up -d kanban-dispatcher
+	$(COMPOSE) --profile kanban up -d kanban-dispatcher
 
 kanban-dispatcher-stop: ## Stop the Dockerized Kanban dispatcher daemon
-	$(COMPOSE) --profile dispatcher stop kanban-dispatcher
+	$(COMPOSE) --profile kanban stop kanban-dispatcher
 
 kanban-dispatcher-logs: ## Follow Dockerized Kanban dispatcher logs
-	$(COMPOSE) --profile dispatcher logs -f kanban-dispatcher
+	$(COMPOSE) --profile kanban logs -f kanban-dispatcher
+
+kanban-notifier-once: ## Process new Kanban mission events into notification outbox rows
+	python3 scripts/kanban-mission-notifier.py --limit $${LIMIT:-100}
+
+kanban-notifier-daemon: ## Start the Dockerized Kanban mission notifier daemon; KANBAN_NOTIFIER_DELIVER=1 posts updates
+	$(COMPOSE) --profile kanban up -d kanban-notifier
+
+kanban-notifier-stop: ## Stop the Dockerized Kanban mission notifier daemon
+	$(COMPOSE) --profile kanban stop kanban-notifier
+
+kanban-notifier-logs: ## Follow Dockerized Kanban notifier container logs
+	$(COMPOSE) --profile kanban logs -f kanban-notifier
+
+kanban-notifier-deliver: ## Deliver pending mission notification outbox rows through Discord status webhook
+	python3 scripts/kanban-mission-notifier.py --deliver --limit $${LIMIT:-100}
+
+kanban-notifier-dry-run: ## Preview pending mission notification delivery without posting
+	python3 scripts/kanban-mission-notifier.py --dry-run --limit $${LIMIT:-100}
 
 discord-status-dry-run: ## Dry-run a Discord status post: make discord-status-dry-run MESSAGE='...'
 	@if [ -z "$(MESSAGE)" ]; then echo "MESSAGE is required" >&2; exit 2; fi

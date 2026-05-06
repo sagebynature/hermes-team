@@ -1,11 +1,42 @@
 name: team-nexus
 
 services:
+  kanban-notifier:
+    image: team-nexus-agent:latest
+    container_name: hermes-kanban-notifier
+    restart: unless-stopped
+    profiles: ["kanban"]
+    working_dir: ${PWD}
+    entrypoint: ["/usr/bin/tini", "-g", "--"]
+    environment:
+      HERMES_HOME: /tmp/hermes-notifier-home
+      HERMES_KANBAN_HOME: ${PWD}/shared/kanban
+      HERMES_UID: ${TEAM_NEXUS_UID:-10000}
+      HERMES_GID: ${TEAM_NEXUS_GID:-10000}
+      AGENT_NAME: Kanban Notifier
+      AGENT_ROLE: Kanban mission notification tailer
+    env_file:
+      - ./.env
+    volumes:
+      # The notifier only needs repo/shared DB access plus env for optional Discord delivery.
+      # It does not need the Docker socket because it never spawns workers.
+      - ${PWD}:${PWD}
+    command:
+      - bash
+      - -lc
+      - >-
+        umask 0002 &&
+        deliver_flag="" &&
+        if [ "$${KANBAN_NOTIFIER_DELIVER:-0}" = "1" ]; then deliver_flag="--deliver"; fi &&
+        python3 scripts/kanban-mission-notifier.py --daemon $${deliver_flag}
+        --interval "$${KANBAN_NOTIFIER_INTERVAL:-10}"
+        --limit "$${KANBAN_NOTIFIER_LIMIT:-100}"
+
   kanban-dispatcher:
     image: team-nexus-agent:latest
     container_name: hermes-kanban-dispatcher
     restart: unless-stopped
-    profiles: ["dispatcher"]
+    profiles: ["kanban"]
     working_dir: ${PWD}
     entrypoint: ["/usr/bin/tini", "-g", "--"]
     environment:

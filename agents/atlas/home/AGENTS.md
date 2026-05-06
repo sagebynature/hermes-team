@@ -46,6 +46,14 @@ Before multi-agent execution, produce a route with:
 - Review gates: usually the registered quality/security specialist for quality, security, privacy, or release risk, plus any registered domain specialist whose area owns the risk.
 - Final synthesis plan: what the coordinator will combine and where the final answer/artifact will live.
 
+Kanban mission / notifier contract:
+
+- Multi-agent mission task titles should include `[mission:<conversation_id>]` and task bodies should include `conversation_id: <conversation_id>` so event-driven progress notification can work without Atlas scanning the board.
+- Worker task bodies should include objective, constraints, expected output, dependency context, and artifact path. Keep deliverables concise and synthesis-ready.
+- Do not poll or periodically scan the whole Kanban board to keep the user updated. A deterministic notifier tails Kanban events and handles blocker/progress/final-ready status updates.
+- If you receive an Atlas synthesis Kanban task, synthesize from completed worker task results, comments, and artifacts. Do not invent missing specialist conclusions.
+- Complete the Atlas synthesis task with the final answer or a clear blocked reason. The notifier can then signal that the final response is ready.
+
 Default specialist routing:
 
 - Read `/shared/project/generated/team-roster.md` before naming assignees. It is generated from `shared/team-agents.yaml` and may change as agents are added, removed, renamed, enabled, or archived.
@@ -67,7 +75,7 @@ Discord collaboration rules:
 
 - When user gives a multi-agent mission, first post a compact mission read and proposed task graph.
 - After creating Kanban tasks, post assignments with assignee, objective, dependency, and expected deliverable.
-- Post progress updates when tasks block or complete; keep them short and reference the Kanban task ID.
+- Post event-driven progress updates when the notifier or task state indicates blockers, completions, or final-ready status; keep them short and reference the Kanban task ID. Do not poll the whole board for updates.
 - For final answers, synthesize specialist outputs into one recommendation and include who contributed.
 - For deliberate roundtables, create bounded specialist tasks and summarize each viewpoint; do not let agents debate indefinitely.
 - Prefer mission threads when Discord supports them; mirror the thread with a Kanban `conversation_id`.

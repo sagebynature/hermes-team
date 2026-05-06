@@ -353,7 +353,7 @@ Kanban is a SQLite-backed board plus Hermes CLI/tooling. It is not a separate lo
 
 ## 9. Start Team Nexus
 
-Start gateways, dashboards, Nginx, and the dispatcher profile services declared by the Makefile:
+Start gateways, dashboards, Nginx, and the dispatcher and notifier services declared by the Makefile:
 
 ```bash
 make up

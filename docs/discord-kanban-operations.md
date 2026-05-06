@@ -74,7 +74,7 @@ docker compose run --rm atlas kanban init
 
 After initialization, the board exists as `shared/kanban/kanban.db`. If that file already exists, Kanban is already initialized.
 
-The automatic dispatcher is separate. It does not run with the plain gateway stack; start it explicitly through the Docker Compose `dispatcher` profile.
+The Kanban background services are separate. They do not run with a plain `docker compose up -d`; start them explicitly through the Docker Compose `kanban` profile. The `kanban-dispatcher` launches worker tasks, while the `kanban-notifier` tails mission events and queues or posts progress updates.
 
 ## Starting Team Nexus
 
@@ -122,10 +122,10 @@ Start automatic worker dispatch as the Dockerized dispatcher daemon:
 make kanban-dispatcher-daemon
 ```
 
-This starts the `kanban-dispatcher` service through the Compose `dispatcher` profile:
+This starts the `kanban-dispatcher` service through the Compose `kanban` profile:
 
 ```bash
-docker compose --profile dispatcher up -d kanban-dispatcher
+docker compose --profile kanban up -d kanban-dispatcher
 ```
 
 Stop it with:
@@ -196,6 +196,130 @@ Dispatcher logs go to:
 
 ```text
 shared/kanban/dispatcher.log
+```
+
+## Mission notifier and Atlas fan-in
+
+Do not make Atlas periodically scan the whole board. Team Nexus uses Kanban events as the progress signal. `scripts/kanban-mission-notifier.py` tails new `task_events` rows by cursor, writes idempotent rows to `mission_notification_outbox`, and creates one Atlas synthesis task when all worker tasks in a mission are terminal.
+
+A mission task must include a conversation ID in its title or body:
+
+```text
+[mission:mission_<slug>_<yyyymmdd>] <short objective>
+
+conversation_id: mission_<slug>_<yyyymmdd>
+objective: ...
+expected_output: ...
+artifact_path: /shared/project/artifacts/missions/mission_<slug>_<yyyymmdd>/<agent>.md
+```
+
+Process newly appended events once:
+
+```bash
+make kanban-notifier-once
+```
+
+Preview pending Discord status deliveries without posting:
+
+```bash
+make kanban-notifier-dry-run
+```
+
+Deliver pending outbox rows through `scripts/discord-post-status.py` and `DISCORD_STATUS_WEBHOOK_URL`:
+
+```bash
+make kanban-notifier-deliver
+```
+
+Run the notifier as a lightweight Dockerized daemon:
+
+```bash
+make kanban-notifier-daemon
+```
+
+That starts the `kanban-notifier` service through the Compose `kanban` profile:
+
+```bash
+docker compose --profile kanban up -d kanban-notifier
+```
+
+The daemon is intentionally separate from the worker dispatcher. The dispatcher launches workers; the notifier tails mission events, queues status updates, and optionally delivers those updates. The notifier service does not mount the Docker socket and cannot spawn workers.
+
+### Notifier setup checklist
+
+1. Initialize the shared board if needed:
+
+   ```bash
+   make kanban-init
+   test -f shared/kanban/kanban.db
+   ```
+
+2. Decide whether the daemon should only queue outbox rows or also post Discord status updates.
+
+   Queue-only mode is the safest default. It requires no webhook secret and is what the Compose service does unless configured otherwise:
+
+   ```bash
+   make kanban-notifier-daemon
+   make kanban-notifier-dry-run
+   make kanban-notifier-deliver
+   ```
+
+   Auto-delivery mode requires `DISCORD_STATUS_WEBHOOK_URL` in repo-root `.env` and `KANBAN_NOTIFIER_DELIVER=1` for the daemon environment. Do not print the webhook value.
+
+   ```bash
+   # .env
+   DISCORD_STATUS_WEBHOOK_URL=<redacted Discord webhook URL>
+   KANBAN_NOTIFIER_DELIVER=1
+   KANBAN_NOTIFIER_INTERVAL=10
+   KANBAN_NOTIFIER_LIMIT=100
+   ```
+
+3. Start or restart the daemon after changing `.env`:
+
+   ```bash
+   make kanban-notifier-daemon
+   # or, after env changes:
+   docker compose --profile kanban up -d --force-recreate kanban-notifier
+   ```
+
+4. Verify the service and log file:
+
+   ```bash
+   docker compose --profile kanban ps kanban-notifier
+   make kanban-notifier-logs
+   tail -f shared/kanban/mission-notifier.log
+   ```
+
+5. Stop it when needed:
+
+   ```bash
+   make kanban-notifier-stop
+   ```
+
+The default daemon interval is 10 seconds. Override with `KANBAN_NOTIFIER_INTERVAL=<seconds>` in `.env`. The default per-pass event limit is 100. Override with `KANBAN_NOTIFIER_LIMIT=<count>` in `.env`.
+
+The notifier reacts to:
+
+- `blocked` / `dispatch_timed_out`: queue a human blocker update.
+- `completed` / `done` on worker tasks: queue a compact completion update.
+- all non-Atlas worker tasks for a `conversation_id` reaching `done` or `archived`: create exactly one ready Atlas task with idempotency key `mission:<conversation_id>:atlas-synthesis`.
+- `completed` / `done` on the Atlas synthesis task: queue a final-response-ready update.
+
+The notifier is deterministic infrastructure. It does not invent specialist conclusions; Atlas still owns final synthesis from Kanban task results/comments and artifacts.
+
+The operational skill for this workflow is tracked in the repo at `shared/skills/team-nexus-kanban-ops/SKILL.md`. It is an operator/developer runbook, not an Atlas runtime skill: Atlas runs inside Docker and should not be expected to run host `make` or `docker compose` commands. Atlas-facing behavior belongs in `agents/atlas/home/AGENTS.md` and in the Kanban task bodies it receives.
+
+Notifier state and outbox rows live in the shared Kanban DB:
+
+```text
+mission_notifier_state
+mission_notification_outbox
+```
+
+Notifier logs go to:
+
+```text
+shared/kanban/mission-notifier.log
 ```
 
 ## Creating and watching tasks
@@ -283,7 +407,7 @@ Or link tasks after creation:
 make kanban-link PARENT=<parent-task-id> CHILD=<child-task-id>
 ```
 
-Remember: the board exists after `make kanban-init`, but automatic worker dispatch only runs when the dispatcher profile is started with `make kanban-dispatcher-daemon` or an equivalent `docker compose --profile dispatcher ...` command.
+Remember: the board exists after `make kanban-init`, but automatic worker dispatch only runs when the kanban profile is started with `make kanban-dispatcher-daemon` or an equivalent `docker compose --profile kanban ...` command.
 
 ## Discord setup
 
