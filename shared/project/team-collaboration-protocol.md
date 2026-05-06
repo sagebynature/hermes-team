@@ -91,6 +91,46 @@ A specialist blocks the task with the exact missing information, risk, or decisi
 
 Atlas creates one short task per relevant role. Each response is limited to five bullets. Atlas summarizes agreement, disagreement, and a recommended decision. Agents do not debate indefinitely.
 
+
+## Code-writing and GitHub workflow
+
+Code-writing tasks must preserve agent isolation, GitHub traceability, and downstream handoff quality.
+
+Required sequence for any task that modifies code or repository files:
+
+1. Work in your own workspace. Do not edit another agent's private `/workspace` files or mutate a shared checkout. Use your agent-owned `/workspace` for clones, worktrees, notes, test outputs, and draft artifacts.
+2. If the task uses GitHub, clone the repository into your own workspace and create a Git worktree for the task branch before changing files. The normal shape is:
+   - clone/cache path: `/workspace/repos/<repo>`
+   - worktree path: `/workspace/worktrees/<task-id-or-slug>`
+   - branch: `<type>/<short-task-slug>` such as `feat/add-billing-import` or `fix/login-redirect`
+3. When picking up, continuing, reviewing, or repairing upstream work, read the upstream worker log first. Use the task body, parent tasks, Kanban comments, and the referenced `worker-log.md` path to understand what was done, why, and which branch/worktree contains the work before making changes.
+4. Commit with Conventional Commits. Use `type(scope): summary` when a scope helps, and include a body for non-obvious decisions. Common types are `feat`, `fix`, `docs`, `test`, `refactor`, `ci`, `chore`, `perf`, and `revert`.
+5. Before completing the Kanban task, push the worktree branch to its remote. If push is impossible, block the task and explain the credential, remote, or policy issue; do not mark code work done with only local commits.
+6. Before completing the Kanban task, update the worker log with what was done, how it was done, why key decisions were made, and where the work lives. The log entry must include branch name, worktree path, commit SHA(s), pushed remote, tests/checks run, changed files, artifact paths, and any follow-up risks.
+7. Complete with a `[handoff]` comment that points to the worker log and any shared artifacts. Downstream agents should be able to resume from the log without reading private scratch files or guessing branch state.
+
+Worker log location:
+
+- Mission-scoped code work should use `/shared/project/artifacts/<conversation_id>/worker-log.md` so every downstream agent can read one chronological log.
+- If no `conversation_id` exists, create one from the task slug before routing code work rather than scattering logs across private workspaces.
+
+Recommended worker log entry shape:
+
+```text
+## <UTC timestamp> — <agent> — <task id/title>
+
+- branch: <type/short-task-slug>
+- worktree: /workspace/worktrees/<task-id-or-slug>
+- remote: origin <git remote URL or owner/repo>
+- pushed: yes, origin/<branch> at <commit sha>
+- what: <files/features/fixes produced>
+- how: <implementation and verification approach>
+- why: <key decisions and tradeoffs>
+- checks: <commands run and results>
+- artifacts: <shared artifact paths, PR URL if created>
+- follow-ups: <known risks or none>
+```
+
 ## Discord operating model
 
 - `#nexus-command`: user talks to Atlas. This is the primary mission intake channel.

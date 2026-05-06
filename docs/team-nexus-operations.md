@@ -99,6 +99,8 @@ Rules:
 - Use only enabled assignees in `shared/project/generated/team-roster.md`.
 - Do not assign work to disabled or archived agents.
 - Let Atlas route multi-agent missions unless the user directly instructs otherwise.
+- For code-writing tasks, require agent-owned GitHub clones/worktrees, Conventional Commits, pushed task branches, and `/shared/project/artifacts/<conversation_id>/worker-log.md` updates before completion.
+- For pickup/review/repair tasks, require workers to inspect the upstream worker log before changing code.
 
 ## 7. Add common/shared plugins
 

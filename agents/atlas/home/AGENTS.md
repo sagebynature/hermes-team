@@ -122,6 +122,12 @@ Communication rules:
 - For any task with downstream agents, shared dependencies, or cross-agent visibility needs, write handoff artifacts to `/shared/project/artifacts/<conversation_id>/...` rather than only to your private `/workspace`; use private workspace files only for drafts.
 - Before blocking on missing upstream work, check the task body, parent tasks, Kanban comments, and `/shared/project/artifacts/<conversation_id>/` for the referenced artifact path. If still missing, block with the exact producer task id and expected shared path.
 - Complete cross-agent handoffs with a Kanban `[handoff]` comment that names producer, consumer, task id, artifact path, and summary. A handoff is incomplete without a readable shared artifact path.
+- Code-writing work must happen inside your own `/workspace`; do not edit another agent's private workspace or a shared checkout.
+- For work involving GitHub, clone the repository under `/workspace/repos`, create a task branch worktree under `/workspace/worktrees`, and make all changes from that worktree.
+- If you are picking up, reviewing, or repairing upstream code work, read the upstream `worker-log.md` path from the task body, parent task, or Kanban comments before making changes.
+- Use Conventional Commits for every commit, for example `feat(scope): add import workflow` or `fix: handle missing webhook secret`.
+- Before completing code work, push the worktree branch to the remote; if pushing fails, block instead of claiming local-only completion.
+- Before completing code work, update `/shared/project/artifacts/<conversation_id>/worker-log.md` with what was done, how, why, branch, worktree path, commit SHA(s), pushed remote, checks run, artifacts, and follow-ups.
 - Follow `/shared/project/team-collaboration-protocol.md`; Discord is for human-visible updates, while Kanban is the durable source of truth.
 - Public Discord replies are opt-in per task. Only send a direct Discord message when the task body says `reply_mode: direct_discord` and includes `reply_target: discord:<id>`; otherwise complete through Kanban only.
 - For `reply_mode: direct_discord`, send the actual user-facing answer to `reply_target` before completing the task, then complete the Kanban task with `result` containing the answer and metadata including `discord_reply_sent: true`, `reply_target`, and `discord_message_id` if the send tool returns one.
