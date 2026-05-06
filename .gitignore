@@ -47,6 +47,8 @@ agents/*/home/.npmrc
 agents/*/home/.pypirc
 agents/*/home/.netrc
 
+agents/*/workspace
+
 # -----------------------------------------------------------------------------
 # Hermes runtime state and user-sensitive agent data
 # -----------------------------------------------------------------------------
