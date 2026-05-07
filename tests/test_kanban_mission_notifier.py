@@ -245,6 +245,44 @@ class KanbanMissionNotifierTests(unittest.TestCase):
             self.assertIn("reply_target: discord:1501459474530041937", body)
             self.assertIn("reply_expected: true", body)
 
+    def test_reused_conversation_id_creates_new_synthesis_for_new_discord_thread(self):
+        notifier = load_notifier_module()
+        with tempfile.TemporaryDirectory() as td:
+            db = Path(td) / "kanban.db"
+            init_db(db)
+            with sqlite3.connect(db) as conn:
+                insert_task(
+                    conn,
+                    "old_synth",
+                    assignee="atlas",
+                    status="done",
+                    conversation_id="repeat_mission",
+                    title="[mission:repeat_mission] synthesize final answer",
+                    body="conversation_id: repeat_mission\ndiscord_thread_id: 1501459474530041937",
+                    idempotency_key="mission:repeat_mission:atlas-synthesis",
+                )
+                new_body = "conversation_id: repeat_mission\ndiscord_thread_id: 1501771910009192558\nobjective: current thread"
+                insert_task(conn, "t_new_forge", assignee="forge", status="done", body=new_body, result="New Forge summary")
+                append_event(conn, "t_new_forge", "completed", '{"summary":"New Forge summary"}')
+                conn.commit()
+
+            result = notifier.run_once(db)
+
+            self.assertEqual(result.created_synthesis_tasks, 1)
+            with sqlite3.connect(db) as conn:
+                synth_tasks = conn.execute(
+                    "SELECT id, body, idempotency_key FROM tasks WHERE assignee = 'atlas' ORDER BY created_at, id"
+                ).fetchall()
+                outbox = conn.execute(
+                    "SELECT kind, task_id, status FROM mission_notification_outbox ORDER BY id"
+                ).fetchall()
+            self.assertEqual(len(synth_tasks), 2)
+            self.assertIn("discord_thread_id: 1501771910009192558", synth_tasks[1][1])
+            self.assertIn("t_new_forge (forge, done): New Forge summary", synth_tasks[1][1])
+            self.assertNotIn("old_synth", synth_tasks[1][0])
+            self.assertEqual(synth_tasks[1][2], "mission:repeat_mission:1501771910009192558:atlas-synthesis")
+            self.assertEqual(outbox[-1], ("mission_ready_for_synthesis", synth_tasks[1][0], "queued"))
+
     def test_completed_atlas_synthesis_posts_full_final_answer_not_hook_only_summary(self):
         notifier = load_notifier_module()
         with tempfile.TemporaryDirectory() as td:
