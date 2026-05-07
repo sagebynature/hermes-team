@@ -2,6 +2,25 @@
 
 Team Nexus now uses the Hermes-native profile-driven runtime. This guide is the short operator path; deeper design/rationale lives in `docs/architecture/profile-driven-team-nexus.md` and `docs/adr/0014-profile-driven-team-nexus.md`.
 
+## Guided installer
+
+For a fresh machine or a user who wants the setup flow to guide them end-to-end:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sagebynature/team-nexus/main/scripts/install.sh | bash
+```
+
+The installer checks prerequisites, clones or updates the repo, creates `.env` without overwriting secrets, prompts you to edit it, renders profile homes, runs preflight, builds the shared Docker image, and starts the profile runtime when the required settings are present.
+
+Useful installer options:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sagebynature/team-nexus/main/scripts/install.sh | bash -s -- --dir ~/team-nexus --skip-up
+./scripts/install.sh --help
+```
+
+## Manual setup
+
 ## 1. Prepare secrets
 
 ```bash

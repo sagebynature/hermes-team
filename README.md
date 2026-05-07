@@ -6,6 +6,14 @@ Team Nexus uses Hermes Agent profiles, Kanban, checkpoints, skills, and a functi
 
 ## Operator quick start
 
+Guided installer from a fresh machine:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sagebynature/team-nexus/main/scripts/install.sh | bash
+```
+
+Manual path inside an existing checkout:
+
 ```bash
 cp .env.example .env
 # edit .env; add a model provider key and Atlas Discord settings for gateway use
