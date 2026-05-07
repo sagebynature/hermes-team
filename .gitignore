@@ -34,5 +34,6 @@ Thumbs.db
 *.swo
 
 # Python
+.venv/
 __pycache__/
 *.py[cod]

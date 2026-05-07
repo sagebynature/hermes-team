@@ -36,6 +36,7 @@ RUN_BUILD=true
 RUN_UP=true
 EDIT_ENV=true
 ASSUME_YES=false
+PYTHON_CMD="python3"
 
 if [ -t 0 ]; then
     IS_INTERACTIVE=true
@@ -177,6 +178,43 @@ print_step() {
 
 command_exists() {
     command -v "$1" >/dev/null 2>&1
+}
+
+python_has_pyyaml() {
+    "$PYTHON_CMD" - <<'PY' >/dev/null 2>&1
+import yaml
+PY
+}
+
+bootstrap_python_deps() {
+    cd "$INSTALL_DIR"
+
+    if python_has_pyyaml || command_exists ruby; then
+        if python_has_pyyaml; then
+            log_success "Python YAML support available"
+        else
+            log_success "Ruby YAML fallback available"
+        fi
+        return 0
+    fi
+
+    log_warn "PyYAML is not installed and Ruby is unavailable; bootstrapping local Python dependencies."
+    if [ ! -x .venv/bin/python ]; then
+        "$PYTHON_CMD" -m venv .venv
+    fi
+
+    .venv/bin/python -m pip install --upgrade pip >/dev/null
+    .venv/bin/python -m pip install PyYAML >/dev/null
+    PYTHON_CMD="$INSTALL_DIR/.venv/bin/python"
+
+    if python_has_pyyaml; then
+        log_success "Installed PyYAML into $INSTALL_DIR/.venv"
+    else
+        log_error "Could not install PyYAML into $INSTALL_DIR/.venv"
+        echo "Install PyYAML or Ruby, then re-run this installer:"
+        echo "  $PYTHON_CMD -m pip install PyYAML"
+        exit 1
+    fi
 }
 
 open_editor() {
@@ -412,8 +450,8 @@ check_env_guidance() {
 
 run_make_target() {
     local target="$1"
-    log_info "Running: make $target"
-    make "$target"
+    log_info "Running: make PYTHON=$PYTHON_CMD $target"
+    make PYTHON="$PYTHON_CMD" "$target"
 }
 
 render_profiles() {
@@ -492,6 +530,8 @@ main() {
 
     print_step "2/9" "Clone or update Team Nexus"
     clone_or_update_repo
+
+    bootstrap_python_deps
 
     print_step "3/9" "Prepare .env secrets file"
     prepare_env

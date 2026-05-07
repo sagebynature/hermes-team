@@ -1,5 +1,6 @@
 SHELL := /usr/bin/env bash
 .DEFAULT_GOAL := help
+PYTHON ?= python3
 
 COMPOSE_FILES ?= -f docker-compose.profiles.yml
 COMPOSE ?= docker compose $(COMPOSE_FILES)
@@ -79,22 +80,22 @@ compose-config: ## Validate profile-driven Docker Compose function services
 	@echo "compose config OK -> /tmp/team-nexus-compose.yaml"
 
 validate: ## Validate profile specs, manifests, scripts, tests, and profile-driven Compose
-	python3 scripts/validate-profile-spec.py
-	python3 -m py_compile scripts/*.py shared/plugins/agent-identity-dashboard/dashboard/plugin_api.py
-	python3 -m unittest discover -s tests -p 'test*.py'
+	$(PYTHON) scripts/validate-profile-spec.py
+	$(PYTHON) -m py_compile scripts/*.py shared/plugins/agent-identity-dashboard/dashboard/plugin_api.py
+	$(PYTHON) -m unittest discover -s tests -p 'test*.py'
 	$(MAKE) profile-compose-config
 
 preflight: ## Run profile-driven preflight checks
 	./scripts/preflight.sh
 
 profile-validate: ## Validate profile-driven Team Nexus spec and manifests
-	python3 scripts/validate-profile-spec.py
+	$(PYTHON) scripts/validate-profile-spec.py
 
 profile-render-dry-run: ## Preview host profile files rendered from profile specs
-	python3 scripts/render-profile-spec.py --mode $(MODE)
+	$(PYTHON) scripts/render-profile-spec.py --mode $(MODE)
 
 profile-render: ## Render Docker profile files into ignored runtime/hermes/profiles
-	python3 scripts/render-profile-spec.py --mode $(MODE) --write --output-dir runtime/hermes/profiles
+	$(PYTHON) scripts/render-profile-spec.py --mode $(MODE) --write --output-dir runtime/hermes/profiles
 
 profile-compose-config: ## Validate profile-driven Docker Compose function services
 	$(COMPOSE) --profile dashboard --profile admin --profile dispatcher-once config >/dev/null
@@ -109,7 +110,7 @@ workspace-init: ## Initialize shared workspace/artifact and ignored runtime dire
 
 kanban-init: profile-render workspace-init ## Initialize the shared Team Nexus Kanban board and mission contract triggers
 	$(COMPOSE) run --rm atlas-gateway kanban init
-	python3 scripts/kanban-mission-contract.py --db "$(KANBAN_DB)" install
+	$(PYTHON) scripts/kanban-mission-contract.py --db "$(KANBAN_DB)" install
 
 kanban-list: profile-render ## List shared Kanban tasks
 	$(COMPOSE) run --rm atlas-gateway kanban list
