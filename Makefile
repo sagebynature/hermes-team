@@ -1,6 +1,5 @@
 SHELL := /usr/bin/env bash
 .DEFAULT_GOAL := help
-PYTHON ?= python3
 
 COMPOSE_FILES ?= -f docker-compose.profiles.yml
 COMPOSE ?= docker compose $(COMPOSE_FILES)
@@ -54,7 +53,7 @@ up: kanban-init ## Start Atlas gateway, dashboard, and mission notifier on the p
 down: ## Stop profile-driven runtime services
 	$(COMPOSE) down
 
-restart: profile-render ## Restart Atlas gateway and dashboard on the profile-driven runtime
+restart: ## Restart Atlas gateway and dashboard on the profile-driven runtime
 	$(COMPOSE) up -d --force-recreate
 
 ps: ## Show profile-driven Compose service status
@@ -63,16 +62,16 @@ ps: ## Show profile-driven Compose service status
 logs: ## Follow logs for one profile runtime service, e.g. make logs SERVICE=atlas-gateway
 	$(COMPOSE) logs -f $(SERVICE)
 
-shell: profile-render guard-profile ## Open bash in the profile runtime, e.g. make shell PROFILE=forge
+shell: guard-profile ## Open bash in the profile runtime, e.g. make shell PROFILE=forge
 	$(COMPOSE) --profile admin run --rm --entrypoint bash -e HERMES_HOME=/opt/data/profiles/$(PROFILE) admin-shell
 
-hermes: profile-render guard-profile ## Run any hermes command for one rendered profile, e.g. make hermes PROFILE=forge doctor
+hermes: guard-profile ## Run any hermes command for one rendered profile, e.g. make hermes PROFILE=forge doctor
 	$(COMPOSE) run --rm -e HERMES_HOME=/opt/data/profiles/$(PROFILE) atlas-gateway $(ARGS)
 
-doctor: profile-render guard-profile ## Run hermes doctor for one rendered profile, e.g. make doctor PROFILE=forge
+doctor: guard-profile ## Run hermes doctor for one rendered profile, e.g. make doctor PROFILE=forge
 	$(COMPOSE) run --rm -e HERMES_HOME=/opt/data/profiles/$(PROFILE) atlas-gateway doctor
 
-doctor-all: profile-render ## Run hermes doctor for every active Team Nexus profile
+doctor-all: ## Run hermes doctor for every active Team Nexus profile
 	@for profile in $(TEAM_AGENTS); do \
 		printf '\n==> %s doctor\n' "$$profile"; \
 		$(COMPOSE) run --rm -e HERMES_HOME=/opt/data/profiles/"$$profile" atlas-gateway doctor; \
@@ -83,6 +82,7 @@ compose-config: ## Validate profile-driven Docker Compose function services
 	@echo "compose config OK -> /tmp/team-nexus-compose.yaml"
 
 $(PYTHON):
+	rm -rf .venv
 	$(PYTHON_BOOTSTRAP) -m venv .venv
 
 python-deps: $(PYTHON) ## Install Python dependencies required by scripts/*.py
@@ -122,16 +122,16 @@ kanban-init: profile-render workspace-init ## Initialize the shared Team Nexus K
 	$(COMPOSE) run --rm atlas-gateway kanban init
 	$(PYTHON) scripts/kanban-mission-contract.py --db "$(KANBAN_DB)" install
 
-kanban-list: profile-render ## List shared Kanban tasks
+kanban-list: ## List shared Kanban tasks
 	$(COMPOSE) run --rm atlas-gateway kanban list
 
-kanban-stats: profile-render ## Show shared Kanban task counts
+kanban-stats: ## Show shared Kanban task counts
 	$(COMPOSE) run --rm atlas-gateway kanban stats
 
-kanban-watch: profile-render ## Watch shared Kanban board events
+kanban-watch: ## Watch shared Kanban board events
 	$(COMPOSE) run --rm atlas-gateway kanban watch
 
-kanban-create: profile-render ## Create a mission-scoped Kanban task: make kanban-create TITLE='...' ASSIGNEE=forge CONVERSATION_ID=mission_slug WORKSPACE=dir:/workspace BODY='...'
+kanban-create: ## Create a mission-scoped Kanban task: make kanban-create TITLE='...' ASSIGNEE=forge CONVERSATION_ID=mission_slug WORKSPACE=dir:/workspace BODY='...'
 	@if [ -z "$(TITLE)" ]; then echo "TITLE is required" >&2; exit 2; fi
 	@if [ -z "$(ASSIGNEE)" ]; then echo "ASSIGNEE is required, e.g. forge" >&2; exit 2; fi
 	@if [ -z "$(CONVERSATION_ID)" ]; then echo "CONVERSATION_ID is required, e.g. mission_readiness_20260506" >&2; exit 2; fi
@@ -145,7 +145,7 @@ kanban-create: profile-render ## Create a mission-scoped Kanban task: make kanba
 		body="$$(printf 'conversation_id: %s\n%s%sfrom: atlas\nto: %s\nassignee: %s\nworkspace: %s\n%s\n' "$(CONVERSATION_ID)" "$$thread_line" "$$reply_line" "$(ASSIGNEE)" "$(ASSIGNEE)" "$(WORKSPACE)" "$(BODY)")"; \
 		$(COMPOSE) run --rm atlas-gateway kanban create "[mission:$(CONVERSATION_ID)] $(TITLE)" --assignee "$(ASSIGNEE)" --workspace "$(WORKSPACE)" --body "$$body" --json
 
-kanban-link: profile-render ## Link parent->child dependency: make kanban-link PARENT=K... CHILD=K...
+kanban-link: ## Link parent->child dependency: make kanban-link PARENT=K... CHILD=K...
 	@if [ -z "$(PARENT)" ]; then echo "PARENT is required" >&2; exit 2; fi
 	@if [ -z "$(CHILD)" ]; then echo "CHILD is required" >&2; exit 2; fi
 	$(COMPOSE) run --rm atlas-gateway kanban link "$(PARENT)" "$(CHILD)"
@@ -183,28 +183,28 @@ discord-status-dry-run: python-deps ## Dry-run a Discord status post: make disco
 	@if [ -z "$(MESSAGE)" ]; then echo "MESSAGE is required" >&2; exit 2; fi
 	printf '%s' "$(MESSAGE)" | $(PYTHON) scripts/discord-post-status.py --dry-run
 
-mcp-list: profile-render guard-profile ## List MCP servers configured for one profile
+mcp-list: guard-profile ## List MCP servers configured for one profile
 	$(COMPOSE) run --rm -e HERMES_HOME=/opt/data/profiles/$(PROFILE) atlas-gateway mcp list
 
-mcp-list-all: profile-render ## List MCP servers configured for every active profile
+mcp-list-all: ## List MCP servers configured for every active profile
 	@for profile in $(TEAM_AGENTS); do \
 		printf '\n==> %s MCP servers\n' "$$profile"; \
 		$(COMPOSE) run --rm -e HERMES_HOME=/opt/data/profiles/"$$profile" atlas-gateway mcp list || true; \
 	done
 
-mcp-test: profile-render guard-profile guard-server ## Test one MCP server for one profile, e.g. make mcp-test PROFILE=atlas SERVER=time
+mcp-test: guard-server ## Test one MCP server for one profile, e.g. make mcp-test PROFILE=atlas SERVER=time
 	$(COMPOSE) run --rm -e HERMES_HOME=/opt/data/profiles/$(PROFILE) atlas-gateway mcp test $(SERVER)
 
-mcp-remove: profile-render guard-profile guard-server ## Remove one MCP server from one profile config
+mcp-remove: guard-profile guard-server ## Remove one MCP server from one profile config
 	$(COMPOSE) run --rm -e HERMES_HOME=/opt/data/profiles/$(PROFILE) atlas-gateway mcp remove $(SERVER)
 
-mcp-add-command: profile-render guard-profile guard-server guard-command ## Register a stdio MCP server with COMMAND='npx -y pkg args...'
+mcp-add-command: guard-profile guard-server guard-command ## Register a stdio MCP server with COMMAND='npx -y pkg args...'
 	$(COMPOSE) run --rm -e HERMES_HOME=/opt/data/profiles/$(PROFILE) atlas-gateway mcp add $(SERVER) --command "$(COMMAND)"
 
-mcp-add-url: profile-render guard-profile guard-server guard-url ## Register an HTTP MCP server with URL=https://example.com/mcp
+mcp-add-url: guard-profile guard-server guard-url ## Register an HTTP MCP server with URL=https://example.com/mcp
 	$(COMPOSE) run --rm -e HERMES_HOME=/opt/data/profiles/$(PROFILE) atlas-gateway mcp add $(SERVER) --url "$(URL)"
 
-mcp-register-template: profile-render guard-profile guard-server ## Register SERVER from shared/mcp/registry/<SERVER>.mk for one profile
+mcp-register-template: guard-profile guard-server ## Register SERVER from shared/mcp/registry/<SERVER>.mk for one profile
 	@if [ ! -f "shared/mcp/registry/$(SERVER).mk" ]; then \
 		echo "Missing template: shared/mcp/registry/$(SERVER).mk" >&2; exit 2; \
 	fi
@@ -218,7 +218,7 @@ mcp-register-template: profile-render guard-profile guard-server ## Register SER
 		echo "Unsupported or missing MCP_TRANSPORT in shared/mcp/registry/$(SERVER).mk; expected 'command' or 'url'" >&2; exit 2; \
 	fi
 
-mcp-register-template-all: profile-render guard-server ## Register SERVER template for TARGET_AGENTS='atlas forge' or all by default
+mcp-register-template-all: guard-server ## Register SERVER template for TARGET_AGENTS='atlas forge' or all by default
 	@if [ ! -f "shared/mcp/registry/$(SERVER).mk" ]; then \
 		echo "Missing template: shared/mcp/registry/$(SERVER).mk" >&2; exit 2; \
 	fi
