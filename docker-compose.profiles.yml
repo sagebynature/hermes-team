@@ -95,6 +95,26 @@ services:
       - ./shared/dashboard-themes:/opt/data/profiles/curator/dashboard-themes:rw
     command: ["bash", "-lc", "exec bash"]
 
+  mission-notifier:
+    <<: *profile-runtime
+    container_name: team-nexus-mission-notifier
+    environment:
+      <<: *profile-env
+      HERMES_HOME: /opt/data/profiles/atlas
+      AGENT_NAME: Mission Notifier
+      AGENT_ROLE: Kanban mission fan-in and Discord final delivery bridge
+    command:
+      - bash
+      - -lc
+      - |
+        while true; do
+          python3 /workspace/scripts/kanban-mission-notifier.py \
+            --db /opt/data/kanban/kanban.db \
+            --deliver \
+            --limit "$${KANBAN_NOTIFIER_LIMIT:-100}" || true
+          sleep "$${KANBAN_NOTIFIER_INTERVAL:-10}"
+        done
+
   kanban-dispatcher:
     <<: *profile-runtime
     container_name: team-nexus-kanban-dispatcher-once

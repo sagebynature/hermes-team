@@ -11,6 +11,7 @@ SERVICE ?= atlas-gateway
 TEAM_AGENTS ?= atlas forge sentinel scribe curator
 TARGET_AGENTS ?= $(TEAM_AGENTS)
 WORKSPACE ?= scratch
+KANBAN_DB ?= runtime/hermes/kanban/kanban.db
 export TEAM_NEXUS_UID TEAM_NEXUS_GID PROFILE AGENT SERVICE
 
 # When SERVER is set, optionally load a shared MCP registry definition.
@@ -41,7 +42,7 @@ help: ## Show available targets
 build: ## Build the custom Hermes team image once; all profiles share team-nexus-agent:latest
 	$(COMPOSE) build atlas-gateway
 
-up: profile-runtime-stage ## Start Atlas gateway and dashboard on the profile-driven runtime
+up: kanban-init ## Start Atlas gateway, dashboard, and mission notifier on the profile-driven runtime
 	$(COMPOSE) up -d
 
 down: ## Stop profile-driven runtime services
@@ -104,8 +105,9 @@ workspace-init: ## Initialize shared workspace/artifact and ignored runtime dire
 	@chmod 2775 shared/project/artifacts runtime/hermes runtime/hermes/kanban 2>/dev/null || true
 	@echo "workspace initialized: shared/project/artifacts and runtime/hermes"
 
-kanban-init: profile-runtime-stage workspace-init ## Initialize the shared Team Nexus Kanban board
+kanban-init: profile-runtime-stage workspace-init ## Initialize the shared Team Nexus Kanban board and mission contract triggers
 	$(COMPOSE) run --rm atlas-gateway kanban init
+	python3 scripts/kanban-mission-contract.py --db "$(KANBAN_DB)" install
 
 kanban-list: profile-runtime-stage ## List shared Kanban tasks
 	$(COMPOSE) run --rm atlas-gateway kanban list
@@ -136,13 +138,13 @@ kanban-link: profile-runtime-stage ## Link parent->child dependency: make kanban
 	$(COMPOSE) run --rm atlas-gateway kanban link "$(PARENT)" "$(CHILD)"
 
 kanban-mission-contract-install: ## Install DB triggers rejecting Kanban tasks without mission markers
-	python3 scripts/kanban-mission-contract.py install
+	python3 scripts/kanban-mission-contract.py --db "$(KANBAN_DB)" install
 
 kanban-mission-contract-uninstall: ## Remove DB mission-contract triggers
-	python3 scripts/kanban-mission-contract.py uninstall
+	python3 scripts/kanban-mission-contract.py --db "$(KANBAN_DB)" uninstall
 
 kanban-mission-contract-check: ## Audit existing Kanban tasks for missing mission markers
-	python3 scripts/kanban-mission-contract.py check
+	python3 scripts/kanban-mission-contract.py --db "$(KANBAN_DB)" check
 
 kanban-mission-payload-sample: ## Print a valid deterministic Kanban mission task payload
 	python3 scripts/kanban-mission-contract.py sample-payload
@@ -156,13 +158,13 @@ kanban-dispatcher-once: profile-runtime-stage ## Preview dispatcher only; MAX_TA
 	fi
 
 kanban-notifier-once: ## Process new Kanban mission events into notification outbox rows
-	python3 scripts/kanban-mission-notifier.py --limit $${LIMIT:-100}
+	python3 scripts/kanban-mission-notifier.py --db "$(KANBAN_DB)" --limit $${LIMIT:-100}
 
 kanban-notifier-deliver: ## Deliver pending mission notification outbox rows through Discord status webhook
-	python3 scripts/kanban-mission-notifier.py --deliver --limit $${LIMIT:-100}
+	python3 scripts/kanban-mission-notifier.py --db "$(KANBAN_DB)" --deliver --limit $${LIMIT:-100}
 
 kanban-notifier-dry-run: ## Preview pending mission notification delivery without posting
-	python3 scripts/kanban-mission-notifier.py --dry-run --limit $${LIMIT:-100}
+	python3 scripts/kanban-mission-notifier.py --db "$(KANBAN_DB)" --dry-run --limit $${LIMIT:-100}
 
 discord-status-dry-run: ## Dry-run a Discord status post: make discord-status-dry-run MESSAGE='...'
 	@if [ -z "$(MESSAGE)" ]; then echo "MESSAGE is required" >&2; exit 2; fi

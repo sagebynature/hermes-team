@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import sqlite3
 import subprocess
@@ -21,8 +22,9 @@ from pathlib import Path
 from typing import Any, Optional
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-KANBAN_DB = REPO_ROOT / "shared" / "kanban" / "kanban.db"
-DEFAULT_LOG = REPO_ROOT / "shared" / "kanban" / "mission-notifier.log"
+DEFAULT_KANBAN_HOME = Path(os.environ.get("HERMES_KANBAN_HOME", REPO_ROOT / "runtime" / "hermes" / "kanban"))
+KANBAN_DB = DEFAULT_KANBAN_HOME / "kanban.db"
+DEFAULT_LOG = DEFAULT_KANBAN_HOME / "mission-notifier.log"
 DISCORD_STATUS_SCRIPT = REPO_ROOT / "scripts" / "discord-post-status.py"
 TERMINAL_STATUSES = {"done", "archived"}
 ATLAS_SYNTHESIS_SUFFIX = ":atlas-synthesis"

@@ -37,10 +37,17 @@ Before multi-agent execution, produce a route with:
 Kanban mission contract:
 
 - Every tracked mission/task must carry mission/conversation metadata and an active profile assignee.
+- Every Kanban task created for a user mission MUST be mission-scoped: title includes `[mission:<conversation_id>]` and body includes `conversation_id: <conversation_id>`. This is not optional; the runtime DB mission-contract trigger rejects unscoped tasks so notifier fan-in remains deterministic.
+- When the mission originates in a Discord thread/forum post and `conversation_id` is not already that Discord thread ID, include `discord_thread_id: <thread-id>` in every task body so the notifier can route the final Atlas response back into the correct thread.
+- Use explicit reply metadata in task bodies: `reply_mode: atlas_internal` for worker handoffs, `reply_mode: kanban_only` for private/non-public tasks, and `reply_mode: direct_discord` plus `reply_target: discord:<thread-id>` only when the assignee should post the actual answer directly into Discord.
+- Worker task bodies should include objective, constraints, expected output, dependency context, artifact path, risk level, and requested evidence.
 - Coding work uses project/repo boards and git worktrees by default.
 - General work uses the default/general board unless repo context is required.
-- Worker task bodies should include objective, constraints, expected output, dependency context, artifact path, risk level, and requested evidence.
 - Worker completions are internal Atlas handoffs, not public final answers, unless `reply_mode: direct_discord` is explicitly set.
+- Worker completion notifications are internal Atlas handoffs; the notifier queues them as Atlas/internal outbox rows and creates a ready Atlas synthesis task once all non-Atlas workers are terminal.
+- If you receive an Atlas synthesis Kanban task, synthesize from completed worker task results, comments, and artifacts. Do not invent missing specialist conclusions.
+- Complete the Atlas synthesis task with the actual final user-facing answer in `kanban_complete(result=...)`; use `summary` only for a one-sentence delivery summary/status. The notifier posts the final answer from `result`, not from the completion summary.
+- If the Atlas synthesis task says `reply_mode: direct_discord`, send the final answer to `reply_target` with `send_message` before completing the Kanban task. Record reply evidence in completion metadata (`discord_reply_sent`, `reply_target`, `discord_message_id` when available). The webhook notifier remains a brief structured completion receipt, not the main answer body.
 - Final user-facing answers must cite durable evidence: board/task IDs, branch/commit/PR/test/verdict/artifact paths as applicable.
 - Never claim a specialist was contacted or completed work without a Kanban task ID, router message ID, completed task result, comment, or artifact path.
 

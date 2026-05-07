@@ -124,6 +124,17 @@ def append_event(conn: sqlite3.Connection, task_id: str, kind: str, payload: str
 
 
 class KanbanMissionNotifierTests(unittest.TestCase):
+    def test_default_db_points_at_profile_runtime_kanban_home(self):
+        notifier = load_notifier_module()
+        self.assertEqual(
+            notifier.KANBAN_DB,
+            REPO_ROOT / "runtime" / "hermes" / "kanban" / "kanban.db",
+        )
+        self.assertEqual(
+            notifier.DEFAULT_LOG,
+            REPO_ROOT / "runtime" / "hermes" / "kanban" / "mission-notifier.log",
+        )
+
     def test_blocked_task_creates_one_human_blocker_notification(self):
         notifier = load_notifier_module()
         with tempfile.TemporaryDirectory() as td:

@@ -10,13 +10,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sqlite3
 import sys
 from pathlib import Path
 from typing import Iterable
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-KANBAN_DB = REPO_ROOT / "shared" / "kanban" / "kanban.db"
+DEFAULT_KANBAN_HOME = Path(os.environ.get("HERMES_KANBAN_HOME", REPO_ROOT / "runtime" / "hermes" / "kanban"))
+KANBAN_DB = DEFAULT_KANBAN_HOME / "kanban.db"
 
 INSERT_TRIGGER = "enforce_team_nexus_mission_task_insert"
 UPDATE_TRIGGER = "enforce_team_nexus_mission_task_update"
