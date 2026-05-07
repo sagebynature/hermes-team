@@ -1,0 +1,13 @@
+version: 0.1.0
+profile: sentinel
+status: draft
+purpose: Role-specific quality gate and review skills for Sentinel.
+skills:
+  - requesting-code-review
+  - receiving-code-review
+  - systematic-debugging
+  - verification-before-completion
+responsibilities:
+  - quality gate review
+  - security/regression review
+  - structured review_verdict comments

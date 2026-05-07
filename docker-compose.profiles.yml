@@ -1,0 +1,128 @@
+name: team-nexus-profiles
+
+# Profile-driven Docker runtime.
+# One image, function services, and one mounted Hermes data root. Hermes profiles
+# are rendered into ./runtime/hermes/profiles/<profile>/ by `make profile-render`.
+# Atlas is the only Discord gateway in v1; its gateway process hosts the native
+# Kanban dispatcher. Do not also run the deprecated standalone dispatcher against
+# the same board.
+
+x-profile-runtime: &profile-runtime
+  image: team-nexus-agent:latest
+  restart: unless-stopped
+  working_dir: /workspace
+  environment: &profile-env
+    HERMES_KANBAN_HOME: /opt/data/kanban
+    HERMES_UID: ${TEAM_NEXUS_UID:-10000}
+    HERMES_GID: ${TEAM_NEXUS_GID:-10000}
+    TEAM_NEXUS_RUNTIME: profile-driven
+  env_file:
+    - ./.env
+  volumes: &profile-volumes
+    - ./runtime/hermes:/opt/data
+    - ${PWD}:/workspace
+    - ./shared/skills:/shared/skills:ro
+    - ./shared/mcp:/shared/mcp:ro
+    - ./shared/plugins:/opt/data/plugins:ro
+    # Hermes dashboard plugin discovery reads $HERMES_HOME/plugins. Mount the
+    # shared Team Nexus dashboard plugins into each active profile home while
+    # retaining /opt/data/plugins as the shared canonical runtime path.
+    - ./shared/plugins:/opt/data/profiles/atlas/plugins:ro
+    - ./shared/plugins:/opt/data/profiles/forge/plugins:ro
+    - ./shared/plugins:/opt/data/profiles/sentinel/plugins:ro
+    - ./shared/plugins:/opt/data/profiles/scribe/plugins:ro
+    - ./shared/plugins:/opt/data/profiles/curator/plugins:ro
+    - ./shared/dashboard-themes:/opt/data/dashboard-themes:ro
+    # Hermes dashboard themes are discovered under $HERMES_HOME/dashboard-themes.
+    # Profile-runtime services set HERMES_HOME=/opt/data/profiles/<profile>, so
+    # mount the shared theme directory into each active profile home too.
+    - ./shared/dashboard-themes:/opt/data/profiles/atlas/dashboard-themes:ro
+    - ./shared/dashboard-themes:/opt/data/profiles/forge/dashboard-themes:ro
+    - ./shared/dashboard-themes:/opt/data/profiles/sentinel/dashboard-themes:ro
+    - ./shared/dashboard-themes:/opt/data/profiles/scribe/dashboard-themes:ro
+    - ./shared/dashboard-themes:/opt/data/profiles/curator/dashboard-themes:ro
+
+services:
+  atlas-gateway:
+    <<: *profile-runtime
+    build:
+      context: ./docker
+    container_name: team-nexus-atlas-gateway
+    environment:
+      <<: *profile-env
+      HERMES_HOME: /opt/data/profiles/atlas
+      AGENT_NAME: Atlas
+      AGENT_ROLE: Mission orchestrator and Discord CLI
+    ports:
+      - "127.0.0.1:${ATLAS_GATEWAY_PORT:-8642}:8642"
+    command: ["gateway", "run"]
+
+  dashboard:
+    <<: *profile-runtime
+    container_name: team-nexus-dashboard
+    environment:
+      <<: *profile-env
+      HERMES_HOME: /opt/data/profiles/atlas
+      AGENT_NAME: Atlas
+      AGENT_ROLE: Team Nexus control plane
+    ports:
+      - "127.0.0.1:${TEAM_NEXUS_DASHBOARD_PORT:-9119}:9119"
+    command: ["dashboard", "--host", "0.0.0.0", "--port", "9119", "--insecure", "--no-open"]
+
+  admin-shell:
+    <<: *profile-runtime
+    container_name: team-nexus-admin-shell
+    profiles: ["admin"]
+    restart: "no"
+    environment:
+      <<: *profile-env
+      HERMES_HOME: /opt/data/profiles/atlas
+      AGENT_NAME: Team Nexus Admin
+      AGENT_ROLE: Operator shell for profile-driven runtime
+    # Admin shell is the intentional mutation path for shared Team Nexus assets.
+    # Long-running gateway/dashboard/worker services keep these mounts read-only.
+    volumes:
+      - ./runtime/hermes:/opt/data
+      - ${PWD}:/workspace
+      - ./shared/skills:/shared/skills:rw
+      - ./shared/mcp:/shared/mcp:rw
+      - ./shared/plugins:/opt/data/plugins:rw
+      - ./shared/dashboard-themes:/opt/data/dashboard-themes:rw
+      - ./shared/dashboard-themes:/opt/data/profiles/atlas/dashboard-themes:rw
+      - ./shared/dashboard-themes:/opt/data/profiles/forge/dashboard-themes:rw
+      - ./shared/dashboard-themes:/opt/data/profiles/sentinel/dashboard-themes:rw
+      - ./shared/dashboard-themes:/opt/data/profiles/scribe/dashboard-themes:rw
+      - ./shared/dashboard-themes:/opt/data/profiles/curator/dashboard-themes:rw
+    command: ["bash", "-lc", "exec bash"]
+
+  mission-notifier:
+    <<: *profile-runtime
+    container_name: team-nexus-mission-notifier
+    environment:
+      <<: *profile-env
+      HERMES_HOME: /opt/data/profiles/atlas
+      AGENT_NAME: Mission Notifier
+      AGENT_ROLE: Kanban mission fan-in and Discord final delivery bridge
+    command:
+      - bash
+      - -lc
+      - |
+        while true; do
+          python3 /workspace/scripts/kanban-mission-notifier.py \
+            --db /opt/data/kanban/kanban.db \
+            --deliver \
+            --limit "$${KANBAN_NOTIFIER_LIMIT:-100}" || true
+          sleep "$${KANBAN_NOTIFIER_INTERVAL:-10}"
+        done
+
+  kanban-dispatcher:
+    <<: *profile-runtime
+    container_name: team-nexus-kanban-dispatcher-once
+    profiles: ["dispatcher-once"]
+    restart: "no"
+    environment:
+      <<: *profile-env
+      HERMES_HOME: /opt/data/profiles/atlas
+      AGENT_NAME: Kanban Dispatcher
+      AGENT_ROLE: Manual one-shot dispatcher nudge
+    command: ["kanban", "dispatch", "--max", "${KANBAN_DISPATCH_MAX_TASKS:-1}"]

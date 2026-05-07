@@ -1,6 +1,6 @@
 # ADR-0012: Use registry-driven agent roster and generated runtime artifacts
 
-Status: Accepted
+Status: Superseded by ADR-0014
 
 Date: 2026-05-05
 

@@ -1,0 +1,14 @@
+version: 0.1.0
+profile: scribe
+status: draft
+purpose: Role-specific documentation skills for Scribe.
+skills:
+  - technical-writer
+  - architecture-decision-records
+  - writing-plans
+  - verification-before-completion
+responsibilities:
+  - docs
+  - ADRs
+  - runbooks
+  - changelogs and PR narrative

@@ -1,0 +1,14 @@
+version: 0.1.0
+profile: forge
+status: draft
+purpose: Role-specific implementation and verification skills for Forge.
+skills:
+  - using-git-worktrees
+  - test-driven-development
+  - systematic-debugging
+  - verification-before-completion
+responsibilities:
+  - implementation
+  - tests and checks
+  - task branch commits
+  - draft PR creation when PR-bound

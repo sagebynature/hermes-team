@@ -9,6 +9,8 @@ set -euo pipefail
 HERMES_HOME="${HERMES_HOME:-/opt/data}"
 HERMES_KANBAN_HOME="${HERMES_KANBAN_HOME:-}"
 HERMES_VENV_BIN="${HERMES_VENV_BIN:-/opt/hermes/.venv/bin/hermes}"
+HERMES_USER_HOME="$(getent passwd hermes 2>/dev/null | cut -d: -f6 || true)"
+HERMES_USER_HOME="${HERMES_USER_HOME:-/opt/data}"
 
 # The upstream Hermes entrypoint can remap the runtime `hermes` user with
 # HERMES_UID/HERMES_GID, but Team Nexus creates and chowns shared bind-mounted
@@ -20,15 +22,20 @@ if [ "$(id -u)" = "0" ]; then
     groupmod -o -g "$HERMES_GID" hermes 2>/dev/null || true
   fi
   if [ -n "${HERMES_UID:-}" ] && [ "$HERMES_UID" != "$(id -u hermes)" ]; then
-    usermod -u "$HERMES_UID" hermes
+    usermod -u "$HERMES_UID" hermes 2>/dev/null || true
   fi
 fi
 
 if [ -n "$HERMES_HOME" ]; then
   mkdir -p "$HERMES_HOME/.local/bin" "$HERMES_HOME/skills/.hub"
+  # Hermes doctor still checks Path.home()/.local/bin even when HERMES_HOME
+  # points at a profile directory. In this Docker image the hermes user's HOME
+  # is /opt/data, so keep both the active profile shim and the user-home shim.
+  mkdir -p "$HERMES_USER_HOME/.local/bin"
 
   if [ -x "$HERMES_VENV_BIN" ]; then
     ln -sfn "$HERMES_VENV_BIN" "$HERMES_HOME/.local/bin/hermes"
+    ln -sfn "$HERMES_VENV_BIN" "$HERMES_USER_HOME/.local/bin/hermes"
   fi
 
   # `hermes skills list` normally initializes this. Creating the minimal lock
@@ -46,7 +53,7 @@ if [ -n "$HERMES_HOME" ]; then
 
   # The upstream entrypoint also fixes ownership, but these paths are created by
   # this wrapper and should be writable after privilege drop.
-  chown -hR hermes:hermes "$HERMES_HOME/.local" "$HERMES_HOME/skills/.hub" 2>/dev/null || true
+  chown -hR hermes:hermes "$HERMES_HOME/.local" "$HERMES_HOME/skills/.hub" "$HERMES_USER_HOME/.local" 2>/dev/null || true
 fi
 
 if [ -n "$HERMES_KANBAN_HOME" ]; then

@@ -1,0 +1,26 @@
+# Hermes config for Scribe.
+# Hand-maintained canonical profile config; staged by scripts/render-profile-spec.py.
+
+model:
+  provider: openrouter
+  default: google/gemma-4-31b-it
+  context_length: 200000
+
+terminal:
+  cwd: /workspace
+
+checkpoints:
+  enabled: true
+  max_snapshots: 50
+
+gateway:
+  enabled: false
+
+kanban:
+  enabled: true
+
+skills:
+  external_dirs:
+    - /shared/skills
+  template_vars: true
+  inline_shell: false

@@ -1,6 +1,6 @@
 # ADR-0001: Run one Docker Compose service per Hermes agent
 
-Status: Accepted
+Status: Superseded by ADR-0014
 
 Date: 2026-05-04
 

@@ -6,94 +6,14 @@
 !.env.example
 !*.env.example
 
-# Agent-local env/auth files. The canonical template is the repo-root .env.example;
-# per-agent .env files are intentionally ignored.
-agents/*/home/*
-!agents/*/home/profile.jpg
-!agents/*/home/SOUL.md
-!agents/*/home/AGENTS.md
-!agents/*/home/plugins/
-!agents/*/home/plugins/hermes-command-center/
-!agents/*/home/plugins/hermes-command-center/**
-!agents/*/home/plugins/agent-identity-dashboard/
-!agents/*/home/plugins/agent-identity-dashboard/**
-!agents/*/home/plugins/kanban/
-!agents/*/home/plugins/kanban/**
-!agents/*/home/dashboard-themes
-agents/*/home/.env
-agents/*/home/.env.*
-agents/*/home/auth.json
-agents/*/home/auth*.json
-agents/*/home/credentials.json
-agents/*/home/credentials*.json
-agents/*/home/token.json
-agents/*/home/tokens.json
-agents/*/home/*token*
-agents/*/home/*secret*
-agents/*/home/*credential*
-agents/*/home/*.pem
-agents/*/home/*.key
-agents/*/home/*.p12
-agents/*/home/*.pfx
-
-
-# OAuth/provider/tool caches commonly contain credentials or personal account data.
-agents/*/home/.cache/
-agents/*/home/.config/
-agents/*/home/.local/
-agents/*/home/.ssh/
-agents/*/home/.gnupg/
-agents/*/home/.npmrc
-agents/*/home/.pypirc
-agents/*/home/.netrc
-
-agents/*/workspace
-
 # -----------------------------------------------------------------------------
-# Hermes runtime state and user-sensitive agent data
+# Hermes runtime state and user-sensitive profile data
 # -----------------------------------------------------------------------------
-# These directories may contain transcripts, memories, logs, MCP config with
-# headers/env, cron outputs, browser profiles, downloaded files, and task-specific
-# customer/project data. Keep only placeholders in git.
-#
-# Agent-local skills under agents/*/home/skills/ are intentionally committable:
-# they are the reviewed, role-specific Hermes skill set for each agent.
-agents/*/home/sessions/*
-!agents/*/home/sessions/.gitkeep
-agents/*/home/logs/*
-!agents/*/home/logs/.gitkeep
-agents/*/home/memory/*
-!agents/*/home/memory/.gitkeep
-agents/*/home/mcp/*
-!agents/*/home/mcp/.gitkeep
-!agents/*/home/mcp/registry/
-!agents/*/home/mcp/registry/.gitkeep
-!agents/*/home/mcp/templates/
-!agents/*/home/mcp/templates/.gitkeep
-agents/*/home/mcp/registry/*
-!agents/*/home/mcp/registry/.gitkeep
-agents/*/home/mcp/templates/*
-!agents/*/home/mcp/templates/.gitkeep
-agents/*/home/cron/*
-agents/*/home/browser/*
-agents/*/home/downloads/*
-agents/*/home/tmp/*
-agents/*/home/temp/*
-
-# Agent workspaces are operational scratch space and may contain user/customer
-# data. Commit shared source-of-truth material under shared/ instead.
-agents/*/workspace/inbox/*
-!agents/*/workspace/inbox/.gitkeep
-agents/*/workspace/outbox/*
-!agents/*/workspace/outbox/.gitkeep
-agents/*/workspace/artifacts/*
-!agents/*/workspace/artifacts/.gitkeep
-agents/*/workspace/notes/*
-!agents/*/workspace/notes/.gitkeep
-agents/*/workspace/.env
-agents/*/workspace/.env.*
-agents/*/workspace/*.pem
-agents/*/workspace/*.key
+# Profile-driven runtime staging/output may contain profile-local env, auth,
+# sessions, memory, logs, checkpoints, Kanban databases, downloaded files, and
+# task/customer data. Canonical source lives under profiles/, shared/, docs/,
+# scripts/, and docker-compose.profiles.yml.
+runtime/
 
 # -----------------------------------------------------------------------------
 # Local-only overrides
@@ -101,8 +21,7 @@ agents/*/workspace/*.key
 *.local
 *.local.*
 config.local.yaml
-agents/*/home/config.local.yaml
-agents/*/workspace/config.local.yaml
+profiles/*/config.local.yaml
 
 # -----------------------------------------------------------------------------
 # OS/editor
@@ -115,4 +34,5 @@ Thumbs.db
 *.swo
 
 # Python
-__pycache__
+__pycache__/
+*.py[cod]

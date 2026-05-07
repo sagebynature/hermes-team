@@ -124,6 +124,17 @@ def append_event(conn: sqlite3.Connection, task_id: str, kind: str, payload: str
 
 
 class KanbanMissionNotifierTests(unittest.TestCase):
+    def test_default_db_points_at_profile_runtime_kanban_home(self):
+        notifier = load_notifier_module()
+        self.assertEqual(
+            notifier.KANBAN_DB,
+            REPO_ROOT / "runtime" / "hermes" / "kanban" / "kanban.db",
+        )
+        self.assertEqual(
+            notifier.DEFAULT_LOG,
+            REPO_ROOT / "runtime" / "hermes" / "kanban" / "mission-notifier.log",
+        )
+
     def test_blocked_task_creates_one_human_blocker_notification(self):
         notifier = load_notifier_module()
         with tempfile.TemporaryDirectory() as td:
@@ -234,7 +245,45 @@ class KanbanMissionNotifierTests(unittest.TestCase):
             self.assertIn("reply_target: discord:1501459474530041937", body)
             self.assertIn("reply_expected: true", body)
 
-    def test_completed_atlas_synthesis_creates_threaded_structured_final_response_notification(self):
+    def test_reused_conversation_id_creates_new_synthesis_for_new_discord_thread(self):
+        notifier = load_notifier_module()
+        with tempfile.TemporaryDirectory() as td:
+            db = Path(td) / "kanban.db"
+            init_db(db)
+            with sqlite3.connect(db) as conn:
+                insert_task(
+                    conn,
+                    "old_synth",
+                    assignee="atlas",
+                    status="done",
+                    conversation_id="repeat_mission",
+                    title="[mission:repeat_mission] synthesize final answer",
+                    body="conversation_id: repeat_mission\ndiscord_thread_id: 1501459474530041937",
+                    idempotency_key="mission:repeat_mission:atlas-synthesis",
+                )
+                new_body = "conversation_id: repeat_mission\ndiscord_thread_id: 1501771910009192558\nobjective: current thread"
+                insert_task(conn, "t_new_forge", assignee="forge", status="done", body=new_body, result="New Forge summary")
+                append_event(conn, "t_new_forge", "completed", '{"summary":"New Forge summary"}')
+                conn.commit()
+
+            result = notifier.run_once(db)
+
+            self.assertEqual(result.created_synthesis_tasks, 1)
+            with sqlite3.connect(db) as conn:
+                synth_tasks = conn.execute(
+                    "SELECT id, body, idempotency_key FROM tasks WHERE assignee = 'atlas' ORDER BY created_at, id"
+                ).fetchall()
+                outbox = conn.execute(
+                    "SELECT kind, task_id, status FROM mission_notification_outbox ORDER BY id"
+                ).fetchall()
+            self.assertEqual(len(synth_tasks), 2)
+            self.assertIn("discord_thread_id: 1501771910009192558", synth_tasks[1][1])
+            self.assertIn("t_new_forge (forge, done): New Forge summary", synth_tasks[1][1])
+            self.assertNotIn("old_synth", synth_tasks[1][0])
+            self.assertEqual(synth_tasks[1][2], "mission:repeat_mission:1501771910009192558:atlas-synthesis")
+            self.assertEqual(outbox[-1], ("mission_ready_for_synthesis", synth_tasks[1][0], "queued"))
+
+    def test_completed_atlas_synthesis_posts_full_final_answer_not_hook_only_summary(self):
         notifier = load_notifier_module()
         with tempfile.TemporaryDirectory() as td:
             db = Path(td) / "kanban.db"
@@ -264,15 +313,15 @@ class KanbanMissionNotifierTests(unittest.TestCase):
                     "SELECT conversation_id, task_id, kind, target, message, payload_json FROM mission_notification_outbox"
                 ).fetchall()
             self.assertEqual(rows[0][0:4], ("1501451632569880636", "t_synth", "final_response_ready", "discord:status:1501451632569880636"))
-            self.assertIn("Atlas completed synthesis", rows[0][4])
-            self.assertIn("Synthesis completed", rows[0][4])
-            self.assertNotIn("Actual final answer for the user", rows[0][4])
+            self.assertIn("Atlas final answer for 1501451632569880636 is ready", rows[0][4])
+            self.assertIn("Actual final answer for the user", rows[0][4])
+            self.assertNotIn("Synthesis completed", rows[0][4])
             self.assertIsNotNone(rows[0][5])
             payload = __import__("json").loads(rows[0][5])
             self.assertEqual(payload["allowed_mentions"], {"parse": []})
-            self.assertEqual(payload["embeds"][0]["title"], "Atlas completed")
-            self.assertIn("Synthesis completed", payload["embeds"][0]["description"])
-            self.assertNotIn("Actual final answer for the user", payload["embeds"][0]["description"])
+            self.assertEqual(payload["embeds"][0]["title"], "Atlas final answer")
+            self.assertIn("Actual final answer for the user", payload["embeds"][0]["description"])
+            self.assertNotIn("Synthesis completed", payload["embeds"][0]["description"])
 
 
 if __name__ == "__main__":

@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import sqlite3
 import subprocess
@@ -21,8 +22,9 @@ from pathlib import Path
 from typing import Any, Optional
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-KANBAN_DB = REPO_ROOT / "shared" / "kanban" / "kanban.db"
-DEFAULT_LOG = REPO_ROOT / "shared" / "kanban" / "mission-notifier.log"
+DEFAULT_KANBAN_HOME = Path(os.environ.get("HERMES_KANBAN_HOME", REPO_ROOT / "runtime" / "hermes" / "kanban"))
+KANBAN_DB = DEFAULT_KANBAN_HOME / "kanban.db"
+DEFAULT_LOG = DEFAULT_KANBAN_HOME / "mission-notifier.log"
 DISCORD_STATUS_SCRIPT = REPO_ROOT / "scripts" / "discord-post-status.py"
 TERMINAL_STATUSES = {"done", "archived"}
 ATLAS_SYNTHESIS_SUFFIX = ":atlas-synthesis"
@@ -313,17 +315,24 @@ def mission_tasks(conn: sqlite3.Connection, conversation_id: str) -> list[sqlite
     ).fetchall()
 
 
-def worker_mission_tasks(conn: sqlite3.Connection, conversation_id: str) -> list[sqlite3.Row]:
-    return [
+def worker_mission_tasks(conn: sqlite3.Connection, conversation_id: str, thread_id: Optional[str] = None) -> list[sqlite3.Row]:
+    tasks = [
         task
         for task in mission_tasks(conn, conversation_id)
         if not is_atlas_synthesis_task(task, conversation_id)
         and (task["assignee"] or "") != "atlas"
     ]
+    if thread_id:
+        tasks = [
+            task
+            for task in tasks
+            if extract_discord_thread_id(task, {}, conversation_id) == thread_id
+        ]
+    return tasks
 
 
-def mission_ready_for_synthesis(conn: sqlite3.Connection, conversation_id: str) -> bool:
-    workers = worker_mission_tasks(conn, conversation_id)
+def mission_ready_for_synthesis(conn: sqlite3.Connection, conversation_id: str, thread_id: Optional[str] = None) -> bool:
+    workers = worker_mission_tasks(conn, conversation_id, thread_id=thread_id)
     return bool(workers) and all((task["status"] in TERMINAL_STATUSES) for task in workers)
 
 
@@ -376,9 +385,9 @@ def final_answer_text(conn: sqlite3.Connection, task: sqlite3.Row, payload: dict
     return event_summary(task, payload)
 
 
-def mission_worker_summary_block(conn: sqlite3.Connection, conversation_id: str) -> str:
+def mission_worker_summary_block(conn: sqlite3.Connection, conversation_id: str, thread_id: Optional[str] = None) -> str:
     lines = []
-    for task in worker_mission_tasks(conn, conversation_id):
+    for task in worker_mission_tasks(conn, conversation_id, thread_id=thread_id):
         summary = latest_completion_summary(conn, task["id"], task["result"] or "")
         lines.append(f"- {task['id']} ({task['assignee']}, {task['status']}): {summary}")
     return "\n".join(lines) if lines else "- No worker tasks found."
@@ -394,23 +403,27 @@ def mission_discord_thread_id(conn: sqlite3.Connection, conversation_id: str) ->
     return None
 
 
-def synthesis_task_exists(conn: sqlite3.Connection, conversation_id: str) -> bool:
+def synthesis_idempotency_key(conversation_id: str, thread_id: Optional[str] = None) -> str:
+    return f"mission:{conversation_id}:{thread_id}:atlas-synthesis" if thread_id else f"mission:{conversation_id}:atlas-synthesis"
+
+
+def synthesis_task_exists(conn: sqlite3.Connection, conversation_id: str, thread_id: Optional[str] = None) -> bool:
     row = conn.execute(
         "SELECT id FROM tasks WHERE idempotency_key = ? LIMIT 1",
-        (f"mission:{conversation_id}:atlas-synthesis",),
+        (synthesis_idempotency_key(conversation_id, thread_id),),
     ).fetchone()
     return row is not None
 
 
-def create_atlas_synthesis_task(conn: sqlite3.Connection, conversation_id: str) -> Optional[str]:
-    if synthesis_task_exists(conn, conversation_id):
+def create_atlas_synthesis_task(conn: sqlite3.Connection, conversation_id: str, thread_id: Optional[str] = None) -> Optional[str]:
+    if synthesis_task_exists(conn, conversation_id, thread_id=thread_id):
         return None
     now = int(time.time())
-    task_id = f"mission-synth-{short_hash(conversation_id)}"
+    task_id = f"mission-synth-{short_hash(f'{conversation_id}:{thread_id}' if thread_id else conversation_id)}"
     title = f"[mission:{conversation_id}] synthesize final answer"
     artifact_hint = f"/shared/project/artifacts/missions/{conversation_id}/"
-    worker_summaries = mission_worker_summary_block(conn, conversation_id)
-    thread_id = mission_discord_thread_id(conn, conversation_id)
+    worker_summaries = mission_worker_summary_block(conn, conversation_id, thread_id=thread_id)
+    thread_id = thread_id or mission_discord_thread_id(conn, conversation_id)
     discord_thread_line = f"discord_thread_id: {thread_id}\n" if thread_id else ""
     direct_reply_lines = (
         f"reply_mode: direct_discord\nreply_target: discord:{thread_id}\nreply_expected: true\n"
@@ -439,7 +452,7 @@ Rules:
 """
     columns = table_columns(conn, "tasks")
     insert_cols = ["id", "title", "body", "assignee", "status", "priority", "created_by", "created_at", "idempotency_key"]
-    values: list[Any] = [task_id, title, body, "atlas", "ready", 0, "mission-notifier", now, f"mission:{conversation_id}:atlas-synthesis"]
+    values: list[Any] = [task_id, title, body, "atlas", "ready", 0, "mission-notifier", now, synthesis_idempotency_key(conversation_id, thread_id)]
     if "workspace_kind" in columns:
         insert_cols.append("workspace_kind")
         values.append("scratch")
@@ -471,7 +484,8 @@ def handle_completed_event(conn: sqlite3.Connection, event: sqlite3.Row, task: s
     summary = event_summary(task, payload)
     if is_atlas_synthesis_task(task, conversation_id):
         thread_id = extract_discord_thread_id(task, payload, conversation_id)
-        message = f"Atlas completed synthesis for {conversation_id}: {summary}"
+        final_answer = final_answer_text(conn, task, payload)
+        message = f"Atlas final answer for {conversation_id} is ready:\n\n{final_answer}"
         if enqueue_outbox(
             conn,
             conversation_id=conversation_id,
@@ -480,7 +494,13 @@ def handle_completed_event(conn: sqlite3.Connection, event: sqlite3.Row, task: s
             message=message,
             idempotency_key=f"final:{conversation_id}:{event['task_id']}:{event['id']}",
             target=discord_target("status", thread_id),
-            payload_json=final_response_payload(conversation_id, event["task_id"], summary),
+            payload_json=discord_embed_payload(
+                title="Atlas final answer",
+                description=final_answer,
+                conversation_id=conversation_id,
+                task_id=event["task_id"],
+                kind="final_response_ready",
+            ),
         ):
             result.outbox_rows += 1
             result.final_responses_ready += 1
@@ -499,8 +519,9 @@ def handle_completed_event(conn: sqlite3.Connection, event: sqlite3.Row, task: s
     ):
         result.outbox_rows += 1
 
-    if mission_ready_for_synthesis(conn, conversation_id):
-        synth_id = create_atlas_synthesis_task(conn, conversation_id)
+    thread_id = extract_discord_thread_id(task, payload, conversation_id)
+    if mission_ready_for_synthesis(conn, conversation_id, thread_id=thread_id):
+        synth_id = create_atlas_synthesis_task(conn, conversation_id, thread_id=thread_id)
         if synth_id:
             result.created_synthesis_tasks += 1
             if enqueue_outbox(
@@ -509,7 +530,7 @@ def handle_completed_event(conn: sqlite3.Connection, event: sqlite3.Row, task: s
                 task_id=synth_id,
                 kind="mission_ready_for_synthesis",
                 message=f"Mission {conversation_id} has all worker tasks complete; queued Atlas synthesis task {synth_id}.",
-                idempotency_key=f"notify:{conversation_id}:synthesis-created",
+                idempotency_key=f"notify:{conversation_id}:{thread_id or 'kanban'}:synthesis-created",
                 target="atlas:kanban",
                 status="queued",
             ):

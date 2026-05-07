@@ -40,6 +40,13 @@ def init_db(path: Path) -> None:
 
 
 class KanbanMissionContractTests(unittest.TestCase):
+    def test_default_db_points_at_profile_runtime_kanban_home(self):
+        contract = load_contract_module()
+        self.assertEqual(
+            contract.KANBAN_DB,
+            REPO_ROOT / "runtime" / "hermes" / "kanban" / "kanban.db",
+        )
+
     def test_installed_trigger_rejects_task_without_mission_marker(self):
         contract = load_contract_module()
         with tempfile.TemporaryDirectory() as td:
