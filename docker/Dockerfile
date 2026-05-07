@@ -56,7 +56,7 @@ RUN curl -fsSL https://mise.run | sh \
 
 # Global defaults. Individual agents can override with /workspace/.mise.toml
 # or mounted config under /opt/data if desired.
-COPY mise/config.toml /etc/mise/config.toml
+COPY docker/mise/config.toml /etc/mise/config.toml
 
 # Preinstall lightweight/common runtimes that MCP servers and startup agents often need.
 # If you want a smaller image, remove these and let agents install from their workspace .mise.toml.
@@ -72,6 +72,13 @@ RUN mise trust /etc/mise/config.toml \
 RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh \
     && uv --version \
     && uvx --version
+
+# Install repo script dependencies into system Python because runtime services call
+# scripts/*.py with python3 from the bind-mounted /workspace checkout.
+COPY requirements.txt /tmp/team-nexus-python-requirements.txt
+RUN uv pip install --system --break-system-packages --python /usr/bin/python3 --no-cache -r /tmp/team-nexus-python-requirements.txt \
+    && rm -f /tmp/team-nexus-python-requirements.txt \
+    && rm -rf /root/.cache/uv /tmp/uv-cache
 
 # Install voice extras into the upstream Hermes venv for CLI/gateway voice mode.
 # The upstream Docker image installs Hermes as site-packages; Hermes doctor still
@@ -100,7 +107,7 @@ RUN if [ -d /opt/hermes/tinker-atropos ]; then \
     fi \
     && rm -rf /root/.cache/uv /tmp/uv-cache
 
-COPY team-nexus-entrypoint.sh /usr/local/bin/team-nexus-entrypoint.sh
+COPY docker/team-nexus-entrypoint.sh /usr/local/bin/team-nexus-entrypoint.sh
 RUN chmod +x /usr/local/bin/team-nexus-entrypoint.sh
 
 ENTRYPOINT ["/usr/bin/tini", "-g", "--", "/usr/local/bin/team-nexus-entrypoint.sh"]

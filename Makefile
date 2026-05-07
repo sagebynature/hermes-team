@@ -3,6 +3,9 @@ SHELL := /usr/bin/env bash
 
 COMPOSE_FILES ?= -f docker-compose.profiles.yml
 COMPOSE ?= docker compose $(COMPOSE_FILES)
+PYTHON_BOOTSTRAP ?= python3
+PYTHON ?= .venv/bin/python3
+PYTHON_REQUIREMENTS ?= requirements.txt
 TEAM_NEXUS_UID ?= $(shell id -u)
 TEAM_NEXUS_GID ?= $(shell id -g)
 PROFILE ?= atlas
@@ -22,7 +25,7 @@ ifneq ($(strip $(SERVER)),)
 -include shared/mcp/registry/$(SERVER).mk
 endif
 
-.PHONY: help build up down restart ps logs shell hermes doctor doctor-all compose-config validate preflight \
+.PHONY: help build up down restart ps logs shell hermes doctor doctor-all compose-config python-deps validate preflight \
 	profile-validate profile-render-dry-run profile-render-docker-dry-run profile-render profile-compose-config \
 	workspace-init kanban-init kanban-list kanban-stats kanban-watch kanban-create kanban-link \
 	kanban-dispatcher-once \
@@ -78,23 +81,30 @@ compose-config: ## Validate profile-driven Docker Compose function services
 	$(COMPOSE) --profile dashboard --profile admin --profile dispatcher-once config >/tmp/team-nexus-compose.yaml
 	@echo "compose config OK -> /tmp/team-nexus-compose.yaml"
 
-validate: ## Validate profile specs, manifests, scripts, tests, and profile-driven Compose
-	python3 scripts/validate-profile-spec.py
-	python3 -m py_compile scripts/*.py shared/plugins/agent-identity-dashboard/dashboard/plugin_api.py
-	python3 -m unittest discover -s tests -p 'test*.py'
+$(PYTHON):
+	$(PYTHON_BOOTSTRAP) -m venv .venv
+
+python-deps: $(PYTHON) ## Install Python dependencies required by scripts/*.py
+	$(PYTHON) -m pip install --upgrade pip
+	$(PYTHON) -m pip install -r $(PYTHON_REQUIREMENTS)
+
+validate: python-deps ## Validate profile specs, manifests, scripts, tests, and profile-driven Compose
+	$(PYTHON) scripts/validate-profile-spec.py
+	$(PYTHON) -m py_compile scripts/*.py shared/plugins/agent-identity-dashboard/dashboard/plugin_api.py
+	$(PYTHON) -m unittest discover -s tests -p 'test*.py'
 	$(MAKE) profile-compose-config
 
 preflight: ## Run profile-driven preflight checks
 	./scripts/preflight.sh
 
-profile-validate: ## Validate profile-driven Team Nexus spec and manifests
-	python3 scripts/validate-profile-spec.py
+profile-validate: python-deps ## Validate profile-driven Team Nexus spec and manifests
+	$(PYTHON) scripts/validate-profile-spec.py
 
-profile-render-dry-run: ## Preview host profile files rendered from profile specs
-	python3 scripts/render-profile-spec.py --mode $(MODE)
+profile-render-dry-run: python-deps ## Preview host profile files rendered from profile specs
+	$(PYTHON) scripts/render-profile-spec.py --mode $(MODE)
 
-profile-render: ## Render Docker profile files into ignored runtime/hermes/profiles
-	python3 scripts/render-profile-spec.py --mode $(MODE) --write --output-dir runtime/hermes/profiles
+profile-render: python-deps ## Render Docker profile files into ignored runtime/hermes/profiles
+	$(PYTHON) scripts/render-profile-spec.py --mode $(MODE) --write --output-dir runtime/hermes/profiles
 
 profile-compose-config: ## Validate profile-driven Docker Compose function services
 	$(COMPOSE) --profile dashboard --profile admin --profile dispatcher-once config >/dev/null
@@ -109,7 +119,7 @@ workspace-init: ## Initialize shared workspace/artifact and ignored runtime dire
 
 kanban-init: profile-render workspace-init ## Initialize the shared Team Nexus Kanban board and mission contract triggers
 	$(COMPOSE) run --rm atlas-gateway kanban init
-	python3 scripts/kanban-mission-contract.py --db "$(KANBAN_DB)" install
+	$(PYTHON) scripts/kanban-mission-contract.py --db "$(KANBAN_DB)" install
 
 kanban-list: profile-render ## List shared Kanban tasks
 	$(COMPOSE) run --rm atlas-gateway kanban list
@@ -139,17 +149,17 @@ kanban-link: profile-render ## Link parent->child dependency: make kanban-link P
 	@if [ -z "$(CHILD)" ]; then echo "CHILD is required" >&2; exit 2; fi
 	$(COMPOSE) run --rm atlas-gateway kanban link "$(PARENT)" "$(CHILD)"
 
-kanban-mission-contract-install: ## Install DB triggers rejecting Kanban tasks without mission markers
-	python3 scripts/kanban-mission-contract.py --db "$(KANBAN_DB)" install
+kanban-mission-contract-install: python-deps ## Install DB triggers rejecting Kanban tasks without mission markers
+	$(PYTHON) scripts/kanban-mission-contract.py --db "$(KANBAN_DB)" install
 
-kanban-mission-contract-uninstall: ## Remove DB mission-contract triggers
-	python3 scripts/kanban-mission-contract.py --db "$(KANBAN_DB)" uninstall
+kanban-mission-contract-uninstall: python-deps ## Remove DB mission-contract triggers
+	$(PYTHON) scripts/kanban-mission-contract.py --db "$(KANBAN_DB)" uninstall
 
-kanban-mission-contract-check: ## Audit existing Kanban tasks for missing mission markers
-	python3 scripts/kanban-mission-contract.py --db "$(KANBAN_DB)" check
+kanban-mission-contract-check: python-deps ## Audit existing Kanban tasks for missing mission markers
+	$(PYTHON) scripts/kanban-mission-contract.py --db "$(KANBAN_DB)" check
 
-kanban-mission-payload-sample: ## Print a valid deterministic Kanban mission task payload
-	python3 scripts/kanban-mission-contract.py sample-payload
+kanban-mission-payload-sample: python-deps ## Print a valid deterministic Kanban mission task payload
+	$(PYTHON) scripts/kanban-mission-contract.py sample-payload
 
 kanban-dispatcher-once: profile-render ## Preview dispatcher only; MAX_TASKS controls cap; set DRY_RUN=1
 	@if [ "$(DRY_RUN)" = "1" ]; then \
@@ -159,18 +169,18 @@ kanban-dispatcher-once: profile-render ## Preview dispatcher only; MAX_TASKS con
 		exit 2; \
 	fi
 
-kanban-notifier-once: ## Process new Kanban mission events into notification outbox rows
-	python3 scripts/kanban-mission-notifier.py --db "$(KANBAN_DB)" --limit $${LIMIT:-100}
+kanban-notifier-once: python-deps ## Process new Kanban mission events into notification outbox rows
+	$(PYTHON) scripts/kanban-mission-notifier.py --db "$(KANBAN_DB)" --limit $${LIMIT:-100}
 
-kanban-notifier-deliver: ## Deliver pending mission notification outbox rows through Discord status webhook
-	python3 scripts/kanban-mission-notifier.py --db "$(KANBAN_DB)" --deliver --limit $${LIMIT:-100}
+kanban-notifier-deliver: python-deps ## Deliver pending mission notification outbox rows through Discord status webhook
+	$(PYTHON) scripts/kanban-mission-notifier.py --db "$(KANBAN_DB)" --deliver --limit $${LIMIT:-100}
 
-kanban-notifier-dry-run: ## Preview pending mission notification delivery without posting
-	python3 scripts/kanban-mission-notifier.py --db "$(KANBAN_DB)" --dry-run --limit $${LIMIT:-100}
+kanban-notifier-dry-run: python-deps ## Preview pending mission notification delivery without posting
+	$(PYTHON) scripts/kanban-mission-notifier.py --db "$(KANBAN_DB)" --dry-run --limit $${LIMIT:-100}
 
-discord-status-dry-run: ## Dry-run a Discord status post: make discord-status-dry-run MESSAGE='...'
+discord-status-dry-run: python-deps ## Dry-run a Discord status post: make discord-status-dry-run MESSAGE='...'
 	@if [ -z "$(MESSAGE)" ]; then echo "MESSAGE is required" >&2; exit 2; fi
-	printf '%s' "$(MESSAGE)" | python3 scripts/discord-post-status.py --dry-run
+	printf '%s' "$(MESSAGE)" | $(PYTHON) scripts/discord-post-status.py --dry-run
 
 mcp-list: profile-render guard-profile ## List MCP servers configured for one profile
 	$(COMPOSE) run --rm -e HERMES_HOME=/opt/data/profiles/$(PROFILE) atlas-gateway mcp list

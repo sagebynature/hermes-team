@@ -207,7 +207,7 @@ open_editor() {
 print_plan() {
     echo "This installer will guide you through a complete Team Nexus setup:"
     echo ""
-    echo "  1. Check host prerequisites: git, make, python3, Docker, Docker Compose"
+    echo "  1. Check host prerequisites: git, make, python3 with venv support, Docker, Docker Compose"
     echo "  2. Clone or update the Team Nexus repo"
     echo "  3. Create .env from .env.example without overwriting secrets"
     echo "  4. Help you edit .env for model provider and Atlas Discord settings"
@@ -249,6 +249,9 @@ require_prerequisites() {
     command_exists git || missing+=("git")
     command_exists make || missing+=("make")
     command_exists python3 || missing+=("python3")
+    if command_exists python3 && ! python3 -m venv --help >/dev/null 2>&1; then
+        missing+=("python3 venv module")
+    fi
 
     if ! command_exists docker; then
         missing+=("docker")
@@ -274,7 +277,7 @@ require_prerequisites() {
             echo "  brew install python docker    # or install Docker Desktop from docker.com"
             ;;
         linux)
-            echo "  sudo apt update && sudo apt install -y git make python3 docker.io docker-compose-plugin"
+            echo "  sudo apt update && sudo apt install -y git make python3 python3-venv docker.io docker-compose-plugin"
             echo "  sudo usermod -aG docker \$USER  # then log out/in if Docker needs permissions"
             ;;
         *)
