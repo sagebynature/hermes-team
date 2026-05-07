@@ -13,6 +13,7 @@ TARGET_AGENTS ?= $(TEAM_AGENTS)
 WORKSPACE ?= scratch
 KANBAN_DB ?= runtime/hermes/kanban/kanban.db
 MODE ?= docker
+ARGS ?=
 export TEAM_NEXUS_UID TEAM_NEXUS_GID PROFILE AGENT SERVICE
 
 # When SERVER is set, optionally load a shared MCP registry definition.
@@ -21,7 +22,7 @@ ifneq ($(strip $(SERVER)),)
 -include shared/mcp/registry/$(SERVER).mk
 endif
 
-.PHONY: help build up down restart ps logs shell doctor doctor-all compose-config validate preflight \
+.PHONY: help build up down restart ps logs shell hermes doctor doctor-all compose-config validate preflight \
 	profile-validate profile-render-dry-run profile-render-docker-dry-run profile-render profile-compose-config \
 	workspace-init kanban-init kanban-list kanban-stats kanban-watch kanban-create kanban-link \
 	kanban-dispatcher-once \
@@ -60,6 +61,9 @@ logs: ## Follow logs for one profile runtime service, e.g. make logs SERVICE=atl
 
 shell: profile-render guard-profile ## Open bash in the profile runtime, e.g. make shell PROFILE=forge
 	$(COMPOSE) --profile admin run --rm --entrypoint bash -e HERMES_HOME=/opt/data/profiles/$(PROFILE) admin-shell
+
+hermes: profile-render guard-profile ## Run any hermes command for one rendered profile, e.g. make hermes PROFILE=forge doctor
+	$(COMPOSE) run --rm -e HERMES_HOME=/opt/data/profiles/$(PROFILE) atlas-gateway $(ARGS)
 
 doctor: profile-render guard-profile ## Run hermes doctor for one rendered profile, e.g. make doctor PROFILE=forge
 	$(COMPOSE) run --rm -e HERMES_HOME=/opt/data/profiles/$(PROFILE) atlas-gateway doctor
