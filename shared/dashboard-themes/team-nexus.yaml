@@ -335,8 +335,9 @@ customCSS: |
     font-weight: 900 !important;
     font-size: 0.86rem !important;
     line-height: 1.28 !important;
-    letter-spacing: 0.045em !important;
-    text-transform: uppercase !important;
+    letter-spacing: 0.025em !important;
+    text-transform: none !important;
+    font-variant-caps: normal !important;
     text-shadow: none !important;
   }
 
@@ -362,8 +363,35 @@ customCSS: |
 
   .hermes-kanban-card-content .hermes-kanban-card-title,
   .hermes-kanban-card-content .hermes-kanban-card-title * {
-    text-transform: uppercase !important;
-    letter-spacing: 0.045em !important;
+    text-transform: none !important;
+    font-variant-caps: normal !important;
+    letter-spacing: 0.025em !important;
+  }
+
+  /* Kanban readability: preserve meaningful case in details, logs, and code-like content. */
+  .hermes-kanban [data-slot="dialog"],
+  .hermes-kanban [data-slot="sheet"],
+  .hermes-kanban [data-slot="tabs-content"],
+  .hermes-kanban pre,
+  .hermes-kanban code,
+  .hermes-kanban textarea,
+  .hermes-kanban .whitespace-pre-wrap,
+  .hermes-kanban .whitespace-pre-line {
+    text-transform: none !important;
+    font-variant-caps: normal !important;
+    letter-spacing: 0.015em !important;
+  }
+
+  /* Detail headings like "Worker Log" and "Run History - detail" should preserve case. */
+  .hermes-kanban [data-slot="dialog"] h1,
+  .hermes-kanban [data-slot="dialog"] h2,
+  .hermes-kanban [data-slot="dialog"] h3,
+  .hermes-kanban [data-slot="sheet"] h1,
+  .hermes-kanban [data-slot="sheet"] h2,
+  .hermes-kanban [data-slot="sheet"] h3 {
+    text-transform: none !important;
+    font-variant-caps: normal !important;
+    letter-spacing: 0.04em !important;
   }
 
   .hermes-kanban input,

@@ -25,8 +25,9 @@ ifneq ($(strip $(SERVER)),)
 -include shared/mcp/registry/$(SERVER).mk
 endif
 
-.PHONY: help build up down restart ps logs shell hermes doctor doctor-all compose-config python-deps validate preflight \
+.PHONY: help build up down restart ps logs shell root-shell hermes doctor doctor-all compose-config python-deps validate preflight \
 	profile-validate profile-render-dry-run profile-render-docker-dry-run profile-render profile-compose-config \
+	profile-permissions-check profile-permissions-repair \
 	workspace-init kanban-init kanban-list kanban-stats kanban-watch kanban-create kanban-link \
 	kanban-dispatcher-once \
 	kanban-mission-contract-install kanban-mission-contract-uninstall kanban-mission-contract-check kanban-mission-payload-sample \
@@ -62,7 +63,10 @@ ps: ## Show profile-driven Compose service status
 logs: ## Follow logs for one profile runtime service, e.g. make logs SERVICE=atlas-gateway
 	$(COMPOSE) logs -f $(SERVICE)
 
-shell: guard-profile ## Open bash in the profile runtime, e.g. make shell PROFILE=forge
+shell: guard-profile ## Open non-root bash in the profile runtime, e.g. make shell PROFILE=forge
+	$(COMPOSE) --profile admin run --rm --user $(TEAM_NEXUS_UID):$(TEAM_NEXUS_GID) --entrypoint bash -e HERMES_HOME=/opt/data/profiles/$(PROFILE) admin-shell
+
+root-shell: guard-profile ## Open a ROOT bash in the profile runtime for ownership repair only
 	$(COMPOSE) --profile admin run --rm --entrypoint bash -e HERMES_HOME=/opt/data/profiles/$(PROFILE) admin-shell
 
 hermes: guard-profile ## Run any hermes command for one rendered profile, e.g. make hermes PROFILE=forge doctor
@@ -106,6 +110,12 @@ profile-render-dry-run: python-deps ## Preview host profile files rendered from 
 
 profile-render: python-deps ## Render Docker profile files into ignored runtime/hermes/profiles
 	$(PYTHON) scripts/render-profile-spec.py --mode $(MODE) --write --output-dir runtime/hermes/profiles
+
+profile-permissions-check: ## Fail if active profile runtime dirs/files are not writable by the host operator
+	$(PYTHON_BOOTSTRAP) scripts/profile-permissions.py check --root runtime/hermes/profiles --profiles "$(TEAM_AGENTS)"
+
+profile-permissions-repair: ## Repair active profile runtime ownership/modes from inside the container
+	$(COMPOSE) --profile admin run --rm --entrypoint python3 admin-shell /workspace/scripts/profile-permissions.py repair --root /opt/data/profiles --profiles "$(TEAM_AGENTS)" --owner "$(TEAM_NEXUS_UID):$(TEAM_NEXUS_GID)"
 
 profile-compose-config: ## Validate profile-driven Docker Compose function services
 	$(COMPOSE) --profile dashboard --profile admin --profile dispatcher-once config >/dev/null

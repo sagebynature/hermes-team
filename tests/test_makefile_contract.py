@@ -34,6 +34,22 @@ class MakefileContractTests(unittest.TestCase):
         self.assertIn("--db /opt/data/kanban/kanban.db", compose)
         self.assertIn("--deliver", compose)
 
+    def test_admin_shell_is_not_root_by_default_and_root_shell_is_explicit(self):
+        makefile = MAKEFILE.read_text()
+
+        self.assertIn("--user $(TEAM_NEXUS_UID):$(TEAM_NEXUS_GID)", makefile)
+        self.assertIn("root-shell:", makefile)
+        self.assertIn("Open a ROOT bash", makefile)
+
+    def test_profile_permission_targets_are_part_of_preflight_path(self):
+        makefile = MAKEFILE.read_text()
+        preflight = (REPO_ROOT / "scripts" / "preflight.sh").read_text()
+
+        self.assertIn("profile-permissions-check:", makefile)
+        self.assertIn("profile-permissions-repair:", makefile)
+        self.assertIn("scripts/profile-permissions.py check", makefile)
+        self.assertIn("make profile-permissions-check", preflight)
+
     def test_atlas_profile_requires_mission_scoped_discord_tasks(self):
         agents = ATLAS_AGENTS.read_text()
 
