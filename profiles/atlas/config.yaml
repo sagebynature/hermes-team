@@ -8,6 +8,7 @@ credential_pool_strategies: {}
 toolsets:
   - hermes-cli
   - kanban
+  - messaging
   - spotify
 agent:
   max_turns: 90

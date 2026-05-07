@@ -52,6 +52,18 @@ class ProfileSpecValidatorTests(unittest.TestCase):
         self.assertNotIn("agents/*/home", gitignore)
         self.assertNotIn("agents/*/workspace", gitignore)
 
+    def test_atlas_has_messaging_toolset_for_direct_discord_synthesis(self):
+        validator = load_validator_module()
+        config = validator.load_yaml(REPO_ROOT / "profiles" / "atlas" / "config.yaml")
+
+        self.assertIn("messaging", config["toolsets"])
+
+    def test_atlas_direct_discord_policy_requires_verified_send_message_tool(self):
+        agents = (REPO_ROOT / "profiles" / "atlas" / "AGENTS.md").read_text()
+
+        self.assertIn("Do not use terminal or Hermes CLI commands as a substitute for the `send_message` tool", agents)
+        self.assertIn("block the synthesis task instead of completing it", agents)
+
 
 if __name__ == "__main__":
     unittest.main()
