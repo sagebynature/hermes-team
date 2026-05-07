@@ -1,0 +1,8 @@
+# Keep Docker build context tiny for docker-compose.profiles.yml root-context builds.
+**
+!docker/
+!docker/Dockerfile
+!docker/team-nexus-entrypoint.sh
+!docker/mise/
+!docker/mise/config.toml
+!requirements.txt
