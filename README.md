@@ -36,6 +36,7 @@ make compose-config
 make profile-render-dry-run
 make profile-render-docker-dry-run
 make shell PROFILE=forge
+make profile-permissions-check
 make doctor PROFILE=atlas
 make doctor-all
 make logs SERVICE=atlas-gateway
@@ -52,6 +53,7 @@ User -> Atlas Discord gateway -> Kanban -> specialist profiles -> Atlas -> User
 
 - First-time setup: `GETTING_STARTED.md`
 - Operations runbook: `docs/team-nexus-operations.md`
+- Troubleshooting guide: `TROUBLESHOOTING.md`
 - Discord/Kanban runbook: `docs/discord-kanban-operations.md`
 - Architecture plan: `docs/architecture/profile-driven-team-nexus.md`
 - ADR: `docs/adr/0014-profile-driven-team-nexus.md`

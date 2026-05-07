@@ -171,6 +171,12 @@ Run the full local preflight:
 make preflight
 ```
 
+For incident-specific remediation, see the root troubleshooting guide:
+
+```text
+TROUBLESHOOTING.md
+```
+
 Or run individual checks:
 
 ```bash
@@ -179,9 +185,16 @@ make profile-render-dry-run
 make profile-render-docker-dry-run
 make compose-config
 make profile-render
+make profile-permissions-check
 ```
 
 ## 9. Troubleshooting
+
+Start with the root troubleshooting guide for known Team Nexus incidents and recovery commands:
+
+```text
+TROUBLESHOOTING.md
+```
 
 Gateway logs:
 

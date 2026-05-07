@@ -17,11 +17,13 @@ shared/skills -> /shared/skills:ro
 shared/mcp    -> /shared/mcp:ro
 ```
 
-Keep agent-specific skills under:
+Keep profile-local skills and runtime extensions under:
 
 ```text
-agents/<agent>/home/skills
+runtime/hermes/profiles/<profile>/skills
 ```
+
+Profile-local runtime skills are allowed, but Team Nexus canonical skills live in `shared/skills/`. Any skill required by the dispatcher or more than one profile must be promoted to `shared/skills/` and selected through the shared skill manifests.
 
 ## Consequences
 
@@ -42,9 +44,10 @@ Tradeoffs:
 The repo intentionally uses a simple skills layout:
 
 ```text
-shared/skills/                 team-wide, read-only in containers
-agents/<agent>/home/skills/    agent-specific, writable/committable
+shared/skills/                                 team-wide, read-only in containers
+runtime/hermes/profiles/<profile>/skills/      profile-local runtime extensions, ignored state
+shared/skills/manifests/                       shared base and role-specific skill selection
 ```
 
-There are no skills-sync Makefile targets or sync scripts by design.
+There are no ad-hoc skills-sync Makefile targets by design. Promote reusable or dispatcher-required procedures into `shared/skills/`, then render/validate profiles with the normal profile commands.
 
