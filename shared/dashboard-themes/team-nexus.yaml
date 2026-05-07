@@ -459,6 +459,71 @@ customCSS: |
     color: #7ee7ff !important;
   }
 
+  /* Kanban detail readability: code/log/highlight surfaces should favor contrast over glow. */
+  .hermes-kanban [data-slot="dialog"] pre,
+  .hermes-kanban [data-slot="sheet"] pre,
+  .hermes-kanban [data-slot="tabs-content"] pre,
+  .hermes-kanban .whitespace-pre-wrap,
+  .hermes-kanban .whitespace-pre-line {
+    color: #e8e8dc !important;
+    background: rgba(0,0,0,0.72) !important;
+    border: 1px solid rgba(216,216,208,0.14) !important;
+    box-shadow: inset 3px 0 0 rgba(var(--agent-secondary-rgb, 255,152,48),0.42) !important;
+    text-shadow: none !important;
+  }
+
+  .hermes-kanban [data-slot="dialog"] code,
+  .hermes-kanban [data-slot="sheet"] code,
+  .hermes-kanban [data-slot="tabs-content"] code,
+  .hermes-kanban .whitespace-pre-wrap code,
+  .hermes-kanban .whitespace-pre-line code {
+    color: #f4f4e8 !important;
+    background: rgba(0,0,0,0.76) !important;
+    border: 1px solid rgba(var(--agent-primary-rgb, 80,255,80),0.22) !important;
+    border-radius: 0.125rem !important;
+    padding: 0.08rem 0.24rem !important;
+    text-shadow: none !important;
+  }
+
+  .hermes-kanban [data-slot="dialog"] [class*="bg-accent"],
+  .hermes-kanban [data-slot="dialog"] [class*="bg-muted"],
+  .hermes-kanban [data-slot="dialog"] [class*="bg-secondary"],
+  .hermes-kanban [data-slot="sheet"] [class*="bg-accent"],
+  .hermes-kanban [data-slot="sheet"] [class*="bg-muted"],
+  .hermes-kanban [data-slot="sheet"] [class*="bg-secondary"],
+  .hermes-kanban [data-slot="tabs-content"] [class*="bg-accent"],
+  .hermes-kanban [data-slot="tabs-content"] [class*="bg-muted"],
+  .hermes-kanban [data-slot="tabs-content"] [class*="bg-secondary"] {
+    color: #f4f4e8 !important;
+    background: rgba(0,0,0,0.64) !important;
+    border-color: rgba(216,216,208,0.16) !important;
+    text-shadow: none !important;
+  }
+
+  .hermes-kanban [data-slot="dialog"] [class*="text-green"],
+  .hermes-kanban [data-slot="sheet"] [class*="text-green"],
+  .hermes-kanban [data-slot="tabs-content"] [class*="text-green"] {
+    color: #7cff7c !important;
+  }
+
+  .hermes-kanban [data-slot="dialog"] [class*="text-red"],
+  .hermes-kanban [data-slot="sheet"] [class*="text-red"],
+  .hermes-kanban [data-slot="tabs-content"] [class*="text-red"] {
+    color: #ff6b6b !important;
+  }
+
+  .hermes-kanban [data-slot="dialog"] [class*="text-yellow"],
+  .hermes-kanban [data-slot="sheet"] [class*="text-yellow"],
+  .hermes-kanban [data-slot="tabs-content"] [class*="text-yellow"] {
+    color: #ffd166 !important;
+  }
+
+  .hermes-kanban [data-slot="dialog"] [class*="text-blue"],
+  .hermes-kanban [data-slot="sheet"] [class*="text-blue"],
+  .hermes-kanban [data-slot="tabs-content"] [class*="text-blue"] {
+    color: #7ee7ff !important;
+  }
+
   .hermes-kanban input,
   .hermes-kanban button,
   .hermes-kanban [role="combobox"] {
