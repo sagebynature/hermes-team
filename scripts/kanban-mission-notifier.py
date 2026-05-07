@@ -473,7 +473,8 @@ def handle_completed_event(conn: sqlite3.Connection, event: sqlite3.Row, task: s
     summary = event_summary(task, payload)
     if is_atlas_synthesis_task(task, conversation_id):
         thread_id = extract_discord_thread_id(task, payload, conversation_id)
-        message = f"Atlas completed synthesis for {conversation_id}: {summary}"
+        final_answer = final_answer_text(conn, task, payload)
+        message = f"Atlas final answer for {conversation_id} is ready:\n\n{final_answer}"
         if enqueue_outbox(
             conn,
             conversation_id=conversation_id,
@@ -482,7 +483,13 @@ def handle_completed_event(conn: sqlite3.Connection, event: sqlite3.Row, task: s
             message=message,
             idempotency_key=f"final:{conversation_id}:{event['task_id']}:{event['id']}",
             target=discord_target("status", thread_id),
-            payload_json=final_response_payload(conversation_id, event["task_id"], summary),
+            payload_json=discord_embed_payload(
+                title="Atlas final answer",
+                description=final_answer,
+                conversation_id=conversation_id,
+                task_id=event["task_id"],
+                kind="final_response_ready",
+            ),
         ):
             result.outbox_rows += 1
             result.final_responses_ready += 1

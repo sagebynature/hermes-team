@@ -2,7 +2,7 @@ name: team-nexus-profiles
 
 # Profile-driven Docker runtime.
 # One image, function services, and one mounted Hermes data root. Hermes profiles
-# are rendered into ./runtime/hermes/profiles/<profile>/ by `make profile-runtime-stage`.
+# are rendered into ./runtime/hermes/profiles/<profile>/ by `make profile-render`.
 # Atlas is the only Discord gateway in v1; its gateway process hosts the native
 # Kanban dispatcher. Do not also run the deprecated standalone dispatcher against
 # the same board.

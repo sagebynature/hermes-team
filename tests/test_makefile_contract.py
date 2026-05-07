@@ -21,7 +21,7 @@ class MakefileContractTests(unittest.TestCase):
         makefile = MAKEFILE.read_text()
 
         self.assertIn("KANBAN_DB ?= runtime/hermes/kanban/kanban.db", makefile)
-        self.assertIn("kanban-init: profile-runtime-stage workspace-init", makefile)
+        self.assertIn("kanban-init: profile-render workspace-init", makefile)
         self.assertIn("kanban-mission-contract.py --db \"$(KANBAN_DB)\" install", makefile)
         self.assertIn("kanban-mission-notifier.py --db \"$(KANBAN_DB)\" --deliver", makefile)
 

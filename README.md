@@ -54,13 +54,13 @@ User -> Atlas Discord gateway -> Kanban -> specialist profiles -> Atlas -> User
 
 ## V1 profile roster
 
-| Profile | Mission |
-| --- | --- |
-| Atlas | Mission intake, routing, Kanban task graph, Discord-facing synthesis |
-| Forge | Software implementation in task worktrees, tests, commits, draft PRs |
-| Sentinel | Code review, QA, security, and ship/no-ship verdicts |
-| Scribe | Docs, ADRs, changelog, and PR narrative |
-| Curator | Learning governance, repo-visible skills/docs/profile updates |
+| Profile  | Mission                                                              |
+| -------- | -------------------------------------------------------------------- |
+| Atlas    | Mission intake, routing, Kanban task graph, Discord-facing synthesis |
+| Forge    | Software implementation in task worktrees, tests, commits, draft PRs |
+| Sentinel | Code review, QA, security, and ship/no-ship verdicts                 |
+| Scribe   | Docs, ADRs, changelog, and PR narrative                              |
+| Curator  | Learning governance, repo-visible skills/docs/profile updates        |
 
 Planned later profiles: Scout, Ops, and Relay. Worker Discord gateway settings are represented in the profile spec but disabled by default.
 
@@ -68,12 +68,12 @@ Planned later profiles: Scout, Ops, and Relay. Worker Discord gateway settings a
 
 The default Docker runtime uses one image and function services from `docker-compose.profiles.yml`:
 
-| Service | Purpose |
-| --- | --- |
-| `atlas-gateway` | Atlas Discord gateway and native Kanban dispatcher host |
-| `dashboard` | Light Team Nexus inspection/control plane |
-| `admin-shell` | Operator shell using a selected profile home |
-| `kanban-dispatcher` | Optional one-shot native dispatcher nudge |
+| Service             | Purpose                                                 |
+| ------------------- | ------------------------------------------------------- |
+| `atlas-gateway`     | Atlas Discord gateway and native Kanban dispatcher host |
+| `dashboard`         | Light Team Nexus inspection/control plane               |
+| `admin-shell`       | Operator shell using a selected profile home            |
+| `kanban-dispatcher` | Optional one-shot native dispatcher nudge               |
 
 Mounts:
 
@@ -109,7 +109,7 @@ make profile-render-docker-dry-run
 Stage Docker-mode profile files into ignored runtime state:
 
 ```bash
-make profile-runtime-stage
+make profile-render
 ```
 
 Validate:

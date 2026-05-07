@@ -245,7 +245,7 @@ class KanbanMissionNotifierTests(unittest.TestCase):
             self.assertIn("reply_target: discord:1501459474530041937", body)
             self.assertIn("reply_expected: true", body)
 
-    def test_completed_atlas_synthesis_creates_threaded_structured_final_response_notification(self):
+    def test_completed_atlas_synthesis_posts_full_final_answer_not_hook_only_summary(self):
         notifier = load_notifier_module()
         with tempfile.TemporaryDirectory() as td:
             db = Path(td) / "kanban.db"
@@ -275,15 +275,15 @@ class KanbanMissionNotifierTests(unittest.TestCase):
                     "SELECT conversation_id, task_id, kind, target, message, payload_json FROM mission_notification_outbox"
                 ).fetchall()
             self.assertEqual(rows[0][0:4], ("1501451632569880636", "t_synth", "final_response_ready", "discord:status:1501451632569880636"))
-            self.assertIn("Atlas completed synthesis", rows[0][4])
-            self.assertIn("Synthesis completed", rows[0][4])
-            self.assertNotIn("Actual final answer for the user", rows[0][4])
+            self.assertIn("Atlas final answer for 1501451632569880636 is ready", rows[0][4])
+            self.assertIn("Actual final answer for the user", rows[0][4])
+            self.assertNotIn("Synthesis completed", rows[0][4])
             self.assertIsNotNone(rows[0][5])
             payload = __import__("json").loads(rows[0][5])
             self.assertEqual(payload["allowed_mentions"], {"parse": []})
-            self.assertEqual(payload["embeds"][0]["title"], "Atlas completed")
-            self.assertIn("Synthesis completed", payload["embeds"][0]["description"])
-            self.assertNotIn("Actual final answer for the user", payload["embeds"][0]["description"])
+            self.assertEqual(payload["embeds"][0]["title"], "Atlas final answer")
+            self.assertIn("Actual final answer for the user", payload["embeds"][0]["description"])
+            self.assertNotIn("Synthesis completed", payload["embeds"][0]["description"])
 
 
 if __name__ == "__main__":

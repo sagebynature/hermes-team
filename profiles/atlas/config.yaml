@@ -296,8 +296,6 @@ honcho: {}
 timezone: ""
 discord:
   require_mention: true
-  free_response_channels: ""
-  allowed_channels: ""
   auto_thread: true
   reactions: true
   channel_prompts: {}

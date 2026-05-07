@@ -19,7 +19,7 @@ cd /Users/sage/team-nexus
 ```bash
 cp .env.example .env
 # edit .env and add required provider/API keys
-make profile-runtime-stage
+make profile-render
 make validate
 make workspace-init
 make build
@@ -157,7 +157,7 @@ Safe edit loop:
 make profile-render-dry-run
 make profile-render-docker-dry-run
 make profile-validate
-make profile-runtime-stage
+make profile-render
 make validate
 ```
 
@@ -178,7 +178,7 @@ make validate
 make profile-render-dry-run
 make profile-render-docker-dry-run
 make compose-config
-make profile-runtime-stage
+make profile-render
 ```
 
 ## 9. Troubleshooting
@@ -212,7 +212,7 @@ Generated profile files look stale:
 
 ```bash
 make profile-render-docker-dry-run
-make profile-runtime-stage
+make profile-render
 make validate
 ```
 

@@ -20,7 +20,7 @@ Rules:
 ## 2. Render profile homes
 
 ```bash
-make profile-runtime-stage
+make profile-render
 ```
 
 This renders Docker-mode profile files into:
@@ -73,12 +73,12 @@ make up
 
 Default function services from `docker-compose.profiles.yml`:
 
-| Service | Purpose |
-| --- | --- |
-| `atlas-gateway` | Atlas Discord gateway and native Kanban dispatcher host |
-| `dashboard` | Light inspection/control plane at `http://127.0.0.1:${TEAM_NEXUS_DASHBOARD_PORT}` |
-| `admin-shell` | Operator shell with selected profile home |
-| `kanban-dispatcher` | Optional one-shot native dispatcher nudge |
+| Service             | Purpose                                                                           |
+| ------------------- | --------------------------------------------------------------------------------- |
+| `atlas-gateway`     | Atlas Discord gateway and native Kanban dispatcher host                           |
+| `dashboard`         | Light inspection/control plane at `http://127.0.0.1:${TEAM_NEXUS_DASHBOARD_PORT}` |
+| `admin-shell`       | Operator shell with selected profile home                                         |
+| `kanban-dispatcher` | Optional one-shot native dispatcher nudge                                         |
 
 Notes:
 
