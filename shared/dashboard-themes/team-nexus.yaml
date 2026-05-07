@@ -394,6 +394,71 @@ customCSS: |
     letter-spacing: 0.04em !important;
   }
 
+  /* Kanban detail readability: code/log/highlight surfaces should favor contrast over glow. */
+  .hermes-kanban [data-slot="dialog"] pre,
+  .hermes-kanban [data-slot="sheet"] pre,
+  .hermes-kanban [data-slot="tabs-content"] pre,
+  .hermes-kanban .whitespace-pre-wrap,
+  .hermes-kanban .whitespace-pre-line {
+    color: #e8e8dc !important;
+    background: rgba(0,0,0,0.72) !important;
+    border: 1px solid rgba(216,216,208,0.14) !important;
+    box-shadow: inset 3px 0 0 rgba(var(--agent-secondary-rgb, 255,152,48),0.42) !important;
+    text-shadow: none !important;
+  }
+
+  .hermes-kanban [data-slot="dialog"] code,
+  .hermes-kanban [data-slot="sheet"] code,
+  .hermes-kanban [data-slot="tabs-content"] code,
+  .hermes-kanban .whitespace-pre-wrap code,
+  .hermes-kanban .whitespace-pre-line code {
+    color: #f4f4e8 !important;
+    background: rgba(0,0,0,0.76) !important;
+    border: 1px solid rgba(var(--agent-primary-rgb, 80,255,80),0.22) !important;
+    border-radius: 0.125rem !important;
+    padding: 0.08rem 0.24rem !important;
+    text-shadow: none !important;
+  }
+
+  .hermes-kanban [data-slot="dialog"] [class*="bg-accent"],
+  .hermes-kanban [data-slot="dialog"] [class*="bg-muted"],
+  .hermes-kanban [data-slot="dialog"] [class*="bg-secondary"],
+  .hermes-kanban [data-slot="sheet"] [class*="bg-accent"],
+  .hermes-kanban [data-slot="sheet"] [class*="bg-muted"],
+  .hermes-kanban [data-slot="sheet"] [class*="bg-secondary"],
+  .hermes-kanban [data-slot="tabs-content"] [class*="bg-accent"],
+  .hermes-kanban [data-slot="tabs-content"] [class*="bg-muted"],
+  .hermes-kanban [data-slot="tabs-content"] [class*="bg-secondary"] {
+    color: #f4f4e8 !important;
+    background: rgba(0,0,0,0.64) !important;
+    border-color: rgba(216,216,208,0.16) !important;
+    text-shadow: none !important;
+  }
+
+  .hermes-kanban [data-slot="dialog"] [class*="text-green"],
+  .hermes-kanban [data-slot="sheet"] [class*="text-green"],
+  .hermes-kanban [data-slot="tabs-content"] [class*="text-green"] {
+    color: #7cff7c !important;
+  }
+
+  .hermes-kanban [data-slot="dialog"] [class*="text-red"],
+  .hermes-kanban [data-slot="sheet"] [class*="text-red"],
+  .hermes-kanban [data-slot="tabs-content"] [class*="text-red"] {
+    color: #ff6b6b !important;
+  }
+
+  .hermes-kanban [data-slot="dialog"] [class*="text-yellow"],
+  .hermes-kanban [data-slot="sheet"] [class*="text-yellow"],
+  .hermes-kanban [data-slot="tabs-content"] [class*="text-yellow"] {
+    color: #ffd166 !important;
+  }
+
+  .hermes-kanban [data-slot="dialog"] [class*="text-blue"],
+  .hermes-kanban [data-slot="sheet"] [class*="text-blue"],
+  .hermes-kanban [data-slot="tabs-content"] [class*="text-blue"] {
+    color: #7ee7ff !important;
+  }
+
   .hermes-kanban input,
   .hermes-kanban button,
   .hermes-kanban [role="combobox"] {
@@ -419,6 +484,97 @@ customCSS: |
   .hermes-kanban button:not([role="combobox"]) {
     text-transform: uppercase !important;
     letter-spacing: 0.12em !important;
+  }
+
+  /* Kanban hard readability override: Events/Run History use nested utility classes whose
+     hover/focus/selection states can beat the softer detail rules above. Keep data text
+     stable and high-contrast even while clicking or selecting it. */
+  .hermes-kanban pre,
+  .hermes-kanban code,
+  .hermes-kanban kbd,
+  .hermes-kanban samp,
+  .hermes-kanban .whitespace-pre-wrap,
+  .hermes-kanban .whitespace-pre-line,
+  .hermes-kanban [class*="whitespace-pre"] {
+    color: #f2f2e6 !important;
+    background-color: rgba(0,0,0,0.84) !important;
+    background-image: none !important;
+    border-color: rgba(216,216,208,0.20) !important;
+    text-shadow: none !important;
+    box-shadow: inset 3px 0 0 rgba(var(--agent-secondary-rgb, 255,152,48),0.40) !important;
+  }
+
+  .hermes-kanban pre *,
+  .hermes-kanban code *,
+  .hermes-kanban kbd *,
+  .hermes-kanban samp *,
+  .hermes-kanban .whitespace-pre-wrap *,
+  .hermes-kanban .whitespace-pre-line *,
+  .hermes-kanban [class*="whitespace-pre"] * {
+    color: inherit !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    text-shadow: none !important;
+  }
+
+  .hermes-kanban pre:hover,
+  .hermes-kanban pre:focus,
+  .hermes-kanban pre:focus-within,
+  .hermes-kanban pre:active,
+  .hermes-kanban code:hover,
+  .hermes-kanban code:focus,
+  .hermes-kanban code:active,
+  .hermes-kanban .whitespace-pre-wrap:hover,
+  .hermes-kanban .whitespace-pre-wrap:focus,
+  .hermes-kanban .whitespace-pre-wrap:focus-within,
+  .hermes-kanban .whitespace-pre-wrap:active,
+  .hermes-kanban .whitespace-pre-line:hover,
+  .hermes-kanban .whitespace-pre-line:focus,
+  .hermes-kanban .whitespace-pre-line:focus-within,
+  .hermes-kanban .whitespace-pre-line:active,
+  .hermes-kanban [class*="whitespace-pre"]:hover,
+  .hermes-kanban [class*="whitespace-pre"]:focus,
+  .hermes-kanban [class*="whitespace-pre"]:focus-within,
+  .hermes-kanban [class*="whitespace-pre"]:active {
+    color: #f2f2e6 !important;
+    background-color: rgba(0,0,0,0.84) !important;
+    background-image: none !important;
+    text-shadow: none !important;
+  }
+
+  .hermes-kanban [class*="bg-accent"],
+  .hermes-kanban [class*="bg-muted"],
+  .hermes-kanban [class*="bg-secondary"],
+  .hermes-kanban [class*="bg-primary"] {
+    color: #f4f4e8 !important;
+    background-color: rgba(0,0,0,0.74) !important;
+    background-image: none !important;
+    border-color: rgba(216,216,208,0.18) !important;
+    text-shadow: none !important;
+  }
+
+  .hermes-kanban [class*="bg-accent"]:hover,
+  .hermes-kanban [class*="bg-accent"]:focus,
+  .hermes-kanban [class*="bg-accent"]:active,
+  .hermes-kanban [class*="bg-muted"]:hover,
+  .hermes-kanban [class*="bg-muted"]:focus,
+  .hermes-kanban [class*="bg-muted"]:active,
+  .hermes-kanban [class*="bg-secondary"]:hover,
+  .hermes-kanban [class*="bg-secondary"]:focus,
+  .hermes-kanban [class*="bg-secondary"]:active,
+  .hermes-kanban [class*="bg-primary"]:hover,
+  .hermes-kanban [class*="bg-primary"]:focus,
+  .hermes-kanban [class*="bg-primary"]:active {
+    color: #f4f4e8 !important;
+    background-color: rgba(0,0,0,0.82) !important;
+    background-image: none !important;
+    text-shadow: none !important;
+  }
+
+  .hermes-kanban ::selection {
+    background: rgba(255,209,102,0.38) !important;
+    color: #fffbe6 !important;
+    text-shadow: none !important;
   }
 
   ::selection {
