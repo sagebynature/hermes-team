@@ -64,21 +64,21 @@ logs: ## Follow logs for one profile runtime service, e.g. make logs SERVICE=atl
 	$(COMPOSE) logs -f $(SERVICE)
 
 shell: guard-profile ## Open non-root bash in the profile runtime, e.g. make shell PROFILE=forge
-	$(COMPOSE) --profile admin run --rm --user $(TEAM_NEXUS_UID):$(TEAM_NEXUS_GID) --entrypoint bash -e HERMES_HOME=/opt/data/profiles/$(PROFILE) admin-shell
+	$(COMPOSE) --profile admin run --rm --workdir /workspaces/$(PROFILE) --user $(TEAM_NEXUS_UID):$(TEAM_NEXUS_GID) --entrypoint bash -e HERMES_HOME=/opt/data/profiles/$(PROFILE) admin-shell
 
 root-shell: guard-profile ## Open a ROOT bash in the profile runtime for ownership repair only
-	$(COMPOSE) --profile admin run --rm --entrypoint bash -e HERMES_HOME=/opt/data/profiles/$(PROFILE) admin-shell
+	$(COMPOSE) --profile admin run --rm --workdir /workspaces/$(PROFILE) --entrypoint bash -e HERMES_HOME=/opt/data/profiles/$(PROFILE) admin-shell
 
 hermes: guard-profile ## Run any hermes command for one rendered profile, e.g. make hermes PROFILE=forge doctor
-	$(COMPOSE) run --rm -e HERMES_HOME=/opt/data/profiles/$(PROFILE) atlas-gateway $(ARGS)
+	$(COMPOSE) run --rm --workdir /workspaces/$(PROFILE) -e HERMES_HOME=/opt/data/profiles/$(PROFILE) atlas-gateway $(ARGS)
 
 doctor: guard-profile ## Run hermes doctor for one rendered profile, e.g. make doctor PROFILE=forge
-	$(COMPOSE) run --rm -e HERMES_HOME=/opt/data/profiles/$(PROFILE) atlas-gateway doctor
+	$(COMPOSE) run --rm --workdir /workspaces/$(PROFILE) -e HERMES_HOME=/opt/data/profiles/$(PROFILE) atlas-gateway doctor
 
 doctor-all: ## Run hermes doctor for every active Team Nexus profile
 	@for profile in $(TEAM_AGENTS); do \
 		printf '\n==> %s doctor\n' "$$profile"; \
-		$(COMPOSE) run --rm -e HERMES_HOME=/opt/data/profiles/"$$profile" atlas-gateway doctor; \
+		$(COMPOSE) run --rm --workdir /workspaces/"$$profile" -e HERMES_HOME=/opt/data/profiles/"$$profile" atlas-gateway doctor; \
 	done
 
 compose-config: ## Validate profile-driven Docker Compose function services
@@ -121,12 +121,14 @@ profile-compose-config: ## Validate profile-driven Docker Compose function servi
 	$(COMPOSE) --profile dashboard --profile admin --profile dispatcher-once config >/dev/null
 
 workspace-init: ## Initialize shared workspace/artifact and ignored runtime directories
-	@mkdir -p shared/project/artifacts runtime/hermes/profiles runtime/hermes/kanban
+	@mkdir -p shared/project/artifacts runtime/hermes/profiles runtime/hermes/kanban \
+		runtime/hermes/workspaces $(addprefix runtime/hermes/workspaces/,$(TEAM_AGENTS))
 	@if [ ! -f shared/project/artifacts/.gitignore ]; then \
 		printf '*\n!.gitignore\n' > shared/project/artifacts/.gitignore; \
 	fi
-	@chmod 2775 shared/project/artifacts runtime/hermes runtime/hermes/kanban 2>/dev/null || true
-	@echo "workspace initialized: shared/project/artifacts and runtime/hermes"
+	@chmod 2775 shared/project/artifacts runtime/hermes runtime/hermes/kanban runtime/hermes/workspaces 2>/dev/null || true
+	@chmod 2775 $(addprefix runtime/hermes/workspaces/,$(TEAM_AGENTS)) 2>/dev/null || true
+	@echo "workspace initialized: shared/project/artifacts, runtime/hermes, and runtime/hermes/workspaces"
 
 kanban-init: profile-render workspace-init ## Initialize the shared Team Nexus Kanban board and mission contract triggers
 	$(COMPOSE) run --rm atlas-gateway kanban init

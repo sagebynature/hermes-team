@@ -89,14 +89,30 @@ Mounts:
 
 ```text
 runtime/hermes             -> /opt/data
-repo root                  -> /workspace
+repo root                  -> /workspace (control repo; intentional edits only)
+runtime/hermes/workspaces  -> /workspaces (ignored per-profile scratch cwd)
 shared/skills              -> /shared/skills:ro
 shared/mcp                 -> /shared/mcp:ro
 shared/plugins              -> /opt/data/plugins:ro and /opt/data/profiles/<active>/plugins:ro
 shared/dashboard-themes    -> /opt/data/dashboard-themes:ro and /opt/data/profiles/<active>/dashboard-themes:ro
 ```
 
-`runtime/` is ignored because it may contain profile-local `.env`, auth, sessions, memory, logs, checkpoints, Kanban state, and other user/customer data.
+Google Workspace CLI credentials use `GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE`.
+A safe Docker-mode setup is:
+
+```bash
+mkdir -p runtime/hermes/secrets
+cp /path/to/your/google-credentials.json runtime/hermes/secrets/google-workspace-credentials.json
+printf '\nGOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE=/opt/data/secrets/google-workspace-credentials.json\n' >> .env
+```
+
+The custom Docker image installs `gws`, and the upstream `googleworkspace/cli`
+agent skills are vendored under `shared/skills/` so all profiles can load them
+through the shared `/shared/skills` external skill directory.
+
+`runtime/` is ignored because it may contain profile-local `.env`, auth, sessions, memory, logs, checkpoints, Kanban state, credentials, per-profile scratch workspaces, and other user/customer data.
+
+`/workspace` is the Team Nexus control repository. Profiles default their terminal cwd to `/workspaces/<profile>` so ad-hoc scratch files do not dirty the repo. Use `/workspace` explicitly for intentional Team Nexus source/docs/config edits, and use Kanban `workspace: scratch` or task-specific worktrees for delegated work.
 
 ## Profile generation
 

@@ -31,7 +31,8 @@ Notes:
 
 - `profiles/team-nexus.profiles.yaml` is the source of truth for the active profile roster.
 - `profiles/<profile>/` contains the source `SOUL.md`, `AGENTS.md`, and `config.yaml`; the renderer copies `SOUL.md`/`config.yaml` and composes generated `AGENTS.md` from `shared/profile/AGENTS.base.md` plus the profile fragment.
-- `runtime/` is ignored because it may contain `.env`, auth, sessions, memory, logs, checkpoints, and Kanban state.
+- `runtime/` is ignored because it may contain `.env`, auth, sessions, memory, logs, checkpoints, Kanban state, per-profile scratch workspaces, and credentials.
+- `/workspace` is the Team Nexus control repository; profiles default terminal scratch work to `/workspaces/<profile>` so accidental ad-hoc files stay under ignored `runtime/hermes/workspaces`.
 - On Linux, prefer Makefile targets so `TEAM_NEXUS_UID=$(id -u)` and `TEAM_NEXUS_GID=$(id -g)` are exported automatically.
 
 ## 3. Start and stop the runtime

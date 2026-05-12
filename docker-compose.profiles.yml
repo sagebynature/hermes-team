@@ -20,7 +20,8 @@ x-profile-runtime: &profile-runtime
     - ./.env
   volumes: &profile-volumes
     - ./runtime/hermes:/opt/data
-    - ${PWD}:/workspace
+    - ${TEAM_NEXUS_REPO_ROOT:-.}:/workspace
+    - ./runtime/hermes/workspaces:/workspaces
     - ./shared/skills:/shared/skills:ro
     - ./shared/mcp:/shared/mcp:ro
     - ./shared/plugins:/opt/data/plugins:ro
@@ -84,7 +85,8 @@ services:
     # Long-running gateway/dashboard/worker services keep these mounts read-only.
     volumes:
       - ./runtime/hermes:/opt/data
-      - ${PWD}:/workspace
+      - ${TEAM_NEXUS_REPO_ROOT:-.}:/workspace
+      - ./runtime/hermes/workspaces:/workspaces
       - ./shared/skills:/shared/skills:rw
       - ./shared/mcp:/shared/mcp:rw
       - ./shared/plugins:/opt/data/plugins:rw

@@ -94,8 +94,12 @@ RUN cd /opt/hermes \
 
 # Install local browser automation support for Hermes' browser toolset. Chromium
 # comes from apt because Chrome for Testing does not publish Linux ARM64 builds.
-RUN npm install -g agent-browser \
+# Also install the Google Workspace CLI (`gws`) for shared Workspace skills.
+RUN npm install -g agent-browser @googleworkspace/cli \
     && ln -sfn /opt/hermes/node_modules/.bin/agent-browser /usr/local/bin/agent-browser \
+    && ln -sfn "$(mise which gws)" /usr/local/bin/gws \
+    && command -v gws \
+    && gws --version \
     && npm cache clean --force
 
 # Install Hermes' bundled RL backend when the upstream image contains the

@@ -40,7 +40,8 @@ Runtime mounts:
 
 ```text
 runtime/hermes             -> /opt/data
-repo root                  -> /workspace
+repo root                  -> /workspace (control repo; intentional edits only)
+runtime/hermes/workspaces  -> /workspaces (ignored per-profile scratch cwd)
 shared/skills              -> /shared/skills:ro
 shared/mcp                 -> /shared/mcp:ro
 shared/plugins              -> /opt/data/plugins:ro and /opt/data/profiles/<active>/plugins:ro
@@ -58,6 +59,8 @@ Inside containers, that path is resolved through:
 ```text
 HERMES_KANBAN_HOME=/opt/data/kanban
 ```
+
+`/workspace` is the Team Nexus control repository. Profiles default their terminal cwd to `/workspaces/<profile>` so ad-hoc scratch files do not dirty the repo. Use `/workspace` explicitly for intentional Team Nexus source/docs/config edits, and use Kanban `workspace: scratch` or task-specific worktrees for delegated work.
 
 ## Does Kanban autostart?
 

@@ -21,8 +21,12 @@ agent:
 
 terminal:
   backend: local
-  cwd: /workspace
+  cwd: /workspaces/forge
   timeout: 180
+  env_passthrough:
+    - GITHUB_TOKEN
+    - CONTEXT7_API_KEY
+    - STITCH_API_KEY
 
 memory:
   memory_enabled: true
@@ -151,3 +155,4 @@ delegation:
   max_spawn_depth: 1
   orchestrator_enabled: false
   subagent_auto_approve: true
+

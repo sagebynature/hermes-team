@@ -26,9 +26,12 @@ agent:
 terminal:
   backend: local
   modal_mode: auto
-  cwd: /workspace
+  cwd: /workspaces/atlas
   timeout: 180
-  env_passthrough: []
+  env_passthrough:
+    - GITHUB_TOKEN
+    - CONTEXT7_API_KEY
+    - STITCH_API_KEY
   shell_init_files: []
   auto_source_bashrc: true
   docker_image: nikolaik/python-nodejs:python3.11-nodejs20
@@ -401,3 +404,4 @@ plugins:
 # fallback_model:
 #   provider: openrouter
 #   model: anthropic/claude-sonnet-4
+

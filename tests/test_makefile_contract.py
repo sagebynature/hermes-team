@@ -22,8 +22,15 @@ class MakefileContractTests(unittest.TestCase):
 
         self.assertIn("KANBAN_DB ?= runtime/hermes/kanban/kanban.db", makefile)
         self.assertIn("kanban-init: profile-render workspace-init", makefile)
+        self.assertIn("runtime/hermes/workspaces", makefile)
         self.assertIn("kanban-mission-contract.py --db \"$(KANBAN_DB)\" install", makefile)
         self.assertIn("kanban-mission-notifier.py --db \"$(KANBAN_DB)\" --deliver", makefile)
+
+    def test_profile_runtime_mounts_control_repo_and_ignored_workspaces(self):
+        compose = COMPOSE_FILE.read_text()
+
+        self.assertIn("${TEAM_NEXUS_REPO_ROOT:-.}:/workspace", compose)
+        self.assertIn("./runtime/hermes/workspaces:/workspaces", compose)
 
     def test_compose_starts_mission_notifier_sidecar_by_default(self):
         compose = COMPOSE_FILE.read_text()

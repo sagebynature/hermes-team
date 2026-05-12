@@ -64,6 +64,21 @@ class ProfileSpecValidatorTests(unittest.TestCase):
         self.assertIn("Do not use terminal or Hermes CLI commands as a substitute for the `send_message` tool", agents)
         self.assertIn("block the synthesis task instead of completing it", agents)
 
+    def test_active_profiles_default_to_ignored_runtime_workspaces(self):
+        validator = load_validator_module()
+        for profile in ["atlas", "forge", "sentinel", "scribe", "curator"]:
+            config = validator.load_yaml(REPO_ROOT / "profiles" / profile / "config.yaml")
+            terminal = config.get("terminal") or {}
+            self.assertEqual(f"/workspaces/{profile}", terminal.get("cwd"))
+
+    def test_active_profiles_allow_approved_runtime_credentials_in_terminal_subprocesses(self):
+        validator = load_validator_module()
+        required = {"GITHUB_TOKEN", "CONTEXT7_API_KEY", "STITCH_API_KEY"}
+        for profile in ["atlas", "forge", "sentinel", "scribe", "curator"]:
+            config = validator.load_yaml(REPO_ROOT / "profiles" / profile / "config.yaml")
+            terminal = config.get("terminal") or {}
+            self.assertTrue(required.issubset(set(terminal.get("env_passthrough") or [])))
+
 
 if __name__ == "__main__":
     unittest.main()
