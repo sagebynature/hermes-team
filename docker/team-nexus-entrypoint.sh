@@ -24,6 +24,15 @@ if [ "$(id -u)" = "0" ]; then
   if [ -n "${HERMES_UID:-}" ] && [ "$HERMES_UID" != "$(id -u hermes)" ]; then
     usermod -u "$HERMES_UID" hermes 2>/dev/null || true
   fi
+
+  # Mise is the shared Team Nexus toolchain manager. Its data/cache roots live
+  # under /opt/mise so all profiles see the same installed runtimes, but the
+  # runtime hermes UID/GID may be remapped to the host operator on each start.
+  # Normalize ownership after remap so shims can update cache metadata and agents
+  # can install additional mise toolchains without falling back to per-tool hacks.
+  if [ -d /opt/mise ]; then
+    chown -hR hermes:hermes /opt/mise 2>/dev/null || true
+  fi
 fi
 
 if [ -n "$HERMES_HOME" ]; then
@@ -45,11 +54,12 @@ if [ -n "$HERMES_HOME" ]; then
     printf '{"installed":{}}\n' > "$HERMES_HOME/skills/.hub/lock.json"
   fi
 
-  # Keep the agent-local Hermes shim on PATH and avoid root-only PATH entries
-  # after the upstream entrypoint drops privileges to the hermes user. Python's
-  # execvp reports PermissionError for missing commands if any PATH directory is
-  # not searchable, which made doctor crash while probing optional CLIs like gh.
-  export PATH="$HERMES_HOME/.local/bin:${PATH//:\/root\/.local\/bin/}"
+  # Keep the agent-local Hermes shim and mise-managed toolchains on PATH while
+  # avoiding root-only PATH entries after the upstream entrypoint drops privileges
+  # to the hermes user. Python's execvp reports PermissionError for missing
+  # commands if any PATH directory is not searchable, which made doctor crash
+  # while probing optional CLIs like gh.
+  export PATH="/opt/mise/shims:$HERMES_HOME/.local/bin:${PATH//:\/root\/.local\/bin/}"
 
   # The upstream entrypoint also fixes ownership, but these paths are created by
   # this wrapper and should be writable after privilege drop.

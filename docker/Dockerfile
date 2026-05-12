@@ -57,12 +57,16 @@ RUN curl -fsSL https://mise.run | sh \
 # Global defaults. Individual agents can override with /workspace/.mise.toml
 # or mounted config under /opt/data if desired.
 COPY docker/mise/config.toml /etc/mise/config.toml
+COPY docker/profile.d/team-nexus-mise.sh /etc/profile.d/team-nexus-mise.sh
+RUN chmod 0644 /etc/profile.d/team-nexus-mise.sh
 
-# Preinstall lightweight/common runtimes that MCP servers and startup agents often need.
+# Preinstall lightweight/common runtimes and CLIs that MCP servers and startup agents often need.
 # If you want a smaller image, remove these and let agents install from their workspace .mise.toml.
 RUN mise trust /etc/mise/config.toml \
     && mise install --yes \
-    && mise reshim
+    && mise reshim \
+    && command -v gh \
+    && gh --version
 
 # Install uv/uvx directly instead of through mise's aqua backend. The mise uv
 # plugin verifies GitHub artifact attestations, and uv releases can fail Docker

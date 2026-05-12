@@ -10,6 +10,9 @@ idiomatic_version_file_enable_tools = ["node", "python"]
 # Node is needed for many MCP servers invoked through `npx`.
 node = "lts"
 
+# GitHub CLI is used by GitHub skills/workflows for auth, PRs, issues, and CI.
+gh = "latest"
+
 # uv is installed in the Dockerfile via Astral's installer instead of mise.
 # Reason: mise's aqua backend can fail Docker builds when GitHub artifact
 # attestation metadata for astral-sh/uv is unavailable or mismatched.
