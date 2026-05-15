@@ -58,6 +58,14 @@ class ProfileSpecValidatorTests(unittest.TestCase):
 
         self.assertIn("messaging", config["toolsets"])
 
+    def test_atlas_discord_channels_are_backed_by_env_templates(self):
+        validator = load_validator_module()
+        config = validator.load_yaml(REPO_ROOT / "profiles" / "atlas" / "config.yaml")
+        discord = config.get("discord") or {}
+
+        self.assertEqual("${DISCORD_FREE_RESPONSE_CHANNELS}", discord.get("free_response_channels"))
+        self.assertEqual("${DISCORD_ALLOWED_CHANNELS}", discord.get("allowed_channels"))
+
     def test_atlas_direct_discord_policy_requires_verified_send_message_tool(self):
         agents = (REPO_ROOT / "profiles" / "atlas" / "AGENTS.md").read_text()
 

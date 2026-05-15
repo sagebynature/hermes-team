@@ -300,6 +300,12 @@ honcho: {}
 timezone: ""
 discord:
   require_mention: true
+  # Keep Atlas' no-mention channels tied to the Compose .env value. Hermes
+  # config migration writes missing defaults such as `free_response_channels: ""`
+  # into runtime config.yaml; an explicit empty config value suppresses the
+  # Discord adapter's DISCORD_FREE_RESPONSE_CHANNELS fallback.
+  free_response_channels: ${DISCORD_FREE_RESPONSE_CHANNELS}
+  allowed_channels: ${DISCORD_ALLOWED_CHANNELS}
   auto_thread: true
   reactions: true
   channel_prompts: {}

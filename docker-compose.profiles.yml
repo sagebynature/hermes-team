@@ -56,7 +56,7 @@ services:
       AGENT_NAME: Atlas
       AGENT_ROLE: Mission orchestrator and Discord CLI
     ports:
-      - "127.0.0.1:${ATLAS_GATEWAY_PORT:-8642}:8642"
+      - "${TEAM_NEXUS_BIND_ADDRESS:-127.0.0.1}:${ATLAS_GATEWAY_PORT:-8642}:8642"
     command: ["gateway", "run"]
 
   dashboard:
@@ -68,7 +68,7 @@ services:
       AGENT_NAME: Atlas
       AGENT_ROLE: Team Nexus control plane
     ports:
-      - "127.0.0.1:${TEAM_NEXUS_DASHBOARD_PORT:-9119}:9119"
+      - "${TEAM_NEXUS_BIND_ADDRESS:-127.0.0.1}:${TEAM_NEXUS_DASHBOARD_PORT:-9119}:9119"
     command: ["dashboard", "--host", "0.0.0.0", "--port", "9119", "--insecure", "--no-open"]
 
   admin-shell:

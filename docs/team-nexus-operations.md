@@ -69,6 +69,19 @@ make up
 open http://127.0.0.1:${TEAM_NEXUS_DASHBOARD_PORT:-9119}/
 ```
 
+By default, Compose binds published gateway/dashboard ports to loopback
+(`127.0.0.1`) for local-only access. To expose them on your LAN, set this in
+`.env` and recreate the services:
+
+```bash
+TEAM_NEXUS_BIND_ADDRESS=0.0.0.0
+make restart
+```
+
+Then browse to the host's LAN IP, for example
+`http://192.168.1.50:${TEAM_NEXUS_DASHBOARD_PORT:-9119}/`. Ensure your host
+firewall allows the selected ports before relying on remote access.
+
 Dashboard assets are shared through:
 
 ```text

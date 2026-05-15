@@ -34,7 +34,8 @@ Rules:
 - At least one model provider key is required for live agent runs, usually `OPENROUTER_API_KEY`.
 - `DISCORD_BOT_TOKEN`, `DISCORD_ALLOWED_USERS`, and `DISCORD_HOME_CHANNEL` are required when running the Atlas Discord gateway.
 - Worker Discord gateways are disabled in v1; specialists coordinate through Kanban unless a task explicitly opts into direct Discord reply.
-- `TEAM_NEXUS_DASHBOARD_PORT` defaults to the value in `.env.example`; open the dashboard at `http://127.0.0.1:${TEAM_NEXUS_DASHBOARD_PORT}` after `make up`.
+- `TEAM_NEXUS_BIND_ADDRESS` defaults to `127.0.0.1` for local-only access. Set it to `0.0.0.0` to expose the gateway/dashboard ports to your local network.
+- `TEAM_NEXUS_DASHBOARD_PORT` defaults to the value in `.env.example`; open the dashboard at `http://127.0.0.1:${TEAM_NEXUS_DASHBOARD_PORT}` after `make up` when using the default bind address.
 
 ## 2. Render profile homes
 
@@ -95,7 +96,7 @@ Default function services from `docker-compose.profiles.yml`:
 | Service             | Purpose                                                                           |
 | ------------------- | --------------------------------------------------------------------------------- |
 | `atlas-gateway`     | Atlas Discord gateway and native Kanban dispatcher host                           |
-| `dashboard`         | Light inspection/control plane at `http://127.0.0.1:${TEAM_NEXUS_DASHBOARD_PORT}` |
+| `dashboard`         | Light inspection/control plane at `http://${TEAM_NEXUS_BIND_ADDRESS:-127.0.0.1}:${TEAM_NEXUS_DASHBOARD_PORT}` |
 | `admin-shell`       | Operator shell with selected profile home                                         |
 | `kanban-dispatcher` | Optional one-shot native dispatcher nudge                                         |
 
