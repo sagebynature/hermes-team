@@ -3,8 +3,8 @@
 
 model:
   provider: openrouter
-  default: google/gemma-4-31b-it
-  context_length: 200000
+  default: google/gemma-4-26b-a4b-it
+  context_length: 260000
 
 terminal:
   backend: local
@@ -30,4 +30,3 @@ skills:
     - /shared/skills
   template_vars: true
   inline_shell: false
-

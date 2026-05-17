@@ -4,7 +4,7 @@
 model:
   provider: openrouter
   default: google/gemma-4-31b-it
-  context_length: 200000
+  context_length: 260000
 
 # Keep the default Hermes CLI toolset and opt into Kanban tools.
 # Kanban tool handlers are runtime-gated by Hermes: they appear for
@@ -154,4 +154,3 @@ delegation:
   max_spawn_depth: 1
   orchestrator_enabled: false
   subagent_auto_approve: true
-
